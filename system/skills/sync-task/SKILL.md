@@ -1,6 +1,6 @@
 ---
 name: sync-task
-description: Updating the record while work continues. Use when a phase lands, a decision is made, a check runs, or a blocker appears and the work goes on; when the project hub has drifted from the task bundles; or when setting up commit-to-task linking for a repository.
+description: Updating the record while work continues. Use when a phase lands, a decision is made, a check runs, or a blocker appears and the work goes on; when the user asks to sync or repair the project hub; or when setting up commit-to-task linking for a repository.
 ---
 
 # Sync Task
