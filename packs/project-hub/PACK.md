@@ -3,7 +3,7 @@
 A registry that aggregates dev-docs task bundles into a Milestone / Feature / Requirement view,
 with deterministic validation and regeneration.
 
-Answers a different question from `dev-docs-continuity`: not *how do I resume this task*, but
+Answers a different question from `dev-docs-continuity`: not *how do I resume one task*, but
 *what is the state of everything, and does the record still match reality?*
 
 ## When the pack earns its keep
@@ -17,8 +17,8 @@ trade.
 
 ## Dependencies
 
-- **`dev-docs-continuity` pack** (required). The hub aggregates task bundles; it does not create
-  them, and it does not define what a task is. `dev-docs/AGENTS.md` owns the task layer.
+- **`dev-docs-continuity` pack** (required). The hub aggregates task bundles rather than creating
+  them, and does not define what a task is. `dev-docs/AGENTS.md` owns the task layer.
 - **Node.js** (Node built-ins only — no npm install, no third-party packages).
 
 ## Install
@@ -40,20 +40,23 @@ node .ai/scripts/ctl-project-governance.mjs init
 | `.ai/project/templates/` | The 5 hub files `init` materializes |
 | `.ai/scripts/ctl-project-governance.mjs` | The control script (8 commands) |
 | `.ai/scripts/lib/` | `colors.mjs`, `yaml-lite.mjs` — the script's only imports |
-| `.ai/skills/workflows/planning/project-orchestrator/` | The one **writing** skill: triage, mapping, sync/lint, semantic extraction |
-| `.ai/skills/workflows/planning/project-status-reporter/` | The one **read-only** skill: status reporting |
-| `.githooks/pre-commit` | Auto-syncs the hub when `dev-docs/` files are staged |
-| `.githooks/install.mjs` | Points `core.hooksPath` at `.githooks/` (shared, idempotent) |
 
-### Two skills, split by write access
+### Where the skills went
 
-`project-orchestrator` decides and writes. `project-status-reporter` only reads, and is bound by an
-explicit `MUST NOT modify files`. Keeping them apart preserves that guarantee — a read-only
-question can be answered without ever reaching for a skill that can mutate the hub.
+The pack ships no skills. Hub work happens at the moment where each action belongs, inside the
+global task skills in `system/skills/`:
 
-Sync and lint used to be a third skill. Running the control script is a step inside a governance
-decision rather than a decision of its own, so that content moved into the orchestrator, and the
-command reference now lives once in `.ai/project/AGENTS.md`.
+| Hub work | Lives in |
+|----------|----------|
+| Find related work, register a new task, map to a Feature | `start-task` |
+| Propagate status, repair drift, the `pre-commit` hook | `sync-task` |
+| Refresh the feature brief, append the changelog, archive | `handoff-task` |
+| `resume --json` fast path | `resume-task` |
+| Read-only progress questions across tasks | `project-status` |
+
+Governance used to be a layer with its own front-door skill. Splitting by moment instead means each
+governance action sits in the workflow that actually triggers it, and no skill exists solely to
+route between the others.
 
 ## Commands
 
@@ -68,19 +71,19 @@ node .ai/scripts/ctl-project-governance.mjs current-task --format id
 node .ai/scripts/ctl-project-governance.mjs map --task T-001 --feature F-002 --apply
 ```
 
-`resume` is the accelerated form of the protocol in the `resume-dev-docs-task` skill: same semantics,
+`resume` is the accelerated form of the protocol in the `resume-task` skill: same semantics,
 one call instead of six reads, with bounded output that will not flood the context window.
 
 ## Single project by design
 
 The hub holds exactly one project. There is no `--project` flag, no `.ai/project/<slug>/`
-partitioning, and no `P-xxx` ID space. A repository that genuinely hosts several independent
-projects should run several hubs — one per repository.
+partitioning, and no `P-xxx` ID space. A repository genuinely hosting several independent projects
+should run several hubs — one per repository.
 
 ## Layering
 
 `CONTRACT.md` covers the hub layer only. Task progress, task identity, and the `.ai-task.yaml`
-schema are defined once in `dev-docs/AGENTS.md` and referenced here, so the two cannot drift.
+schema are defined once in `dev-docs/AGENTS.md` and referenced from here, so the two cannot drift.
 
 | Layer | Owner | Covers |
 |-------|-------|--------|
@@ -89,7 +92,7 @@ schema are defined once in `dev-docs/AGENTS.md` and referenced here, so the two 
 
 ## Boundaries
 
-- The task bundle stays authoritative for status. The registry is a derived cache and MUST be
-  regenerated, never hand-edited inside AUTO blocks.
-- `sync --apply` is idempotent; safe after any task change.
-- The hub does not implement product code changes.
+- The task bundle stays authoritative for status. The registry is a derived cache: regenerate it,
+  never hand-edit inside AUTO blocks.
+- `sync --apply` is idempotent and safe after any task change.
+- The hub never implements product code changes.

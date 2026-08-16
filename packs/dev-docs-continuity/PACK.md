@@ -1,23 +1,15 @@
 # Pack: dev-docs-continuity
 
-Task documentation and context recovery for work that spans sessions.
+The project-side scaffolding the task skills operate on: the Task Contract and the directories a
+task bundle lives in.
 
-Answers one question: *a session ended mid-task — how does the next agent pick up exactly where
-the last one stopped?*
-
-## What you get
-
-- A **decision gate** that keeps dev-docs off trivial work (the common failure mode is writing
-  bundles for 20-minute fixes until nobody reads them).
-- A **6-file task bundle** with templates: overview, plan, architecture, notes, verification, pitfalls.
-- A **resume protocol**: a fixed read order that reconstructs task state from the bundle, the
-  commit timeline, and the worktree.
-- **Commit-to-task linking** via a `Task: T-###` trailer, so the timeline is reconstructible from
-  `git log` alone.
+The skills themselves are global — see `system/skills/` for `start-task`, `sync-task`,
+`handoff-task`, and `resume-task`. This pack is what a *repository* needs so those skills have
+something to write to and a contract to follow.
 
 ## Dependencies
 
-None. Everything is Markdown plus two POSIX shell hooks. No Node, no build step, nothing to run.
+None. Markdown and two empty directories; nothing to run.
 
 ## Install
 
@@ -25,53 +17,47 @@ None. Everything is Markdown plus two POSIX shell hooks. No Node, no build step,
 cp -R packs/dev-docs-continuity/files/. /path/to/your/project/
 ```
 
-Then, optionally, enable the Git hooks:
-
-```bash
-cd /path/to/your/project && node .githooks/install.mjs
-```
-
-The hooks are optional. Without them the trailer convention still works — the hooks only automate
-injection and validation.
+The Git hooks that link commits to tasks ship with `sync-task` rather than here, because the skill
+is what explains and installs them. See that skill's `assets/githooks/`.
 
 ## Contents
 
 | Path | Role |
 |------|------|
-| `dev-docs/AGENTS.md` | Entry point. Owns the Decision Gate and the **Task Contract**, including task-ID allocation. |
-| `.ai/skills/workflows/dev-docs/start-dev-docs-task/` | Opens a task: roadmap and/or bundle (+ 8 templates) |
-| `.ai/skills/workflows/dev-docs/resume-dev-docs-task/` | Rebuilds context for work in flight; owns the Resume Protocol |
-| `.ai/skills/workflows/dev-docs/update-dev-docs-task/` | Checkpoints, hands off, and archives a bundle |
-| `.githooks/prepare-commit-msg` | Injects `Task:` from a task branch |
-| `.githooks/commit-msg` | Validates conventional format + the `Task:` trailer |
-| `.githooks/install.mjs` | Points `core.hooksPath` at `.githooks/` (shared, idempotent) |
+| `dev-docs/AGENTS.md` | Entry point. Owns the Decision Gate and the **Task Contract**: granularity, progress, identity, id allocation, id opacity. |
+| `dev-docs/active/` | Where open task bundles live |
+| `dev-docs/archive/` | Where finished bundles move; the location itself sets the effective status |
 
-## Skill placement
+## What the contract fixes
 
-`files/` mirrors the layout of the AI-friendly repository template, where `.ai/skills/` is the
-single source of truth and provider wrappers are generated from it.
+`dev-docs/AGENTS.md` is the single definition of the task layer. Every skill that touches a task
+reads the contract rather than restating it, so the rules cannot drift apart:
 
-If your project has no such SSOT mechanism, put the three skill directories directly where your
-agent reads them instead — for example `.claude/skills/start-dev-docs-task/`. The skill bodies do
-not depend on their own location.
+- **Granularity** — one task is one resumable unit: one bundle, one `State:`, one commit stream.
+  Parent/child task structures break resume, and the reasons are mechanical.
+- **Progress** — `00-overview.md` `## Status` → `- State:` is authoritative, nothing else.
+- **Identity** — `.ai-task.yaml` `task_id`, unique repository-wide, allocated at creation.
+- **Allocation** — highest existing id + 1, scanning the working tree *and* `git log --all` so
+  parallel worktrees do not collide.
+- **Opacity** — `T-###` carries no meaning; categorize with `keywords` or the registry instead.
 
 ## Composing with project-hub
 
-`dev-docs-continuity` is self-sufficient. Installing the `project-hub` pack on top adds a registry
-that aggregates bundles into Milestone/Feature/Requirement views.
+The pack is self-sufficient. Adding `project-hub` gives the same skills a faster path and a
+cross-task rollup, never a different one:
 
-The two layers are wired so the fast path is additive, never required:
-
-| Capability | dev-docs-continuity alone | with project-hub |
-|------------|---------------------------|------------------|
-| Resume a task | Manual read protocol in `resume-dev-docs-task` | Same skill, `ctl-project-governance.mjs resume --json` fast path |
+| Capability | This pack alone | With project-hub |
+|------------|-----------------|------------------|
+| Resume a task | Manual read protocol in `resume-task` | Same skill, `ctl-project-governance.mjs resume --json` fast path |
+| Allocate an id | Scan rule in the Task Contract | `sync --apply` applies the same rule |
 | Validate a `Task:` trailer | Hooks scan `.ai-task.yaml` files | Hooks call the control script |
-| Cross-task rollup | Not available | `registry.yaml` + derived views |
+| Cross-task rollup | Not available | `registry.yaml` and derived views |
 
-Both hooks detect `.ai/scripts/ctl-project-governance.mjs` at runtime and use it when present, so
-installing the hub upgrades them in place — there is no second copy of either hook to maintain.
+The hooks detect `.ai/scripts/ctl-project-governance.mjs` at runtime and use it when present, so
+installing the hub upgrades them in place — there is no second copy of any hook to maintain.
 
 ## Boundaries
 
-- Owns the **task layer**: task progress, task identity, `.ai-task.yaml`, the `Task:` trailer.
+- Owns the **task layer**: granularity, progress, identity, `.ai-task.yaml`, the `Task:` trailer.
 - Does **not** own Milestones, Features, Requirements, or any cross-task rollup — that is `project-hub`.
+- Ships no skills. Those are global, in `system/skills/`.

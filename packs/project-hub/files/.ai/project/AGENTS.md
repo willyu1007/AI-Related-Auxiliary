@@ -57,7 +57,8 @@ node .ai/scripts/ctl-project-governance.mjs current-task --format id
 node .ai/scripts/ctl-project-governance.mjs commits --task T-001
 ```
 
-7) (Optional) Install Git hooks for automatic sync and commit/task linking:
+7) (Optional) Install Git hooks for automatic sync and commit/task linking. The hooks ship with the
+`sync-task` skill; copy them into `.githooks/` first, then:
 ```bash
 node .githooks/install.mjs
 ```

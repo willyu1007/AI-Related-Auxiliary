@@ -10,9 +10,14 @@ set -e
 
 fail() { echo "FAIL: $1"; exit 1; }
 
-[ -x .githooks/pre-commit ] || fail ".githooks/pre-commit is not executable"
 [ -f .ai/project/templates/registry.yaml ] || fail "hub templates missing"
 [ -f dev-docs/AGENTS.md ] || fail "dependency dev-docs-continuity was not installed"
+
+# Hooks ship with the sync-task skill, not with either pack. AUX_ROOT is set by checks/run.mjs.
+[ -n "$AUX_ROOT" ] || fail "AUX_ROOT not set; run via node checks/run.mjs"
+mkdir -p .githooks
+cp -R "$AUX_ROOT/system/skills/sync-task/assets/githooks/." .githooks/
+[ -x .githooks/pre-commit ] || fail ".githooks/pre-commit is not executable"
 
 node .githooks/install.mjs >/dev/null
 node .ai/scripts/ctl-project-governance.mjs init >/dev/null

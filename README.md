@@ -8,9 +8,12 @@
 
 ```text
 system/          # 全局层：跟着人走，镜像 ~/.claude/
-  skills/        #   在所有项目里生效的 Skill
+  skills/        #   所有 Skill，一层平铺（发现只扫这一层）
+    <skill>/
+      SKILL.md
+      templates/ examples/ reference/ assets/   # 随技能走的资产，含 Git 钩子
   docs/          #   全局 Agent 指令（CLAUDE.md / AGENTS.md）
-packs/           # 项目层：跟着项目走，按需复制进目标仓库
+packs/           # 项目层：项目侧脚手架，按需复制进目标仓库
   <pack-name>/
     PACK.md      #   这是什么 / 依赖什么 / 怎么装 / 不做什么
     files/       #   原样复制到目标项目根目录
@@ -20,10 +23,24 @@ checks/          # 本仓库自己的校验，不是分发物
 
 分层的依据很简单：**一个能力是绑在人身上还是绑在项目上。**
 
-`system/` 里的东西对每个项目都成立，装一次即可（例如「用 Codex 做独立 review」）。`packs/`
-里的东西只对采用了某套约定的项目成立，必须随项目安装（例如「任务文档放在 `dev-docs/` 下」）。
+`system/` 里是**能力**：技能连同它自己的模板、示例、钩子，装一次即可，对每个项目都成立。
+`packs/` 里是**项目侧脚手架**：契约文档、模板、控制脚本 —— 技能要操作的对象，必须随项目安装。
+
+技能发现只扫 `system/skills/` 的第一层，所以那一层保持平铺，不要建分组子目录。
 
 ## system/ —— 全局层
+
+任务治理的五个技能，按实际操作划分 —— 每个对应工作流程里的一个时刻：
+
+| Skill | 时刻 | 写 |
+|---|---|---|
+| [start-task](system/skills/start-task/SKILL.md) | 创建任务：查重、roadmap、bundle、分配 ID、注册进 hub | ✓ |
+| [sync-task](system/skills/sync-task/SKILL.md) | 同步改动：检查点、带尾注提交、传播状态、修复漂移；**持有 Git 钩子** | ✓ |
+| [handoff-task](system/skills/handoff-task/SKILL.md) | 创建 handoff：完整 pass、刷新 feature brief、归档 | ✓ |
+| [resume-task](system/skills/resume-task/SKILL.md) | 接受 handoff：重建上下文、对账文档与 Git 历史 | — |
+| [project-status](system/skills/project-status/SKILL.md) | 跨任务的只读进度问答 | — |
+
+另有 `codex-*` 三个和 `html-communication`，与任务治理无关。
 
 `system/` 是 `~/.claude/` 的版本化镜像。改动流程：
 
@@ -49,7 +66,7 @@ cp -R packs/<pack-name>/files/. /path/to/your/project/
 
 | Pack | 能力 | 依赖 |
 |------|------|------|
-| [dev-docs-continuity](packs/dev-docs-continuity/PACK.md) | 任务文档 bundle、跨会话续接、commit 关联 | 无 |
+| [dev-docs-continuity](packs/dev-docs-continuity/PACK.md) | Task Contract 与 `dev-docs/` 目录结构 | 无 |
 | [project-hub](packs/project-hub/PACK.md) | 任务聚合成 Milestone/Feature/Requirement 视图，带校验与同步 | Node、dev-docs-continuity |
 
 ## 校验

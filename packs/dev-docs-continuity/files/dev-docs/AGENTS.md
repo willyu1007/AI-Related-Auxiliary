@@ -6,15 +6,15 @@ Persistent task documentation for context preservation across sessions.
 
 | Condition | Action |
 |-----------|--------|
-| Complex task (multi-module, multi-session, >2 hours) | Open a bundle via `start-dev-docs-task` |
-| Work already in flight is continued, or a handoff is accepted | Rebuild context via `resume-dev-docs-task` |
-| A phase completes, a decision is made, or a check is run | Checkpoint via `update-dev-docs-task` |
-| User requests a pause or handoff | Full pass via `update-dev-docs-task` |
-| Task completed and verified | Archive via `update-dev-docs-task` with status=done |
+| Complex task (multi-module, multi-session, >2 hours) | Open a bundle via `start-task` |
+| Work already in flight is continued, or a handoff is accepted | Rebuild context via `resume-task` |
+| A phase completes, a decision is made, or a check is run | Checkpoint via `sync-task` |
+| User requests a pause or handoff | Full pass via `handoff-task` |
+| Task completed and verified | Archive via `handoff-task` with status=done |
 
 ## Decision Gate (MUST)
 
-The gate below is the **single definition**. `start-dev-docs-task` references the gate and MUST NOT
+The gate below is the **single definition**. `start-task` references the gate and MUST NOT
 restate the criteria.
 
 Create a dev-docs task bundle under `dev-docs/active/<task-slug>/` only when the task is **complex** and benefits from context preservation.
@@ -38,7 +38,7 @@ Notes:
 - ">= 3 sequential steps with verification" is too common; the pattern is **not** a trigger for dev-docs.
 
 If the user asks for a roadmap/plan before coding:
-- If the task meets the Create Conditions above, use `start-dev-docs-task`, which writes `roadmap.md` and the bundle.
+- If the task meets the Create Conditions above, use `start-task`, which writes `roadmap.md` and the bundle.
 - Otherwise, provide an in-chat plan and do NOT write under `dev-docs/`.
 
 ## Task Contract (MUST)
@@ -167,12 +167,12 @@ Categorize with fields that have names:
 
 Before making any code/config changes for a task that meets the Decision Gate:
 1. Ensure the task bundle exists under `dev-docs/active/<task-slug>/`. If it is missing, or the work
-   is ambiguous, or the user asked for a plan/roadmap, run `start-dev-docs-task` first.
+   is ambiguous, or the user asked for a plan/roadmap, run `start-task` first.
 2. During implementation, keep the bundle current:
    - update `00-overview.md` when status changes
    - append to `03-implementation-notes.md` after each phase
    - record every verification run in `04-verification.md` (commands + outcomes)
-3. At each checkpoint, and before any pause, handoff, or completion, run `update-dev-docs-task`.
+3. Run `sync-task` at each checkpoint, and `handoff-task` before any pause, handoff, or completion.
 
 ## Commit Gate (MUST)
 
@@ -185,7 +185,7 @@ Task docs describe intent and current state; commits record what landed.
 - MUST NOT force broken or unverified work into a commit. Preserve and report any remaining
   worktree changes accurately.
 
-The trailer is what links a commit to a task bundle, and is the only mechanism `resume-dev-docs-task`
+The trailer is what links a commit to a task bundle, and is the only mechanism `resume-task`
 has to reconstruct a timeline.
 
 When hooks are installed (`node .githooks/install.mjs`), `prepare-commit-msg` injects `Task:`
@@ -207,7 +207,7 @@ only from a branch containing one valid task ID.
 
 ### Resuming Existing Work
 
-For a request that continues work already in flight, run `resume-dev-docs-task` **before** reading
+For a request that continues work already in flight, run `resume-task` **before** reading
 implementation files. The skill owns the full protocol — task resolution order, the commit-timeline
 reconstruction, and the rules for reconciling the documents against Git history.
 
@@ -223,15 +223,17 @@ reconstruction, and the rules for reconciling the documents against Git history.
 
 | Workflow | Use When |
 |----------|----------|
-| `start-dev-docs-task` | Opening a task: roadmap, bundle, or both |
-| `resume-dev-docs-task` | Picking up work already in flight; accepting a handoff |
-| `update-dev-docs-task` | Checkpointing mid-work, pausing, handing off, or completing |
+| `start-task` | Opening a task: roadmap, bundle, or both |
+| `sync-task` | Checkpointing mid-work; repairing hub drift |
+| `handoff-task` | Pausing, handing off, completing, archiving |
+| `resume-task` | Picking up work already in flight; accepting a handoff |
+| `project-status` | Read-only progress questions across tasks |
 
 ### Archive Rules
 
 When task status changes to "done" and all verification passes:
 1. Move `dev-docs/active/<task-slug>/` to `dev-docs/archive/<task-slug>/`
-2. `update-dev-docs-task` handles the move when status=done
+2. `handoff-task` handles the move when status=done
 
 ### Project Hub Integration (optional)
 

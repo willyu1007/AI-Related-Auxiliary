@@ -12,6 +12,11 @@ set -e
 fail() { echo "FAIL: $1"; exit 1; }
 
 [ -f dev-docs/AGENTS.md ] || fail "dev-docs/AGENTS.md missing"
+
+# Hooks ship with the sync-task skill, not with this pack. AUX_ROOT is set by checks/run.mjs.
+[ -n "$AUX_ROOT" ] || fail "AUX_ROOT not set; run via node checks/run.mjs"
+mkdir -p .githooks
+cp -R "$AUX_ROOT/system/skills/sync-task/assets/githooks/." .githooks/
 [ -x .githooks/commit-msg ] || fail ".githooks/commit-msg is not executable"
 [ -x .githooks/prepare-commit-msg ] || fail ".githooks/prepare-commit-msg is not executable"
 
@@ -27,7 +32,7 @@ printf '# Sample\n\n## Status\n- State: in-progress\n- Next step: verify\n\n## G
   > dev-docs/active/sample/00-overview.md
 
 # Coverage boundary: this pack ships no allocator. Allocating T-### is a rule in the Task Contract
-# that start-dev-docs-task follows, so a shell test cannot exercise it -- the bundle below starts
+# that start-task follows, so a shell test cannot exercise it -- the bundle below starts
 # from an already-allocated id on purpose. What is under test here is everything downstream: that
 # the hooks work off .ai-task.yaml alone, with no control script present.
 printf 'version: 1\ntask_id: T-001\nslug: sample\n' > dev-docs/active/sample/.ai-task.yaml

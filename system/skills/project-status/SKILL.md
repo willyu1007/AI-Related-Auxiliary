@@ -1,14 +1,19 @@
 ---
-name: project-status-reporter
-description: Answer progress questions from existing tracking artifacts without touching them — task inventory, overall progress, what to do next, blockers, and documented semantic focus, each ending in an actionable command. Use when the user asks what is in flight, what is blocked, how far along something is, or what the current focus is. Reports only what the artifacts and Git history actually say, and reports gaps as unknown rather than inferring. Read-only: to create or update tasks, change mappings, or repair drift, use project-orchestrator instead.
+name: project-status
+description: Answer progress questions across all dev-docs tasks without touching anything — task inventory, overall progress, what to do next, blockers, and the documented semantic focus, each ending in an actionable command. Use when the user asks what is in flight, what is blocked, how far along the project is, or what the current focus is. Reports only what the artifacts and Git history actually say, and reports gaps as unknown rather than inferring. Read-only: to open, update, hand off, or resume a specific task, use start-task, sync-task, handoff-task, or resume-task.
 ---
 
-# Project Status Reporter
+# Project Status
 
 Answer the question from what is written down, and make the answer actionable.
 
 Read-only is the point of this skill, not a limitation. A status question should never be able to
-mutate the thing being reported on — which is why the skill lives apart from `project-orchestrator`.
+mutate the thing being reported on — which is why reporting lives apart from the four task
+operations, every one of which writes.
+
+Scope is the portfolio: several tasks at once, the shape of the whole. A question about one
+specific task the user intends to continue is `resume-task`, which rebuilds that task's context
+rather than summarizing it.
 
 ## Response templates
 
@@ -28,7 +33,8 @@ Pick by what was asked, then follow that reference's **Data Source** commands:
 
 2. **Gather from the hub.** Run the reference's data-source commands — usually
    `ctl-project-governance.mjs query` with a `--status` or `--text` filter. Never guess task
-   details; open `00-overview.md` when the query output is not enough.
+   details; open `00-overview.md` when the query output is not enough. Without a hub, scan
+   `dev-docs/**/active/*/00-overview.md` for `State:` directly.
 
 3. **Check consistency, do not fix it.** `lint --check` reveals drift between the registry and the
    task bundles. When lint reports errors, include `sync --apply` in the output as a suggested
@@ -53,8 +59,7 @@ Pick by what was asked, then follow that reference's **Data Source** commands:
 
 - Never modify files. No `sync --apply`, no edits under `dev-docs/**` or `.ai/project/**`.
 - Never invent a task detail, a blocker reason, or a semantic intent. Undocumented means `unknown`.
-- Never present a claim about landed work that the `resume` packet does not support; state the gap
-  instead.
+- Never present a claim about landed work the `resume` packet does not support; state the gap.
 - Status counts in the answer must match the query output they came from.
 
 ## Contract

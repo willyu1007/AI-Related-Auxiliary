@@ -1,13 +1,13 @@
 # Optional detailed documentation convention
 
-The reference describes an optional file layout convention for maintaining task-level development documentation alongside the roadmap produced by the start-dev-docs-task skill.
+The reference describes an optional file layout convention for maintaining task-level development documentation alongside the roadmap produced by the start-task skill.
 
 ## Convention
 When a task requires detailed documentation (architecture notes, implementation notes, verification logs), the repository convention is to use a flat structure under the task directory:
 
 ```
 dev-docs/active/<task>/
-  roadmap.md              # Macro-level planning (start-dev-docs-task)
+  roadmap.md              # Macro-level planning (start-task)
   00-overview.md
   01-plan.md
   02-architecture.md
@@ -17,7 +17,7 @@ dev-docs/active/<task>/
 ```
 
 Notes:
-- The start-dev-docs-task skill **only** produces `roadmap.md`. The skill does not create or update the other files.
+- The start-task skill **only** produces `roadmap.md`. The skill does not create or update the other files.
 - The detailed bundle is intended to be a long-lived, high-fidelity record for collaboration and handoff.
 
 ## Suggested mapping

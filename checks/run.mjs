@@ -33,6 +33,7 @@ import { fileURLToPath } from 'node:url';
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const PACKS_DIR = path.join(REPO_ROOT, 'packs');
+const SKILLS_DIR = path.join(REPO_ROOT, 'system', 'skills');
 
 const SCRIPT_REF_RE = /\.ai\/scripts\/[a-z0-9-]+\.mjs/g;
 const MACHINE_PATH_RE = /(?:\/Users\/|\/home\/[a-z]|\/Volumes\/|[A-Z]:\\\\)/;
@@ -108,28 +109,61 @@ function runStatic(packs) {
     }
   }
 
-  // A skill is addressed by its frontmatter `name`, but lives in a directory. A rename that
-  // updates one and not the other breaks routing silently.
+  // Skills are global and live one level under system/skills/, because skill discovery only scans
+  // that depth -- a skill nested deeper is silently never loaded. A skill is addressed by its
+  // frontmatter `name` but lives in a directory, so a rename that updates one and not the other
+  // breaks routing just as silently.
   const skillOwner = new Map();
-  for (const pack of packs) {
-    const filesDir = path.join(PACKS_DIR, pack, 'files');
-    for (const abs of walk(filesDir)) {
-      if (path.basename(abs) !== 'SKILL.md') continue;
-      const dirName = path.basename(path.dirname(abs));
-      const shipped = path.relative(filesDir, abs).split(path.sep).join('/');
-      const declared = (readTextOrNull(abs) || '').match(/^name:[ \t]*(\S+)[ \t]*$/m)?.[1];
+  for (const entry of fs.readdirSync(SKILLS_DIR, { withFileTypes: true })) {
+    if (!entry.isDirectory()) continue;
+    const skillMd = path.join(SKILLS_DIR, entry.name, 'SKILL.md');
 
-      if (!declared) {
-        fail('skill-name', `${pack}: ${shipped} has no frontmatter name`);
-        continue;
+    if (!fs.existsSync(skillMd)) {
+      const nested = walk(path.join(SKILLS_DIR, entry.name)).some(
+        (f) => path.basename(f) === 'SKILL.md'
+      );
+      fail(
+        'skill-layout',
+        nested
+          ? `system/skills/${entry.name}/ groups skills in subdirectories; discovery only scans one level deep`
+          : `system/skills/${entry.name}/ has no SKILL.md`
+      );
+      continue;
+    }
+
+    const declared = (readTextOrNull(skillMd) || '').match(/^name:[ \t]*(\S+)[ \t]*$/m)?.[1];
+    if (!declared) {
+      fail('skill-name', `system/skills/${entry.name}/SKILL.md has no frontmatter name`);
+      continue;
+    }
+    if (declared !== entry.name) {
+      fail('skill-name', `system/skills/${entry.name}/SKILL.md declares "${declared}"`);
+    }
+    skillOwner.set(declared, entry.name);
+  }
+
+  // Skill assets carry the same hazards as pack files: a dead reference or a hook that lost its
+  // exec bit fails silently.
+  for (const abs of walk(SKILLS_DIR)) {
+    const shipped = path.relative(SKILLS_DIR, abs).split(path.sep).join('/');
+
+    if (shipped.includes('/assets/githooks/') && !shipped.endsWith('.mjs')) {
+      if (!(fs.statSync(abs).mode & 0o111)) {
+        fail('exec-bit', `system/skills/${shipped} is not executable`);
       }
-      if (declared !== dirName) {
-        fail('skill-name', `${pack}: ${shipped} declares "${declared}" but sits in "${dirName}/"`);
-      }
-      if (skillOwner.has(declared)) {
-        fail('skill-name', `${pack}: skill "${declared}" is also shipped by "${skillOwner.get(declared)}"`);
-      } else {
-        skillOwner.set(declared, pack);
+    }
+    if (path.basename(abs) === '.DS_Store') {
+      fail('hygiene', `system/skills/${shipped} should not be committed`);
+    }
+
+    const text = readTextOrNull(abs);
+    if (text === null) continue;
+    if (MACHINE_PATH_RE.test(text)) {
+      fail('hygiene', `system/skills/${shipped} contains a machine-specific absolute path`);
+    }
+    for (const ref of text.match(SCRIPT_REF_RE) || []) {
+      if (!provider.has(ref)) {
+        fail('dangling-ref', `system/skills/${shipped} references ${ref}, which no pack ships`);
       }
     }
   }
@@ -187,7 +221,7 @@ function runStatic(packs) {
   }
 
   if (failures.length === 0) {
-    console.log(c.green('  ok') + c.dim(`  layout, exec bits, hygiene, references, ${skillOwner.size} skill names`));
+    console.log(c.green('  ok') + c.dim(`  layout, exec bits, hygiene, references, ${skillOwner.size} skills`));
   }
 }
 
@@ -242,6 +276,9 @@ function runSmoke(packs) {
         cwd: tmp,
         encoding: 'utf8',
         stdio: ['ignore', 'pipe', 'pipe'],
+        // Hooks ship with the skill that owns them, so a pack's smoke test needs the repo root to
+        // reach system/skills/<skill>/assets/.
+        env: { ...process.env, AUX_ROOT: REPO_ROOT },
       });
       const summary = out.trim().split('\n').filter(Boolean).pop() || '';
       const withDeps = deps.length ? c.dim(` +${deps.join(',')}`) : '';

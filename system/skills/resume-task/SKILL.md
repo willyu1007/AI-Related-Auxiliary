@@ -1,9 +1,9 @@
 ---
-name: resume-dev-docs-task
-description: Rebuild context for work already in flight before touching any code — resolve which task is meant, read its current state, reconstruct the commit timeline from Task trailers, and check the worktree for changes that ran ahead of the record. Use whenever the user continues, resumes, or picks work back up ("continue the auth work", "where were we", "pick up T-012", "keep going"), at the start of a session on an existing branch, or when accepting a handoff. Reports disagreement between the documents and Git history instead of trusting either blindly. To open a new task use start-dev-docs-task; to write findings back use update-dev-docs-task.
+name: resume-task
+description: Rebuild context for a dev-docs task already in flight before touching any code — resolve which task is meant, read its current state, reconstruct the commit timeline from Task trailers, and check the worktree for changes that ran ahead of the record. Use whenever the user continues, resumes, or picks work back up ("continue the auth work", "where were we", "pick up T-012", "keep going"), at the start of a session on an existing branch, or when accepting a handoff. Reports disagreement between the documents and Git history instead of trusting either blindly. To open a new task use start-task; to write findings back use sync-task.
 ---
 
-# Resume Dev Docs Task
+# Resume Task
 
 Reconstruct what happened before you arrived, then say what is next. Nothing else.
 
@@ -13,8 +13,8 @@ the repository, and reconcile them explicitly — never open implementation file
 
 ## Fast path
 
-When `.ai/scripts/ctl-project-governance.mjs` exists — the `project-hub` pack is installed — one
-command produces the whole packet, bounded so it will not flood the context window:
+When `.ai/scripts/ctl-project-governance.mjs` exists, one command produces the whole packet,
+bounded so it will not flood the context window:
 
 ```bash
 node .ai/scripts/ctl-project-governance.mjs resume --json
@@ -60,18 +60,18 @@ Both paths end here.
 - **An empty timeline means progress is unknown, not zero.** The work may predate the trailer
   convention, or may sit uncommitted.
 - **Git history wins ties.** When the record and the history disagree about what landed, believe the
-  history, then fix the document with `update-dev-docs-task`.
+  history, then fix the document with `sync-task`.
 - **Report the reconciliation.** Say what the documents claim, what the repository shows, and where
   the two disagree — do not silently pick one.
 
 ## Rules
 
-- Never run task recovery for work unrelated to the request. A task ID in the branch name is
+- Never run task recovery for work unrelated to the request. A task id in the branch name is
   relevant only when the request concerns that task.
 - Never guess between ambiguous candidates.
 - Never start implementing in the same turn as the resume unless the user asked you to. Report
   state and the next three actions first.
-- Never modify the bundle here; that belongs to `update-dev-docs-task`.
+- Never modify the bundle here; that belongs to `sync-task`.
 
 ## Output
 
@@ -80,3 +80,7 @@ Both paths end here.
 - What landed, from the commit timeline
 - Worktree state, and any disagreement with the record
 - The next three concrete actions
+
+## Contract
+
+Task layer: `dev-docs/AGENTS.md`.

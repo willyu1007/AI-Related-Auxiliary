@@ -132,7 +132,7 @@ If you maintain a detailed dev documentation bundle for the task, the repository
 
 ```
 dev-docs/active/<task>/
-  roadmap.md              # Macro-level planning (start-dev-docs-task)
+  roadmap.md              # Macro-level planning (start-task)
   00-overview.md
   01-plan.md
   02-architecture.md
@@ -141,7 +141,7 @@ dev-docs/active/<task>/
   05-pitfalls.md
 ```
 
-The roadmap document can be used as the macro-level input for the other files. The start-dev-docs-task skill does not create or update those files.
+The roadmap document can be used as the macro-level input for the other files. The start-task skill does not create or update those files.
 
 Suggested mapping:
 - The roadmap's **Goal/Non-goals/Scope** → `00-overview.md`
