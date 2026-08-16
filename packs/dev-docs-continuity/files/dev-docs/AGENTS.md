@@ -46,6 +46,30 @@ If the user asks for a roadmap/plan before coding:
 The rules in the section are the **single definition** of task identity and progress. Any
 project-level governance layer MUST derive from the rules here rather than restate them.
 
+### Task granularity
+
+**One task is one resumable unit of work: one bundle, one `State:`, one stream of commits.**
+
+- Tasks MUST be flat. No parent tasks, no subtasks, no nested bundle directories.
+- Structure *inside* a task belongs in `01-plan.md` as phases. Phases need no id, no bundle, and
+  no separate status.
+- Work that genuinely advances in parallel becomes **sibling tasks**, each with a full bundle. Group
+  them with `feature_id` in the registry when `project-hub` is installed.
+
+Two mechanisms make flatness a rule rather than a preference:
+
+- Task discovery scans only the immediate children of `active/` and `archive/`. A bundle nested one
+  level deeper is invisible, and the enclosing directory is mistaken for a task.
+- Task resolution returns exactly one task. A parent and a child both `in-progress` is an ambiguous
+  resolution, so every resume stops to ask which one — and running several strands at once is the
+  reason to split in the first place.
+
+A third reason is quieter: `Task: T-###` is single-valued, so commits attach to the child. A parent
+task ends up with no commits, no verification, and no evidence — a status field nobody can check.
+
+When a bundle grows unmanageable, the correct reading is that the work was several sibling tasks
+from the start, not that the task needs children.
+
 ### Task progress (source of truth)
 
 **Authoritative file:** `dev-docs/**/active/<task-slug>/00-overview.md`
@@ -127,9 +151,9 @@ and a repository without the hub still needs working commit links.
 - MUST NOT infer meaning from a number when reading one.
 - MUST NOT skip ahead to reach a "better" number. Allocation is always highest + 1.
 
-Encoding a scheme in the ID leaves the scheme in one head. Anyone reading
-`T-901` later — human or agent — has no rule for decoding, so they either ignore the convention or
-invent a conflicting one.
+Encoding a scheme in the ID leaves the scheme in one head. Anyone reading `T-901` later — human
+or agent — has no rule for decoding, so they either ignore the convention or invent a conflicting
+one.
 
 Categorize with fields that have names:
 
