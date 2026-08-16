@@ -1,15 +1,25 @@
 ---
-name: update-dev-docs-for-handoff
-description: Bring an existing dev-docs task bundle up to date with progress, decisions, pitfalls, and verification evidence, then archive it once the task is done and verified. Use when the user pauses or hands off work, when a task becomes blocked, when a refactor changes the plan or architecture, or when a task is finished. Separates what actually landed from what is still uncommitted, and never marks work complete without recorded verification. If no task bundle exists yet, use start-dev-docs-task instead.
+name: update-dev-docs-task
+description: Bring an existing dev-docs task bundle back in line with what the repository actually contains — progress, decisions, pitfalls, verification evidence — and archive it once the task is done. Use at a checkpoint mid-implementation (a phase finished, a decision made, a check run), and again when the user pauses, hands off, hits a blocker, changes the plan, or finishes. Separates what landed from what is still uncommitted, and never marks work complete without recorded verification. If no bundle exists yet use start-dev-docs-task; to pick up a task you have no context on, use resume-dev-docs-task first.
 ---
 
-# Update Dev Docs for Handoff
+# Update Dev Docs Task
 
-Close the gap between what the repository now contains and what the task bundle claims, so
-the next session — or the next person — can continue without reconstructing your reasoning.
+Close the gap between what the repository now contains and what the task bundle claims, so the next
+session — or the next person — can continue without reconstructing your reasoning.
 
-The failure this prevents is a bundle that describes intent from three days ago while the code has
-moved on. A stale bundle is worse than no bundle, because a stale bundle is confidently wrong.
+Run it at checkpoints, not only at the end. The failure this prevents is a bundle that describes
+intent from three days ago while the code has moved on, and a stale bundle is worse than no bundle
+because a stale bundle is confidently wrong. Waiting for a handoff to catch up on three days of
+notes is how bundles rot.
+
+## When to run
+
+| Moment | Depth |
+|--------|-------|
+| A phase completed, a decision made, a check run | Touch the files the change affected. Minutes, not a full pass. |
+| Pausing, handing off, or blocked | Full pass. Someone else picks up from here. |
+| Task finished and verified | Full pass, then archive. |
 
 ## Workflow
 
@@ -51,9 +61,10 @@ moved on. A stale bundle is worse than no bundle, because a stale bundle is conf
 
 ## Reader test
 
-The handoff is done when a fresh reader can answer, from the bundle alone: what changed, what state
-it is in, what the next three actions are (with commands and paths), and how to verify success.
-Anything still requiring tribal knowledge goes into `03-implementation-notes.md` before you stop.
+A full pass is done when a fresh reader can answer, from the bundle alone: what changed, what state
+the work is in, what the next three actions are (with commands and paths), and how to verify
+success. Anything still requiring tribal knowledge goes into `03-implementation-notes.md` before you
+stop.
 
 ## Assets
 

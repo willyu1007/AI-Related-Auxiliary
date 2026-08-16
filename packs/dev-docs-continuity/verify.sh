@@ -25,7 +25,16 @@ node .githooks/install.mjs >/dev/null
 mkdir -p dev-docs/active/sample
 printf '# Sample\n\n## Status\n- State: in-progress\n- Next step: verify\n\n## Goal\nSmoke test.\n' \
   > dev-docs/active/sample/00-overview.md
+
+# Coverage boundary: this pack ships no allocator. Allocating T-### is a rule in the Task Contract
+# that start-dev-docs-task follows, so a shell test cannot exercise it -- the bundle below starts
+# from an already-allocated id on purpose. What is under test here is everything downstream: that
+# the hooks work off .ai-task.yaml alone, with no control script present.
 printf 'version: 1\ntask_id: T-001\nslug: sample\n' > dev-docs/active/sample/.ai-task.yaml
+
+# The allocation rule itself must at least be executable as written.
+NEXT=$(grep -rh '^task_id:' --include='.ai-task.yaml' . | grep -oE 'T-[0-9]{3}' | sort -u | tail -1)
+[ "$NEXT" = "T-001" ] || fail "task-id scan from the Task Contract returned '$NEXT', expected T-001"
 
 git checkout -q -b feat/T-001-sample
 git add -A
@@ -53,4 +62,4 @@ if SKIP_TASK_TRAILER=1 git -c user.email=ci@local -c user.name=ci \
   fail "commit-msg accepted a non-conventional subject"
 fi
 
-echo "standalone install, shell-fallback trailer injection, negative case, format gate"
+echo "standalone install, id-scan rule, shell-fallback trailer injection, negative case, format gate"

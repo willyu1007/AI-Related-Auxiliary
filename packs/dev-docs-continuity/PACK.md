@@ -38,9 +38,10 @@ injection and validation.
 
 | Path | Role |
 |------|------|
-| `dev-docs/AGENTS.md` | Entry point. Owns the Decision Gate, the **Task Contract**, and the Resume Protocol. |
+| `dev-docs/AGENTS.md` | Entry point. Owns the Decision Gate and the **Task Contract**, including task-ID allocation. |
 | `.ai/skills/workflows/dev-docs/start-dev-docs-task/` | Opens a task: roadmap and/or bundle (+ 8 templates) |
-| `.ai/skills/workflows/dev-docs/update-dev-docs-for-handoff/` | Updates / archives a bundle |
+| `.ai/skills/workflows/dev-docs/resume-dev-docs-task/` | Rebuilds context for work in flight; owns the Resume Protocol |
+| `.ai/skills/workflows/dev-docs/update-dev-docs-task/` | Checkpoints, hands off, and archives a bundle |
 | `.githooks/prepare-commit-msg` | Injects `Task:` from a task branch |
 | `.githooks/commit-msg` | Validates conventional format + the `Task:` trailer |
 | `.githooks/install.mjs` | Points `core.hooksPath` at `.githooks/` (shared, idempotent) |
@@ -50,7 +51,7 @@ injection and validation.
 `files/` mirrors the layout of the AI-friendly repository template, where `.ai/skills/` is the
 single source of truth and provider wrappers are generated from it.
 
-If your project has no such SSOT mechanism, put the two skill directories directly where your
+If your project has no such SSOT mechanism, put the three skill directories directly where your
 agent reads them instead — for example `.claude/skills/start-dev-docs-task/`. The skill bodies do
 not depend on their own location.
 
@@ -63,7 +64,7 @@ The two layers are wired so the fast path is additive, never required:
 
 | Capability | dev-docs-continuity alone | with project-hub |
 |------------|---------------------------|------------------|
-| Resume a task | Manual read protocol in `dev-docs/AGENTS.md` | `ctl-project-governance.mjs resume --json` (one bounded packet) |
+| Resume a task | Manual read protocol in `resume-dev-docs-task` | Same skill, `ctl-project-governance.mjs resume --json` fast path |
 | Validate a `Task:` trailer | Hooks scan `.ai-task.yaml` files | Hooks call the control script |
 | Cross-task rollup | Not available | `registry.yaml` + derived views |
 

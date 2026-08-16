@@ -1,6 +1,6 @@
 ---
 name: start-dev-docs-task
-description: Open a task under dev-docs/active/<slug>/ — clarify the goal, optionally write a macro-level roadmap, and scaffold the documentation bundle (overview, plan, architecture, notes, verification, pitfalls). Use when the user asks for a plan, roadmap, milestones, or an implementation plan before coding, or when work is about to start that will run long, span sessions, or need handoff. Apply the Decision Gate in dev-docs/AGENTS.md first; for a trivial change answer with an in-chat plan and write nothing. To update or archive a bundle that already exists, use update-dev-docs-for-handoff instead.
+description: Open a task under dev-docs/active/<slug>/ — clarify the goal, optionally write a macro-level roadmap, and scaffold the documentation bundle (overview, plan, architecture, notes, verification, pitfalls). Use when the user asks for a plan, roadmap, milestones, or an implementation plan before coding, or when work is about to start that will run long, span sessions, or need handoff. Apply the Decision Gate in dev-docs/AGENTS.md first; for a trivial change answer with an in-chat plan and write nothing. To record progress on a bundle that already exists use update-dev-docs-task, and to pick up work already in flight use resume-dev-docs-task.
 ---
 
 # Start Dev Docs Task
@@ -55,7 +55,19 @@ The gate produces one of three outcomes:
    `00-overview.md` `State:` is the source of truth for task progress — see the Task Contract in
    `dev-docs/AGENTS.md`. Get the section right or the whole continuity chain breaks.
 
-6. **Hand back** the confirmed goal, where the artifacts live, and the next three concrete actions.
+6. **Allocate the task ID.** Write `dev-docs/active/<slug>/.ai-task.yaml`:
+
+   ```yaml
+   version: 1
+   task_id: T-007
+   slug: <slug>
+   ```
+
+   Follow "Allocating a task ID" in `dev-docs/AGENTS.md` to pick the number. Skipping the step
+   leaves the task unlinked from commits, which means no `Task:` trailer and no timeline to resume
+   from later — the bundle exists but continuity does not.
+
+7. **Hand back** the confirmed goal, where the artifacts live, and the next three concrete actions.
    Do not start implementing in the same turn unless the user asked you to.
 
 ## Requirements alignment (optional)

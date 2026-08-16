@@ -6,10 +6,11 @@ Persistent task documentation for context preservation across sessions.
 
 | Condition | Action |
 |-----------|--------|
-| Complex task (multi-module, multi-session, >2 hours) | Create task bundle |
-| Existing task continued by user intent or a related task branch | Follow the Resume Protocol |
-| User requests a pause or handoff | Update docs via `update-dev-docs-for-handoff` |
-| Task completed and verified | Archive via `update-dev-docs-for-handoff` with status=done |
+| Complex task (multi-module, multi-session, >2 hours) | Open a bundle via `start-dev-docs-task` |
+| Work already in flight is continued, or a handoff is accepted | Rebuild context via `resume-dev-docs-task` |
+| A phase completes, a decision is made, or a check is run | Checkpoint via `update-dev-docs-task` |
+| User requests a pause or handoff | Full pass via `update-dev-docs-task` |
+| Task completed and verified | Archive via `update-dev-docs-task` with status=done |
 
 ## Decision Gate (MUST)
 
@@ -90,8 +91,24 @@ Validation rules:
   is **not** authoritative — `00-overview.md` `State:` wins.
 - If `updated` is present, the value MUST match `YYYY-MM-DD`.
 
-A missing `.ai-task.yaml` is tolerated (the task is simply unlinked from commits), but an existing
-file MUST be valid.
+A missing `.ai-task.yaml` is tolerated, but the task is then unlinked from commits: no `Task:`
+trailer can be validated, so no commit timeline can be rebuilt. An existing file MUST be valid.
+
+### Allocating a task ID
+
+Every task bundle gets its ID when the bundle is created, not later.
+
+```bash
+grep -rh '^task_id:' --include='.ai-task.yaml' . | grep -oE 'T-[0-9]{3}' | sort -u | tail -1
+```
+
+Take the highest existing ID and add one, zero-padded to three digits; `T-001` when the scan
+returns nothing. Because IDs are never reused, the highest ID is always the correct base even when
+lower ones were archived or deleted.
+
+If the `project-hub` pack is installed, `ctl-project-governance.mjs sync --apply` implements the
+same rule and will fill in a missing file — but do not rely on that. Allocation belongs to the task
+layer, and a repository without the hub still needs working commit links.
 
 ## Coding Gate (MUST)
 
@@ -102,7 +119,7 @@ Before making any code/config changes for a task that meets the Decision Gate:
    - update `00-overview.md` when status changes
    - append to `03-implementation-notes.md` after each phase
    - record every verification run in `04-verification.md` (commands + outcomes)
-3. Before an explicit pause, handoff, or task completion, run `update-dev-docs-for-handoff`.
+3. At each checkpoint, and before any pause, handoff, or completion, run `update-dev-docs-task`.
 
 ## Commit Gate (MUST)
 
@@ -115,8 +132,8 @@ Task docs describe intent and current state; commits record what landed.
 - MUST NOT force broken or unverified work into a commit. Preserve and report any remaining
   worktree changes accurately.
 
-The trailer is what links a commit to a task bundle, and is the only mechanism the Resume Protocol
-uses to reconstruct a timeline.
+The trailer is what links a commit to a task bundle, and is the only mechanism `resume-dev-docs-task`
+has to reconstruct a timeline.
 
 When hooks are installed (`node .githooks/install.mjs`), `prepare-commit-msg` injects `Task:`
 only from a branch containing one valid task ID.
@@ -135,51 +152,11 @@ only from a branch containing one valid task ID.
 
 ## AI Instructions
 
-### Resume Protocol
+### Resuming Existing Work
 
-For a request that continues an existing task, reconstruct context **before** reading
-implementation files.
-
-**Fast path.** If `.ai/scripts/ctl-project-governance.mjs` exists (the `project-hub` pack is
-installed), one command produces the whole packet:
-
-```bash
-node .ai/scripts/ctl-project-governance.mjs resume --json
-```
-
-Pass `--task T-###` when the request names a task. Then skip to the Interpretation rules.
-
-**Manual path.** Without the script, perform the same steps in order:
-
-1. **Resolve the task.** Take the first match:
-   1. a `T-###` named in the request
-   2. a `T-###` found in the current branch name (`git branch --show-current`)
-   3. the single `dev-docs/**/active/*/` bundle whose `State:` is `in-progress`
-   4. the single bundle whose `State:` is `blocked`
-
-   If a step yields more than one candidate, stop and ask. Do not guess.
-
-2. **Read the task head.** From `00-overview.md`: `State:`, the next concrete step, and the goal.
-
-3. **Rebuild the commit timeline.**
-
-   ```bash
-   git log --grep="^Task: T-###" --extended-regexp --format="%h %ad %s" --date=short -n 20
-   ```
-
-4. **Check the worktree.** `git status --short`. Uncommitted changes may be ahead of the timeline.
-
-5. **Read the do-not-repeat summary** at the top of `05-pitfalls.md`.
-
-6. **Read further only as needed** — `01-plan.md` for the remaining phases, `03-implementation-notes.md`
-   for open TODOs, `04-verification.md` for what has been checked.
-
-**Interpretation rules** (both paths):
-- A dirty worktree means inspect `git status --short` and `git diff` before writing code.
-- An empty commit timeline means progress is **unknown**, not zero.
-- When Git history and the task document disagree about what landed, Git history wins; then correct
-  the document.
-- Do not run task recovery for unrelated work.
+For a request that continues work already in flight, run `resume-dev-docs-task` **before** reading
+implementation files. The skill owns the full protocol — task resolution order, the commit-timeline
+reconstruction, and the rules for reconciling the documents against Git history.
 
 ### During Work
 
@@ -194,13 +171,14 @@ Pass `--task T-###` when the request names a task. Then skip to the Interpretati
 | Workflow | Use When |
 |----------|----------|
 | `start-dev-docs-task` | Opening a task: roadmap, bundle, or both |
-| `update-dev-docs-for-handoff` | Pausing, handing off, unblocking, or completing |
+| `resume-dev-docs-task` | Picking up work already in flight; accepting a handoff |
+| `update-dev-docs-task` | Checkpointing mid-work, pausing, handing off, or completing |
 
 ### Archive Rules
 
 When task status changes to "done" and all verification passes:
 1. Move `dev-docs/active/<task-slug>/` to `dev-docs/archive/<task-slug>/`
-2. `update-dev-docs-for-handoff` handles the move when status=done
+2. `update-dev-docs-task` handles the move when status=done
 
 ### Project Hub Integration (optional)
 

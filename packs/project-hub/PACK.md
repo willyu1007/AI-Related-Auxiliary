@@ -68,7 +68,7 @@ node .ai/scripts/ctl-project-governance.mjs current-task --format id
 node .ai/scripts/ctl-project-governance.mjs map --task T-001 --feature F-002 --apply
 ```
 
-`resume` is the accelerated form of the Resume Protocol in `dev-docs/AGENTS.md`: same semantics,
+`resume` is the accelerated form of the protocol in the `resume-dev-docs-task` skill: same semantics,
 one call instead of six reads, with bounded output that will not flood the context window.
 
 ## Single project by design
