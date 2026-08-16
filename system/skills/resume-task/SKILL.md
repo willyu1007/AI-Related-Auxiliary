@@ -1,6 +1,6 @@
 ---
 name: resume-task
-description: Rebuild context for a dev-docs task already in flight before touching any code — resolve which task is meant, read its current state, reconstruct the commit timeline from Task trailers, and check the worktree for changes that ran ahead of the record. Use whenever the user continues, resumes, or picks work back up ("continue the auth work", "where were we", "pick up T-012", "keep going"), at the start of a session on an existing branch, or when accepting a handoff. Reports disagreement between the documents and Git history instead of trusting either blindly. To open a new task use start-task; to write findings back use sync-task.
+description: Rebuild context for a dev-docs task already in flight, before touching any code: resolve which task is meant, read its state, reconstruct the commit timeline from Task trailers, and check the worktree. Use for "continue the auth work", "where were we", "pick up T-012", a session starting on an existing branch, or accepting a handoff. Reports where the documents and Git history disagree instead of trusting either.
 ---
 
 # Resume Task

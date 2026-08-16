@@ -1,6 +1,6 @@
 ---
 name: project-status
-description: Answer progress questions across all dev-docs tasks without touching anything — task inventory, overall progress, what to do next, blockers, and the documented semantic focus, each ending in an actionable command. Use when the user asks what is in flight, what is blocked, how far along the project is, or what the current focus is. Reports only what the artifacts and Git history actually say, and reports gaps as unknown rather than inferring. Read-only: to open, update, hand off, or resume a specific task, use start-task, sync-task, handoff-task, or resume-task.
+description: Answer progress questions across all dev-docs tasks without writing anything: inventory, overall progress, blockers, what to do next, and the documented focus. Use for "what is in flight", "what is blocked", "how far along are we". Reports gaps as unknown rather than inferring. Read-only — for one specific task the user intends to continue, use resume-task.
 ---
 
 # Project Status

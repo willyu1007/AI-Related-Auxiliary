@@ -1,6 +1,6 @@
 ---
 name: sync-task
-description: Record progress on an in-flight dev-docs task — update the bundle to match what the repository now contains, commit the verified part with a Task trailer, and propagate the new status into the project hub. Use at a checkpoint during implementation: a phase finished, a decision made, a check run, a blocker hit. Also use when the hub has drifted from the task bundles and needs repair. Owns the Git hooks that link commits to tasks. For the full pass before someone else takes over use handoff-task; to open a task use start-task; to pick one up use resume-task.
+description: Checkpoint a dev-docs task that is in flight: bring the bundle level with the repository, commit the verified part with a Task trailer, and propagate the new status to the project hub. Use when a phase finishes, a decision is made, a check runs, a blocker appears, or the hub has drifted from the bundles. Owns the Git hooks that link commits to tasks. For the full pass before stopping, use handoff-task.
 ---
 
 # Sync Task

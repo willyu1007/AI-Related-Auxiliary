@@ -1,6 +1,6 @@
 ---
 name: handoff-task
-description: Close out a dev-docs task so someone else can take over or so it can be archived — run a full pass over the bundle, state plainly what landed versus what is still uncommitted, refresh the project hub's feature brief, and move the task to dev-docs/archive/ once it is done and verified. Use when the user pauses work, hands work off, hits a blocker they are stopping on, or finishes a task. The reader test is the bar: a fresh reader must be able to continue from the bundle alone. For a quick mid-implementation checkpoint use sync-task instead; to pick up a handoff use resume-task.
+description: Close out a dev-docs task for whoever picks it up next: a full pass over the bundle, landed work separated from uncommitted, the feature brief refreshed, and the task archived once done and verified. Use when the user pauses, hands off, stops on a blocker, or finishes. The bar is that a fresh reader can continue from the bundle alone. For a mid-implementation checkpoint, use sync-task.
 ---
 
 # Handoff Task
