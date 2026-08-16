@@ -32,8 +32,11 @@ printf '# Sample\n\n## Status\n- State: in-progress\n- Next step: verify\n\n## G
 # the hooks work off .ai-task.yaml alone, with no control script present.
 printf 'version: 1\ntask_id: T-001\nslug: sample\n' > dev-docs/active/sample/.ai-task.yaml
 
-# The allocation rule itself must at least be executable as written.
-NEXT=$(grep -rh '^task_id:' --include='.ai-task.yaml' . | grep -oE 'T-[0-9]{3}' | sort -u | tail -1)
+# The allocation scan from the Task Contract must be executable exactly as written, including on a
+# repository with no commits yet (git log fails, the working-tree half still answers).
+NEXT=$( { grep -rh '^task_id:' --include='.ai-task.yaml' . 2>/dev/null
+          git log --all --format=%B 2>/dev/null | grep -E '^Task: T-[0-9]{3}'
+        } | grep -oE 'T-[0-9]{3}' | sort -u | tail -1)
 [ "$NEXT" = "T-001" ] || fail "task-id scan from the Task Contract returned '$NEXT', expected T-001"
 
 git checkout -q -b feat/T-001-sample

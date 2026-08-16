@@ -99,16 +99,45 @@ trailer can be validated, so no commit timeline can be rebuilt. An existing file
 Every task bundle gets its ID when the bundle is created, not later.
 
 ```bash
-grep -rh '^task_id:' --include='.ai-task.yaml' . | grep -oE 'T-[0-9]{3}' | sort -u | tail -1
+{ grep -rh '^task_id:' --include='.ai-task.yaml' . 2>/dev/null
+  git log --all --format=%B 2>/dev/null | grep -E '^Task: T-[0-9]{3}'
+} | grep -oE 'T-[0-9]{3}' | sort -u | tail -1
 ```
 
-Take the highest existing ID and add one, zero-padded to three digits; `T-001` when the scan
-returns nothing. Because IDs are never reused, the highest ID is always the correct base even when
-lower ones were archived or deleted.
+Take the highest ID and add one, zero-padded to three digits; `T-001` when the scan returns
+nothing. Because IDs are never reused, the highest is always the correct base even when lower ones
+were archived or deleted.
 
-If the `project-hub` pack is installed, `ctl-project-governance.mjs sync --apply` implements the
-same rule and will fill in a missing file — but do not rely on that. Allocation belongs to the task
-layer, and a repository without the hub still needs working commit links.
+The scan reads Git history as well as the working tree because the working tree alone is blind to
+other branches. In a linked worktree, a sibling worktree's committed task is invisible to `grep`,
+so both would allocate the same number and the collision would only surface at merge. `--all`
+closes that gap. Two worktrees allocating simultaneously with neither committed can still collide;
+lint reports the duplicate, and the fix is to renumber the newer task before merging.
+
+If the `project-hub` pack is installed, `ctl-project-governance.mjs sync --apply` applies the same
+rule and fills in a missing file — but do not depend on that. Allocation belongs to the task layer,
+and a repository without the hub still needs working commit links.
+
+### Task IDs carry no meaning
+
+`T-###` is an opaque key. It records identity and nothing else.
+
+- MUST NOT encode meaning in the number — no reserved ranges for mainline versus side work, for
+  validation tasks, for parallel branches, or for anything else.
+- MUST NOT infer meaning from a number when reading one.
+- MUST NOT skip ahead to reach a "better" number. Allocation is always highest + 1.
+
+Encoding a scheme in the ID leaves the scheme in one head. Anyone reading
+`T-901` later — human or agent — has no rule for decoding, so they either ignore the convention or
+invent a conflicting one.
+
+Categorize with fields that have names:
+
+| Need | Use |
+|------|-----|
+| Tag a task (validation, spike, chore) | `keywords:` in `.ai-task.yaml` |
+| Group tasks under one deliverable | `feature_id` / `milestone_id` in the registry (`project-hub`) |
+| Separate lines of work | The branch name |
 
 ## Coding Gate (MUST)
 

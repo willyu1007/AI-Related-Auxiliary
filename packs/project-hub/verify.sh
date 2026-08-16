@@ -59,6 +59,41 @@ node .ai/scripts/ctl-project-governance.mjs lint --strict >/dev/null || fail "li
 node .ai/scripts/ctl-project-governance.mjs map --task T-001 --requirement R-001 --apply >/dev/null
 grep -q 'R-001' .ai/project/registry.yaml || fail "map did not record the requirement"
 
+# Two linked worktrees branched from the same base must not allocate the same id.
+#
+# The second worktree's registry is the one committed at BASE, so it knows only T-001. The first
+# worktree's T-002 exists solely on its own branch. Only git history reveals it -- which is the
+# point: branching both worktrees from HEAD would let the shared registry answer, and the test
+# would pass even with history scanning removed.
+BASE=$(git rev-parse HEAD)
+
+new_worktree_task() { # <path> <branch> <slug>
+  rm -rf "$1"
+  git worktree add -q "$1" -b "$2" "$BASE"
+  mkdir -p "$1/dev-docs/active/$3"
+  printf '# %s\n\n## Status\n- State: planned\n- Next step: verify\n\n## Goal\nSmoke test.\n' "$3" \
+    > "$1/dev-docs/active/$3/00-overview.md"
+  ( cd "$1" && node .ai/scripts/ctl-project-governance.mjs sync --apply >/dev/null )
+  grep -oE 'T-[0-9]{3}' "$1/dev-docs/active/$3/.ai-task.yaml"
+}
+
+WT_A="${TMPDIR:-/tmp}/aux-wt-a.$$"
+WT_B="${TMPDIR:-/tmp}/aux-wt-b.$$"
+
+ID_A=$(new_worktree_task "$WT_A" feat/sib-a alpha)
+[ "$ID_A" = "T-002" ] || fail "first worktree allocated $ID_A, expected T-002"
+( cd "$WT_A" && git add -A && git -c user.email=ci@local -c user.name=ci \
+    commit -qm "feat(alpha): sibling work
+
+Task: $ID_A" >/dev/null )
+
+ID_B=$(new_worktree_task "$WT_B" feat/sib-b beta)
+[ "$ID_B" = "T-003" ] || fail "second worktree allocated $ID_B, expected T-003 (collides with $ID_A)"
+
+git worktree remove --force "$WT_A"
+git worktree remove --force "$WT_B"
+git branch -D feat/sib-a feat/sib-b >/dev/null 2>&1 || true
+
 # archiving flips the effective status.
 mkdir -p dev-docs/archive
 mv dev-docs/active/sample dev-docs/archive/
@@ -66,4 +101,4 @@ node .ai/scripts/ctl-project-governance.mjs sync --apply >/dev/null
 grep -q 'status: archived' .ai/project/registry.yaml || fail "archive status not propagated"
 node .ai/scripts/ctl-project-governance.mjs lint --strict >/dev/null || fail "lint failed after archive"
 
-echo "init, hook sync, single-project layout, lint, resume, idempotency, map, archive"
+echo "init, hook sync, single-project layout, lint, resume, idempotency, map, worktree ids, archive"

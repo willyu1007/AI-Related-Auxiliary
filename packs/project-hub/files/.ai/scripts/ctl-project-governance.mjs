@@ -1502,6 +1502,21 @@ function runGit(repoRoot, args) {
   }
 }
 
+/**
+ * Task IDs linked by a `Task:` trailer anywhere in the repository's history, across all branches.
+ * Used only to avoid reallocating an ID; never as a source of task state.
+ */
+function taskIdsFromAllBranches(repoRoot) {
+  const raw = runGit(repoRoot, ['log', '--all', '--format=%B']);
+  if (!raw) return [];
+  const ids = new Set();
+  for (const line of normalizeEol(raw).split('\n')) {
+    const m = /^Task:[ \t]*(T-\d{3})[ \t]*$/.exec(line);
+    if (m) ids.add(m[1]);
+  }
+  return Array.from(ids);
+}
+
 function readCurrentBranch(repoRoot) {
   const raw = runGit(repoRoot, ['branch', '--show-current']);
   if (raw === null) return '';
@@ -2137,6 +2152,10 @@ function cmdSync({ repoRoot, dryRun, apply, initIfMissing, changelog }) {
       if (TASK_ID_RE.test(id)) existingIds.add(id);
     }
   }
+
+  // And IDs linked from any branch's history. The working tree is blind to other branches, so a
+  // linked worktree would otherwise reallocate an ID a sibling worktree already committed.
+  for (const id of taskIdsFromAllBranches(repoRoot)) existingIds.add(id);
 
   function nextId() {
     // Allocate monotonically increasing IDs (best-effort) to avoid reusing historical task IDs.
