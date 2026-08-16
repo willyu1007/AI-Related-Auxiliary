@@ -1,6 +1,6 @@
 ---
 name: start-task
-description: Open a new dev-docs task: confirm no existing task already covers the work, then scaffold dev-docs/active/<slug>/ with a roadmap, the six-file bundle, and a T-### id. Use when the user asks for a plan, roadmap, or milestones before coding, or when long or cross-cutting work is starting. Apply the Decision Gate in dev-docs/AGENTS.md first — a trivial change gets an in-chat plan and no files. For a task that already exists, use sync-task, handoff-task, or resume-task.
+description: Opening a new tracked task. Use when the user asks for a plan, roadmap, or milestones before coding, or when substantial new work is about to start. Not for a trivial change — answer that in chat and write no files.
 ---
 
 # Start Task

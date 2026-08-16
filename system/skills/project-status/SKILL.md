@@ -1,6 +1,6 @@
 ---
 name: project-status
-description: Answer progress questions across all dev-docs tasks without writing anything: inventory, overall progress, blockers, what to do next, and the documented focus. Use for "what is in flight", "what is blocked", "how far along are we". Reports gaps as unknown rather than inferring. Read-only — for one specific task the user intends to continue, use resume-task.
+description: Progress questions spanning tasks, answered without writing anything. Use for "what is in flight", "what is blocked", "how far along are we", "what should I do next".
 ---
 
 # Project Status

@@ -1,6 +1,6 @@
 ---
 name: sync-task
-description: Checkpoint a dev-docs task that is in flight: bring the bundle level with the repository, commit the verified part with a Task trailer, and propagate the new status to the project hub. Use when a phase finishes, a decision is made, a check runs, a blocker appears, or the hub has drifted from the bundles. Owns the Git hooks that link commits to tasks. For the full pass before stopping, use handoff-task.
+description: Updating the record while work continues. Use when a phase lands, a decision is made, a check runs, or a blocker appears and the work goes on; when the project hub has drifted from the task bundles; or when setting up commit-to-task linking for a repository.
 ---
 
 # Sync Task

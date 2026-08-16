@@ -142,6 +142,21 @@ function runStatic(packs) {
     skillOwner.set(declared, entry.name);
   }
 
+  // Descriptions are the routing signal and are all loaded at once, so a description naming a
+  // sibling puts that sibling's name in an entry that is not the sibling — the router then matches
+  // the name in several places. The sibling is already visible in the same list with its own
+  // trigger, so the cross-reference adds nothing. Boundaries belong in the positive trigger
+  // ("while work continues" vs "session ends"); pointers to non-skills are fine and stay.
+  for (const [name, dir] of skillOwner) {
+    const desc = (readTextOrNull(path.join(SKILLS_DIR, dir, 'SKILL.md')) || '')
+      .match(/^description:([\s\S]*?)(?=\n[a-z_]+:|\n---)/m)?.[1] || '';
+    for (const other of skillOwner.keys()) {
+      if (other !== name && desc.includes(other)) {
+        fail('description-crosslink', `${name} names "${other}" in its description`);
+      }
+    }
+  }
+
   // Skill assets carry the same hazards as pack files: a dead reference or a hook that lost its
   // exec bit fails silently.
   for (const abs of walk(SKILLS_DIR)) {

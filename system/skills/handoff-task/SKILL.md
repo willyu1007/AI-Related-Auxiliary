@@ -1,6 +1,6 @@
 ---
 name: handoff-task
-description: Close out a dev-docs task for whoever picks it up next: a full pass over the bundle, landed work separated from uncommitted, the feature brief refreshed, and the task archived once done and verified. Use when the user pauses, hands off, stops on a blocker, or finishes. The bar is that a fresh reader can continue from the bundle alone. For a mid-implementation checkpoint, use sync-task.
+description: Ending a session with the task still open, or closing the task for good. Use when the user asks to pause, stop, hand off, or archive; or when context has degraded enough to risk the quality of the next work.
 ---
 
 # Handoff Task
@@ -8,9 +8,30 @@ description: Close out a dev-docs task for whoever picks it up next: a full pass
 Leave the task in a state someone else can walk into cold. Not a status update — a transfer of
 everything you know that is not already in the code.
 
-The bar is concrete: a fresh reader, with no memory of this session, can answer what changed, what
+The bar is concrete: a fresh reader, with no memory of the session, can answer what changed, what
 state the work is in, what the next three actions are, and how to verify success. Anything still
 living only in your head is the thing to write down.
+
+## Finish the work first
+
+Complete the instruction in hand before starting a handoff. A handoff produced by abandoning the
+requested work is a worse outcome than no handoff — the user asked for something and receives
+documentation about the absence of it.
+
+That applies most sharply to the context trigger, which is the one that can occur to you
+mid-request. Running short of context is not a reason to stop early, but a reason to stop
+*cleanly*, once the current piece is finished.
+
+### Judging context
+
+The signal is degraded work, not a percentage. Watch for:
+
+- Re-reading files already read earlier on
+- Uncertainty about decisions made earlier in the same session
+- Losing the thread of the plan and needing to reconstruct the whole thing
+
+Those mean quality is already slipping. Plenty of context consumed while every decision is still
+clear is not a trigger — keep working.
 
 ## Workflow
 
@@ -50,6 +71,21 @@ living only in your head is the thing to write down.
    node .ai/scripts/ctl-project-governance.mjs sync --apply   # registry status becomes archived
    ```
 
+## When the budget is short
+
+A full pass abandoned halfway is worse than a small honest one: the bundle ends up part new and
+part stale, and the next reader cannot tell which is which. So write in descending order of value
+and stop at a clean point.
+
+| Budget | Write |
+|--------|-------|
+| Comfortable | The full pass above |
+| Tight | Three things only: `State:` and the next concrete step in `00-overview.md`; the list of uncommitted changes; any pitfall hit this session |
+| Nearly gone | One commit with a `Task: T-###` trailer whose message states what landed and what is still pending |
+
+The next step and the uncommitted list are what a successor needs first. Architecture notes and
+verification history can wait for the next session; those two cannot.
+
 ## Handoff checklist
 
 `./templates/handoff-checklist.md` is the short form to paste into the bundle. A worked example is
@@ -63,6 +99,8 @@ in `./examples/sample-handoff-update.md`.
 - Never move or archive a directory without approval.
 - Never delete a prior decision or pitfall; supersede with an explanation.
 - Never leave tribal knowledge unwritten — whatever the next person needs, the bundle needs.
+- Never break off a request part-way to write a handoff; finish what was asked, then hand off.
+- Never leave a full pass half-applied. Under pressure, write less and finish the smaller thing.
 - No secrets, credentials, or tokens in any artifact.
 
 ## Contract
