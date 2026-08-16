@@ -108,6 +108,32 @@ function runStatic(packs) {
     }
   }
 
+  // A skill is addressed by its frontmatter `name`, but lives in a directory. A rename that
+  // updates one and not the other breaks routing silently.
+  const skillOwner = new Map();
+  for (const pack of packs) {
+    const filesDir = path.join(PACKS_DIR, pack, 'files');
+    for (const abs of walk(filesDir)) {
+      if (path.basename(abs) !== 'SKILL.md') continue;
+      const dirName = path.basename(path.dirname(abs));
+      const shipped = path.relative(filesDir, abs).split(path.sep).join('/');
+      const declared = (readTextOrNull(abs) || '').match(/^name:[ \t]*(\S+)[ \t]*$/m)?.[1];
+
+      if (!declared) {
+        fail('skill-name', `${pack}: ${shipped} has no frontmatter name`);
+        continue;
+      }
+      if (declared !== dirName) {
+        fail('skill-name', `${pack}: ${shipped} declares "${declared}" but sits in "${dirName}/"`);
+      }
+      if (skillOwner.has(declared)) {
+        fail('skill-name', `${pack}: skill "${declared}" is also shipped by "${skillOwner.get(declared)}"`);
+      } else {
+        skillOwner.set(declared, pack);
+      }
+    }
+  }
+
   for (const pack of packs) {
     const packDir = path.join(PACKS_DIR, pack);
     const filesDir = path.join(packDir, 'files');
@@ -160,7 +186,9 @@ function runStatic(packs) {
     }
   }
 
-  if (failures.length === 0) console.log(c.green('  ok') + c.dim('  layout, exec bits, hygiene, references'));
+  if (failures.length === 0) {
+    console.log(c.green('  ok') + c.dim(`  layout, exec bits, hygiene, references, ${skillOwner.size} skill names`));
+  }
 }
 
 // --------------------------------------------------------------------------------------------

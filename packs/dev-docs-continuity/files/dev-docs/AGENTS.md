@@ -13,8 +13,8 @@ Persistent task documentation for context preservation across sessions.
 
 ## Decision Gate (MUST)
 
-The gate below is the **single definition**. `create-dev-docs-plan` and `plan-maker` reference
-the gate and MUST NOT restate the criteria.
+The gate below is the **single definition**. `start-dev-docs-task` references the gate and MUST NOT
+restate the criteria.
 
 Create a dev-docs task bundle under `dev-docs/active/<task-slug>/` only when the task is **complex** and benefits from context preservation.
 
@@ -37,7 +37,7 @@ Notes:
 - ">= 3 sequential steps with verification" is too common; the pattern is **not** a trigger for dev-docs.
 
 If the user asks for a roadmap/plan before coding:
-- If the task meets the Create Conditions above, use `plan-maker` to create `roadmap.md`, then use `create-dev-docs-plan` for the full bundle.
+- If the task meets the Create Conditions above, use `start-dev-docs-task`, which writes `roadmap.md` and the bundle.
 - Otherwise, provide an in-chat plan and do NOT write under `dev-docs/`.
 
 ## Task Contract (MUST)
@@ -96,13 +96,13 @@ file MUST be valid.
 ## Coding Gate (MUST)
 
 Before making any code/config changes for a task that meets the Decision Gate:
-1. Ensure the task bundle exists under `dev-docs/active/<task-slug>/` (create via `create-dev-docs-plan` if missing).
-2. If the work is ambiguous, or the user asked for a plan/roadmap, create `roadmap.md` via `plan-maker` before implementation.
-3. During implementation, keep the bundle current:
+1. Ensure the task bundle exists under `dev-docs/active/<task-slug>/`. If it is missing, or the work
+   is ambiguous, or the user asked for a plan/roadmap, run `start-dev-docs-task` first.
+2. During implementation, keep the bundle current:
    - update `00-overview.md` when status changes
    - append to `03-implementation-notes.md` after each phase
    - record every verification run in `04-verification.md` (commands + outcomes)
-4. Before an explicit pause, handoff, or task completion, run `update-dev-docs-for-handoff`.
+3. Before an explicit pause, handoff, or task completion, run `update-dev-docs-for-handoff`.
 
 ## Commit Gate (MUST)
 
@@ -193,9 +193,8 @@ Pass `--task T-###` when the request names a task. Then skip to the Interpretati
 
 | Workflow | Use When |
 |----------|----------|
-| `create-dev-docs-plan` | Starting new complex task |
-| `update-dev-docs-for-handoff` | Pausing, resuming, handing off, or completing |
-| `plan-maker` | A macro-level roadmap is wanted before implementation |
+| `start-dev-docs-task` | Opening a task: roadmap, bundle, or both |
+| `update-dev-docs-for-handoff` | Pausing, handing off, unblocking, or completing |
 
 ### Archive Rules
 

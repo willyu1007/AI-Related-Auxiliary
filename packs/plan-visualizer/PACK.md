@@ -29,7 +29,7 @@ cp -R packs/plan-visualizer/files/. /path/to/your/project/
 The skill is orthogonal to task governance: nothing here reads or writes `dev-docs/`, and nothing
 knows about the project hub. A presentation tool that happens to be useful next to both.
 
-`plan-maker` (in `dev-docs-continuity`) mentions handing a finished `roadmap.md` to this skill.
+`start-dev-docs-task` (in `dev-docs-continuity`) mentions handing a finished `roadmap.md` to this skill.
 That handoff is optional in both directions — either pack works without the other.
 
 ## Boundaries

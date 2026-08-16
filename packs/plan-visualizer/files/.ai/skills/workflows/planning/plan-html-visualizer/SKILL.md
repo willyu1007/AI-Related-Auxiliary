@@ -1,13 +1,14 @@
 ---
 name: plan-html-visualizer
 description: >-
-  Use when presenting or revising a complex implementation plan, architecture or design
-  proposal, refactoring strategy, migration plan, or multi-step code change analysis as an
-  interactive HTML artifact. Also use when the user requests changes based on a previously
-  generated HTML coding plan artifact, such as modifying sections, updating diagrams,
-  changing comparisons, or adjusting implementation phases. Prefer this skill when the plan
-  benefits from navigation, diagrams, timelines, comparisons, or impact maps rather than
-  plain chat or Markdown.
+  Render an existing implementation plan, architecture or design proposal, refactoring
+  strategy, migration plan, or multi-step change analysis as a self-contained interactive
+  HTML artifact. Use when the plan benefits from navigation, diagrams, timelines,
+  comparisons, or impact maps rather than plain chat or Markdown, and when the user asks to
+  revise a previously generated HTML plan artifact — changing sections, diagrams,
+  comparisons, or phases. This skill presents a plan; it does not author one. To produce the
+  plan itself use start-dev-docs-task, and for content that reads fine as chat or Markdown,
+  answer directly instead.
 ---
 
 ## Purpose
@@ -47,7 +48,7 @@ Do not use this skill when:
 
 - The coding plan to present (required). Sources include:
   - the current conversation or a host plan-mode artifact
-  - a `plan-maker` roadmap under `dev-docs/active/<task>/roadmap.md`
+  - a `start-dev-docs-task` roadmap under `dev-docs/active/<task>/roadmap.md`
   - any existing plan document the user points to
 - For revisions: the previously generated artifact under `.ai/.tmp/html-viewer/`.
 

@@ -150,7 +150,7 @@ If a detailed bundle is required, create:
 
 ```
 dev-docs/active/<task>/
-  roadmap.md              # Macro-level planning (plan-maker)
+  roadmap.md              # Macro-level planning (start-dev-docs-task)
   00-overview.md
   01-plan.md
   02-architecture.md

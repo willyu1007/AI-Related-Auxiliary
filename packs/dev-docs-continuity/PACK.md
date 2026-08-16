@@ -39,9 +39,8 @@ injection and validation.
 | Path | Role |
 |------|------|
 | `dev-docs/AGENTS.md` | Entry point. Owns the Decision Gate, the **Task Contract**, and the Resume Protocol. |
-| `.ai/skills/workflows/dev-docs/create-dev-docs-plan/` | Creates a task bundle (+ 6 templates) |
+| `.ai/skills/workflows/dev-docs/start-dev-docs-task/` | Opens a task: roadmap and/or bundle (+ 8 templates) |
 | `.ai/skills/workflows/dev-docs/update-dev-docs-for-handoff/` | Updates / archives a bundle |
-| `.ai/skills/workflows/planning/plan-maker/` | Macro-level `roadmap.md` before implementation |
 | `.githooks/prepare-commit-msg` | Injects `Task:` from a task branch |
 | `.githooks/commit-msg` | Validates conventional format + the `Task:` trailer |
 | `.githooks/install.mjs` | Points `core.hooksPath` at `.githooks/` (shared, idempotent) |
@@ -51,8 +50,8 @@ injection and validation.
 `files/` mirrors the layout of the AI-friendly repository template, where `.ai/skills/` is the
 single source of truth and provider wrappers are generated from it.
 
-If your project has no such SSOT mechanism, put the three skill directories directly where your
-agent reads them instead — for example `.claude/skills/create-dev-docs-plan/`. The skill bodies do
+If your project has no such SSOT mechanism, put the two skill directories directly where your
+agent reads them instead — for example `.claude/skills/start-dev-docs-task/`. The skill bodies do
 not depend on their own location.
 
 ## Composing with project-hub
