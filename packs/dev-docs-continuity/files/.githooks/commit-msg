@@ -1,0 +1,132 @@
+#!/bin/sh
+#
+# Git commit-msg hook for commit message validation.
+#
+# Validates commit messages follow conventional format:
+#   <type>(<scope>): <subject>
+#
+# Types: feat, fix, docs, style, refactor, perf, test, build, ci, chore, revert
+#
+# Also checks the `Task: T-###` trailer that links a commit to a dev-docs task.
+# The check warns by default. To block instead:
+#   git config hooks.requireTaskTrailer true
+#
+# Task validation uses the project-hub control script when present, and falls back to
+# scanning `.ai-task.yaml` files directly, so the hook works with dev-docs alone.
+#
+# Skip once: SKIP_TASK_TRAILER=1 git commit -m "..."
+#
+# Install: node .githooks/install.mjs
+# Uninstall: node .githooks/install.mjs --uninstall
+#
+
+COMMIT_MSG_FILE="$1"
+COMMIT_MSG=$(cat "$COMMIT_MSG_FILE")
+
+# Skip merge commits
+if echo "$COMMIT_MSG" | grep -q '^Merge '; then
+  exit 0
+fi
+
+# Skip fixup/squash commits
+if echo "$COMMIT_MSG" | grep -qE '^(fixup|squash)! '; then
+  exit 0
+fi
+
+# Validate conventional commit format
+# Pattern: type(scope): subject OR type: subject
+PATTERN='^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\([a-z0-9-]+\))?: .{1,}'
+
+if ! echo "$COMMIT_MSG" | head -1 | grep -qE "$PATTERN"; then
+  echo "[hook] Invalid commit message format."
+  echo ""
+  echo "Expected: <type>(<scope>): <subject>"
+  echo "Types: feat, fix, docs, style, refactor, perf, test, build, ci, chore, revert"
+  echo ""
+  echo "Examples:"
+  echo "  feat(auth): add login page"
+  echo "  fix: resolve null pointer exception"
+  echo "  docs(readme): update installation guide"
+  echo ""
+  echo "Your message: $(head -1 "$COMMIT_MSG_FILE")"
+  exit 1
+fi
+
+# --- Task trailer: links the commit to a dev-docs task bundle ---
+
+if [ "$SKIP_TASK_TRAILER" = "1" ]; then
+  exit 0
+fi
+
+STRICT=$(git config --bool --get hooks.requireTaskTrailer 2>/dev/null || echo false)
+
+# task_exists <T-###> -- succeeds when the ID is anchored by an .ai-task.yaml in this repo.
+task_exists() {
+  if command -v node >/dev/null 2>&1 && [ -f .ai/scripts/ctl-project-governance.mjs ]; then
+    node .ai/scripts/ctl-project-governance.mjs current-task --task "$1" --format id >/dev/null 2>&1
+    return $?
+  fi
+
+  find . -name '.ai-task.yaml' -not -path './.git/*' -not -path '*/node_modules/*' \
+    -exec grep -lE "^task_id:[[:space:]]*${1}[[:space:]]*\$" {} + 2>/dev/null | grep -q .
+}
+
+# In strict mode the commit is rejected, so the fix is to re-commit. In warn mode the
+# commit has already been accepted, so the fix is to amend it.
+if [ "$STRICT" = "true" ]; then
+  FIX_HINT="Re-commit with the trailer: git commit -m \"<subject>\" -m \"Task: T-###\""
+else
+  FIX_HINT="Link the accepted commit: git commit --amend  (append a 'Task: T-###' trailer)"
+fi
+
+# report <message> [hint...]
+report() {
+  MSG="$1"
+  shift
+
+  if [ "$STRICT" = "true" ]; then
+    echo "[hook] $MSG"
+  else
+    echo "[hook] warning: $MSG"
+  fi
+
+  for hint in "$@"; do
+    echo "       $hint"
+  done
+
+  if [ "$STRICT" = "true" ]; then
+    echo "       (Set 'git config hooks.requireTaskTrailer false' to downgrade this to a warning.)"
+    exit 1
+  fi
+}
+
+# Parse real trailers only (not arbitrary "Task:" lines in the body).
+TASK_LINES=$(git interpret-trailers --parse <"$COMMIT_MSG_FILE" | grep -E '^Task:')
+TASK_COUNT=$(printf '%s\n' "$TASK_LINES" | grep -c .)
+
+if [ "$TASK_COUNT" -gt 1 ]; then
+  report "Multiple Task trailers found; use exactly one 'Task: T-###' trailer." "$FIX_HINT"
+  exit 0
+fi
+
+TASK_VALUE=$(printf '%s\n' "$TASK_LINES" | head -1 | sed 's/^Task:[[:space:]]*//' | tr -d '[:space:]')
+
+if [ -z "$TASK_VALUE" ]; then
+  BRANCH=$(git branch --show-current 2>/dev/null)
+  BRANCH_TASKS=$(printf '%s\n' "$BRANCH" | grep -oE 'T-[0-9]{3}' | sort -u)
+  BRANCH_TASK_COUNT=$(printf '%s\n' "$BRANCH_TASKS" | grep -c .)
+
+  if [ "$BRANCH_TASK_COUNT" -eq 1 ]; then
+    BRANCH_TASK_ID=$BRANCH_TASKS
+    if task_exists "$BRANCH_TASK_ID"; then
+      report "Missing 'Task: $BRANCH_TASK_ID' trailer for task branch '$BRANCH'." "$FIX_HINT"
+    fi
+  fi
+  exit 0
+fi
+
+if ! echo "$TASK_VALUE" | grep -qE '^T-[0-9]{3}$'; then
+  report "Invalid Task trailer value: '$TASK_VALUE' (expected T-###)." "$FIX_HINT"
+fi
+
+exit 0
