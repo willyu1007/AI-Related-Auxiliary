@@ -29,7 +29,7 @@ Selecting and composing presentation components for plan HTML artifacts.
 ## Focus and Layout
 
 - **Overview band first**: mindmap (`span-two-thirds`, auto-rendered from the semantic context model) + compact summary card (`span-third`). The mindmap doubles as a navigation and feedback surface — every node is clickable and selectable.
-- **Focus budget**: beyond the overview band, at most 2 primary views. Everything else is `data-priority="secondary"` and starts collapsed; clicking the heading expands it (handled by `scripts/interaction.js`).
+- **Focus budget**: beyond the overview band, at most 2 primary views. Everything else is `data-priority="secondary"` and starts collapsed; clicking the heading expands the section (handled by `scripts/interaction.js`).
 - **Row sharing**: pair compact views with `span-half` / `span-third` classes (for example two risk cards side by side, or comparison + decision card). Reserve `span-full` for timeline, flow graph, and dense content.
 
 ## Anti-Patterns
@@ -44,7 +44,7 @@ Selecting and composing presentation components for plan HTML artifacts.
 
 - `templates/base.html` is the page shell: header, navigation, main content grid, feedback panel, and the four embedded JSON blocks.
 - Component fragments are inserted into `<main>`; each fragment root keeps its `data-component`, `data-semantic-node-id`, `data-priority`, and `span-*` class.
-- Page scripts (`scripts/i18n.js` first, then `scripts/navigation.js`, `scripts/interaction.js`, optional `scripts/graph-support.js` + `scripts/mindmap.js` + `scripts/flow-graph.js`, then `scripts/feedback.js`) are inlined into the final artifact so it stays a single offline file. They provide in-page interaction only; there is no server or persistent runtime.
+- Page scripts (`scripts/i18n.js` first, then `scripts/navigation.js`, `scripts/interaction.js`, optional `scripts/graph-support.js` + `scripts/mindmap.js` + `scripts/flow-graph.js`, then `scripts/feedback.js`) are inlined into the final artifact, which therefore stays a single offline file. They provide in-page interaction only; there is no server or persistent runtime.
 - Mindmap and flow-graph canvases get a zoom toolbar (zoom in/out, actual size, fit width) from `scripts/graph-support.js`; the default is fit-width, which only scales down, never up.
 - Fixed component labels (Before/After, Details, Decision, Trade-offs, Alternatives, Mitigation) carry `data-i18n` attributes and are localized at runtime from `<html lang>`; agent-generated text must be written directly in the configured `artifact_language`.
 
@@ -53,4 +53,4 @@ Selecting and composing presentation components for plan HTML artifacts.
 - Every feedback-attachable element MUST carry `data-semantic-node-id` resolving to a node in `plan-semantic-context`.
 - Component roots SHOULD carry `data-component`.
 - Each rendered view MUST be registered in `plan-presentation-model` with the node ids it represents.
-- Mindmap and flow-graph nodes participate in feedback: clicking a rendered graph node selects the referenced semantic node even if it has no other rendered section.
+- Mindmap and flow-graph nodes participate in feedback: clicking a rendered graph node selects the referenced semantic node even when that node has no other rendered section.

@@ -1,58 +1,62 @@
 ---
 name: project-status-reporter
-description: Read-only progress reporter. Produces a structured status snapshot from existing project/task artifacts (project hub + dev-docs), can include semantic focus extracted from LLM-authored feature briefs, and includes an actionable next command; never modifies repo files.
+description: Answer progress questions from existing tracking artifacts without touching them — task inventory, overall progress, what to do next, blockers, and documented semantic focus, each ending in an actionable command. Use when the user asks what is in flight, what is blocked, how far along something is, or what the current focus is. Reports only what the artifacts and Git history actually say, and reports gaps as unknown rather than inferring. Read-only: to create or update tasks, change mappings, or repair drift, use project-orchestrator instead.
 ---
 
 # Project Status Reporter
 
-## Purpose
-Answer short user questions about current progress with an actionable, read-only report, including semantic focus when requested.
+Answer the question from what is written down, and make the answer actionable.
 
-## Scope
-Use `project-status-reporter` when the user wants a snapshot of project/task progress (overall or for a specific task) and the answer can be produced by reading existing tracking artifacts.
-Use `project-status-reporter` when the user asks for semantic focus, cross-feature risk, or decision context already documented in `feature-map.md` semantic briefs.
-Do not use `project-status-reporter` for requests that ask to create/update tasks, change mappings, or repair metadata drift.
+Read-only is the point of this skill, not a limitation. A status question should never be able to
+mutate the thing being reported on — which is why the skill lives apart from `project-orchestrator`.
 
 ## Response templates
 
-| Need | Reference |
-|------|-----------|
-| Task inventory | [reference/task-list.md](reference/task-list.md) |
-| Overall progress | [reference/progress-summary.md](reference/progress-summary.md) |
-| What to do next | [reference/next-action.md](reference/next-action.md) |
-| Blockers | [reference/blocked-items.md](reference/blocked-items.md) |
-| Semantic focus | [reference/semantic-focus.md](reference/semantic-focus.md) |
+Pick by what was asked, then follow that reference's **Data Source** commands:
 
-## Process
+| Question | Reference |
+|----------|-----------|
+| What tasks exist? | [reference/task-list.md](reference/task-list.md) |
+| How far along are we? | [reference/progress-summary.md](reference/progress-summary.md) |
+| What should I do next? | [reference/next-action.md](reference/next-action.md) |
+| What is blocked? | [reference/blocked-items.md](reference/blocked-items.md) |
+| What is the current focus? | [reference/semantic-focus.md](reference/semantic-focus.md) |
 
-1. Identify the query type from the user request.
-2. Determine the project slug:
-   - Use the user-provided project if present.
-   - Otherwise default to `main`.
-3. Read the corresponding reference document and use its **Data Source** command(s).
-   - For semantic questions, read semantic sections in:
-     - `.ai/project/feature-map.md` (`Semantic Feature Briefs`)
-   - `dashboard.md` is focus index context only, not semantic body source
-4. Optional (recommended for accuracy when hub exists): run
-   - `node .ai/scripts/ctl-project-governance.mjs lint --check`
-   - If lint reports errors, include a remediation command (`node .ai/scripts/ctl-project-governance.mjs sync --apply`) in the output but do not execute the write.
-5. For an `in-progress` or `blocked` task, run
-   `node .ai/scripts/ctl-project-governance.mjs resume --task <T-###> --json` and report its
-   timeline, worktree warnings, and any disagreement with documented status.
-6. Generate output using the reference template.
+## Workflow
 
-## Verification
-- Output includes at least one actionable command
-- Status counts match query results
-- Do not guess task details; read `00-overview.md` if needed
-- Progress claimed for an active task is backed by its `resume` packet, or the gap is stated
-- For semantic output, quote only documented feature briefs; if missing, report `unknown` instead of inferring
+1. **Classify the question** and open the matching reference.
 
-## Boundaries
-- MUST NOT modify files (no `ctl-project-governance sync --apply`, no editing `dev-docs/**` / `.ai/project/**`)
-- MUST NOT invent task details or blocker reasons
-- MUST NOT invent semantic intent/risk/scope that is not documented in `feature-map.md`
-- MAY suggest repair commands when lint indicates drift
+2. **Gather from the hub.** Run the reference's data-source commands — usually
+   `ctl-project-governance.mjs query` with a `--status` or `--text` filter. Never guess task
+   details; open `00-overview.md` when the query output is not enough.
+
+3. **Check consistency, do not fix it.** `lint --check` reveals drift between the registry and the
+   task bundles. When lint reports errors, include `sync --apply` in the output as a suggested
+   remediation and leave the running to the user.
+
+4. **Ground claims about active work.** For any `in-progress` or `blocked` task, run:
+
+   ```bash
+   node .ai/scripts/ctl-project-governance.mjs resume --task <T-###> --json
+   ```
+
+   Report the commit timeline, worktree warnings, and any disagreement between the packet and the
+   documented status. An empty timeline means progress is unknown, not zero.
+
+5. **For semantic questions**, quote the `Semantic Feature Briefs` section of
+   `.ai/project/feature-map.md`. `dashboard.md` supplies the focus index only, never the semantic
+   body.
+
+6. **Answer from the template**, ending with at least one command the user can run.
+
+## Rules
+
+- Never modify files. No `sync --apply`, no edits under `dev-docs/**` or `.ai/project/**`.
+- Never invent a task detail, a blocker reason, or a semantic intent. Undocumented means `unknown`.
+- Never present a claim about landed work that the `resume` packet does not support; state the gap
+  instead.
+- Status counts in the answer must match the query output they came from.
 
 ## Contract
-Follow `.ai/project/CONTRACT.md` for sources of truth and status semantics.
+
+Hub sources of truth: `.ai/project/CONTRACT.md`. Task status semantics: `dev-docs/AGENTS.md`.

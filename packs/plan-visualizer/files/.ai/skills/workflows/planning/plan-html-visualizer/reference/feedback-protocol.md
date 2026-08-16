@@ -16,7 +16,7 @@ The interaction layer records this as a pending feedback event in the `plan-pend
 Rules:
 
 - Events MUST include `nodeId` and `feedback`; `selectedText`, `viewId`, and `createdAt` MAY be included.
-- The interaction layer MUST NOT classify or interpret feedback; it only records where it was given.
+- The interaction layer MUST NOT classify or interpret feedback; the layer only records where feedback was given.
 - The interaction layer MUST NOT allow editing rendered content or the other embedded blocks.
 
 ## Event Persistence
@@ -25,7 +25,7 @@ A static HTML page cannot silently write to its own file. The feedback UI persis
 
 1. **File System Access API (preferred).** On first save, ask the user to grant access to the artifact file, then write the updated `plan-pending-feedback` block back to the same path. Works in Chromium-based browsers.
 2. **Download-replace (fallback).** Offer the updated file as a download with the same filename; the user replaces the artifact in `.ai/.tmp/html-viewer/`.
-3. **Copy-to-chat (last resort).** Offer a "copy feedback" action that copies the pending event JSON; the user pastes it into the conversation.
+3. **Copy-to-chat (last resort).** Offer a "copy feedback" action that copies the pending event JSON for the user to paste into the conversation.
 
 Whichever mechanism is used, the agent-facing contract is the same: pending events arrive either inside the artifact's `plan-pending-feedback` block or as pasted JSON in the conversation.
 
