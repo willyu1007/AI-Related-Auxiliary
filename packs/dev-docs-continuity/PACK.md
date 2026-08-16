@@ -74,4 +74,3 @@ installing the hub upgrades them in place — there is no second copy of either 
 
 - Owns the **task layer**: task progress, task identity, `.ai-task.yaml`, the `Task:` trailer.
 - Does **not** own Milestones, Features, Requirements, or any cross-task rollup — that is `project-hub`.
-- Does not produce interactive plan artifacts — that is `plan-visualizer`.

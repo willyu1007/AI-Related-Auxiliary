@@ -94,4 +94,3 @@ worked. Anything that needs tribal knowledge belongs in `03-implementation-notes
 - `./templates/` — the 6 bundle files, plus `roadmap.md` and `requirement.md`
 - `./examples/sample-roadmap.md`, `./examples/sample-task-bundle.md`
 - `./reference/detailed-docs-convention.md` — optional deeper file layout
-- To present a finished roadmap as an interactive artifact, hand it to `plan-html-visualizer`

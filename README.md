@@ -51,7 +51,6 @@ cp -R packs/<pack-name>/files/. /path/to/your/project/
 |------|------|------|
 | [dev-docs-continuity](packs/dev-docs-continuity/PACK.md) | 任务文档 bundle、跨会话续接、commit 关联 | 无 |
 | [project-hub](packs/project-hub/PACK.md) | 任务聚合成 Milestone/Feature/Requirement 视图，带校验与同步 | Node、dev-docs-continuity |
-| [plan-visualizer](packs/plan-visualizer/PACK.md) | 交互式 HTML 计划产物 | 无 |
 
 ## 校验
 

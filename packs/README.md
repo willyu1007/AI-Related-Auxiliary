@@ -11,7 +11,6 @@ Nothing here runs in this repository. A pack is material to copy out.
 |------|-----------|--------------|
 | [dev-docs-continuity](dev-docs-continuity/PACK.md) | Task bundles + resume across sessions + commit linking | none |
 | [project-hub](project-hub/PACK.md) | Registry aggregating tasks into Milestone/Feature/Requirement, with lint + sync | Node, `dev-docs-continuity` |
-| [plan-visualizer](plan-visualizer/PACK.md) | Interactive HTML plan artifacts | none |
 
 ## Installing
 
