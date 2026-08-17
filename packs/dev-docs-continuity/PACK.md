@@ -1,11 +1,8 @@
 # Pack: dev-docs-continuity
 
-The project-side scaffolding the task skills operate on: the Task Contract and the directories a
-task bundle lives in.
+The project-side scaffolding the task skills operate on: the Task Contract and the directories a task bundle lives in.
 
-The skills themselves are global — see `system/skills/` for `start-task`, `sync-task`,
-`handoff-task`, and `resume-task`. This pack is what a *repository* needs so those skills have
-something to write to and a contract to follow.
+The skills themselves are global — see `system/skills/` for `start-task`, `sync-task`, `maintain-project-hub`, `handoff-task`, and `resume-task`. This pack is what a *repository* needs so those skills have something to write to and a contract to follow.
 
 ## Dependencies
 
@@ -17,8 +14,7 @@ None. Markdown and two empty directories; nothing to run.
 cp -R packs/dev-docs-continuity/files/. /path/to/your/project/
 ```
 
-The Git hooks that link commits to tasks ship with `sync-task` rather than here, because the skill
-is what explains and installs them. See that skill's `assets/githooks/`.
+The Git hooks that link commits to tasks ship with `sync-task` rather than here, because the skill is what explains and installs them. See that skill's `assets/githooks/`.
 
 ## Contents
 
@@ -30,21 +26,17 @@ is what explains and installs them. See that skill's `assets/githooks/`.
 
 ## What the contract fixes
 
-`dev-docs/AGENTS.md` is the single definition of the task layer. Every skill that touches a task
-reads the contract rather than restating it, so the rules cannot drift apart:
+`dev-docs/AGENTS.md` is the single definition of the task layer. Every skill that touches a task reads the contract rather than restating it, so the rules cannot drift apart:
 
-- **Granularity** — one task is one resumable unit: one bundle, one `State:`, one commit stream.
-  Parent/child task structures break resume, and the reasons are mechanical.
+- **Granularity** — one task is one resumable unit: one bundle, one `State:`, one commit stream. Parent/child task structures break resume, and the reasons are mechanical.
 - **Progress** — `00-overview.md` `## Status` → `- State:` is authoritative, nothing else.
 - **Identity** — `.ai-task.yaml` `task_id`, unique repository-wide, allocated at creation.
-- **Allocation** — highest existing id + 1, scanning the working tree *and* `git log --all` so
-  parallel worktrees do not collide.
+- **Allocation** — highest existing id + 1, scanning the working tree *and* `git log --all` so parallel worktrees do not collide.
 - **Opacity** — `T-###` carries no meaning; categorize with `keywords` or the registry instead.
 
 ## Composing with project-hub
 
-The pack is self-sufficient. Adding `project-hub` gives the same skills a faster path and a
-cross-task rollup, never a different one:
+The pack is self-sufficient. Adding `project-hub` gives the same skills a faster path and a cross-task rollup, never a different one:
 
 | Capability | This pack alone | With project-hub |
 |------------|-----------------|------------------|
@@ -53,8 +45,7 @@ cross-task rollup, never a different one:
 | Validate a `Task:` trailer | Hooks scan `.ai-task.yaml` files | Hooks call the control script |
 | Cross-task rollup | Not available | `registry.yaml` and derived views |
 
-The hooks detect `.ai/scripts/ctl-project-governance.mjs` at runtime and use it when present, so
-installing the hub upgrades them in place — there is no second copy of any hook to maintain.
+The hooks detect `.ai/scripts/ctl-project-governance.mjs` at runtime and use it when present, so installing the hub upgrades them in place — there is no second copy of any hook to maintain.
 
 ## Boundaries
 

@@ -5,53 +5,27 @@ description: Handing the current work to a fresh session as a pasteable block. U
 
 # Handoff Task
 
-Pass the baton to a session that is about to start, right now. The output is a markdown block in
-the conversation for the user to copy — no file is written, nothing is left behind to clean up or
-accidentally commit.
-
-Uniquely among these skills, the product never lands in the repository — and the distinction
-matters: the durable record is the task bundle, which gets updated first. The block is a fast lane over that
-record, never a substitute. Lose the block and nothing is lost.
+Pass the baton to a session that is about to start, right now. The output is a markdown block in the conversation for the user to copy — no file is written, nothing is left behind to clean up or accidentally commit.
 
 ## Finish the work first
 
-Complete the instruction in hand before starting a handoff. A handoff produced by abandoning the
-requested work is a worse outcome than no handoff — the user asked for something and receives
-documentation about the absence of that work.
-
-That applies most sharply to the context trigger, which is the one that can occur to you
-mid-request. Running short of context is not a reason to stop early, but a reason to stop
-*cleanly*, once the current piece is finished.
+Complete the instruction in hand before starting a handoff. A handoff produced by abandoning the requested work is a worse outcome than no handoff.
 
 ## Judging context
 
-The signal is degraded work, not a percentage. Watch for:
+The signal is degraded work, not context consumption. Watch for:
 
 - Re-reading files already read earlier on
 - Uncertainty about decisions made earlier in the same session
 - Losing the thread of the plan and needing to reconstruct the whole thing
 
-Those mean quality is already slipping. Plenty of context consumed while every decision is still
-clear is not a trigger — keep working.
-
 ## Workflow
 
-1. **Land the durable layer.** Run the `sync-task` workflow at checkpoint depth — touch what the
-   session changed, commit the verified part with its `Task:` trailer. The block carries the hot
-   layer, so the deeper stopping-for-the-day pass is not required here.
-
-   Skipping the step is how a chain of hot handoffs rots the record — three sessions pass the block
-   forward, none writes the bundle, and the next cold start finds a task that stopped days ago.
-
-   If little context remains even after finishing the instruction, shrink the sync rather than
-   skipping — a full pass abandoned halfway leaves the bundle part new, part stale. In descending
-   order of value: `State:` and the next concrete step in `00-overview.md`; the list of uncommitted
-   changes; any pitfall hit in the session. The floor is one commit with a `Task:` trailer whose
-   message states what landed and what is pending.
+1. **Land the durable layer.** Run the `sync-task` workflow at checkpoint depth — touch what the session changed, commit the verified part with its `Task:` trailer.
 
 2. **Render the block** and present it in the conversation for the user to copy.
 
-## Block format
+## Example Block format
 
 ````markdown
 ## T-012 · oauth-provider-integration
@@ -80,23 +54,11 @@ One sentence. What finishing looks like.
 - Questions the next session has to resolve, and who can answer them.
 ````
 
-Two layers go in. The **durable layer** is what `sync-task` just wrote, condensed. The **hot layer**
-is what the repository does not have and does not need: what you were about to try, which test is
-flaky and should be ignored, what you would not touch yet. That layer has a half-life of one hop,
-which is why an ephemeral block suits the hot layer better than a committed file.
-
-The stale check makes the block self-verifying: the receiving session reads only the block, so the
-instruction to verify has to travel inside the block. Time between handoff and resume is near zero,
-so drift is not the risk — pasting yesterday's block by mistake is.
+The stale check makes the block self-verifying: the receiving session reads only the block. Time between handoff and resume is near zero, so drift is not the risk — pasting yesterday's block by mistake is.
 
 ## Starting the new session
 
-The block is the portable form and works anywhere the user can paste. Where the environment can
-create a session and inject content programmatically, that is a better path — but it belongs to the
-environment's own tooling, since this skill ships to projects that have no such capability.
-
-The receiving session does not need to run a resume: the block is sufficient by construction. Cold
-starts, where no block was carried over, are what `resume-task` is for.
+The block is the portable form and works anywhere the user can paste. It would be better if you could create a new task/session and inject content programmatically — if you have such tools.
 
 ## Rules
 
@@ -104,9 +66,7 @@ starts, where no block was carried over, are what `resume-task` is for.
 - Never render the block without landing the durable layer first.
 - Never write the block to a file in the repository; the conversation is the channel.
 - Never describe uncommitted work as landed.
-- Never leave a dead end out of "Do not" — a successor re-walking one is the most expensive
-  failure a handoff can cause.
-- No secrets, credentials, or tokens in the block.
+- Never leave a dead end out of "Do not" — a successor re-walking one is the most expensive failure a handoff can cause.
 
 ## Contract
 

@@ -1,0 +1,50 @@
+# Example ledger (do not copy verbatim into a real product without editing)
+
+version: 1
+
+capabilities:
+  - id: support-agent
+    status: active
+    summary: Multi-turn support agent with retrieval and tools
+    entry:
+      kind: agent
+      ref: SupportAgent.run
+    code_entry: src/agents/support/run.ts
+    llm:
+      profile: quality
+      provider: anthropic
+      model: claude-sonnet-4-6
+      prompt_ref: prompts/support-agent@v4
+      call_shape: mixed
+    orchestration:
+      memory: session
+      context: "load last N turns + retrieved KB snippets; system prompt from prompt_ref"
+      cache: none
+      tools: [search_kb, create_ticket]
+    credential_ref: env:ANTHROPIC_API_KEY
+    owner: support-platform
+    risk: high
+    notes: "Fallback profile: balanced if primary errors after retries"
+
+  - id: docs-summarize
+    status: active
+    summary: Summarize an uploaded document for the docs UI
+    entry:
+      kind: http
+      ref: POST /api/docs/summarize
+    code_entry: src/modules/docs/summarize/handler.ts
+    llm:
+      profile: balanced
+      provider: openai
+      model: gpt-4.1-mini
+      prompt_ref: prompts/docs-summarize@v2
+      call_shape: chat
+    orchestration:
+      memory: none
+      context: "chunk document; map-reduce then final summary"
+      cache: response
+      tools: []
+    credential_ref: vault:llm/openai/api-key
+    owner: docs
+    risk: medium
+    notes: ""

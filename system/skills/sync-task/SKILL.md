@@ -1,16 +1,11 @@
 ---
 name: sync-task
-description: Bringing the task record level with what the repository contains. Use at a checkpoint — a phase lands, a decision is made, a check runs — when stopping for the day, when the task is finished and ready to archive, when the user asks to sync or repair the project hub, or when setting up commit-to-task linking.
+description: Bringing the task record level with what the repository contains. Use at a checkpoint — a phase lands, a decision is made, a check runs — when stopping for the day, or when setting up commit-to-task linking. Not for moving a finished bundle into archive or for project-hub drift repair.
 ---
 
 # Sync Task
 
-Close the gap between what the repository contains and what the task bundle claims. That is the
-whole job, whether the gap opened five minutes ago or is the last one this task will ever have.
-
-The bundle is the durable channel: anything not written into it is gone when the session ends. A
-record that lags is not a slow record but a wrong one, and confidently wrong is worse than
-absent.
+Close the gap between what the repository contains and what the task bundle claims. The bundle is the durable channel: anything not written into it is gone when the session ends. A record that lags is not a slow record but a wrong one, and confidently wrong is worse than absent.
 
 ## Depth by moment
 
@@ -20,7 +15,8 @@ The same action throughout; only the depth changes.
 |--------|-------|
 | Checkpoint mid-work | Touch the files the change affected. Minutes. |
 | Stopping for the day | Full pass. Tomorrow starts from what is written now. |
-| Task finished | Full pass, mark `done`, then archive. |
+
+When the task is complete, run a **full pass** here (including verification in `04-verification.md` and `State: done` if appropriate), then hand off to hub maintenance for the archive move and registry finalization.
 
 ## Workflow
 
@@ -44,11 +40,9 @@ The same action throughout; only the depth changes.
    | `04-verification.md` | Commands run and outcomes — pass and fail both |
    | `05-pitfalls.md` | Resolved failures and dead ends; refresh the do-not-repeat summary |
 
-   `05-pitfalls.md` is append-only. Mark an entry resolved or superseded, never delete one. A useful
-   entry names the symptom, the root cause, what was tried, the fix, and how to avoid a repeat.
+   `05-pitfalls.md` is append-only. Mark an entry resolved or superseded, never delete one. A useful entry names the symptom, the root cause, what was tried, the fix, and how to avoid a repeat.
 
-   If the task still reads `State: planned`, the first checkpoint flips the state to `in-progress` — per
-   the Task Contract, a task left on `planned` is invisible to automatic resume resolution.
+   If the task still reads `State: planned`, the first checkpoint flips the state to `in-progress`.
 
 3. **Commit the verified part** with a `Task: T-###` trailer:
 
@@ -56,66 +50,30 @@ The same action throughout; only the depth changes.
    git commit -m "feat(scope): subject" -m "Task: T-012"
    ```
 
-   The trailer is the only thing linking a commit to a task, and the only input a later session has
-   for rebuilding a timeline. Work that cannot be committed safely stays uncommitted and gets
-   written down — never force broken or unverified changes in for a clean status.
+   The trailer is the only thing linking a commit to a task, and the only input a later session has for rebuilding a timeline. Work that cannot be committed safely stays uncommitted and gets written down — never force broken or unverified changes in for a clean status.
 
-4. **Propagate to the project hub**, when `.ai/scripts/ctl-project-governance.mjs` exists:
+4. **Propagate status to the project hub**, when `.ai/scripts/ctl-project-governance.mjs` exists:
 
    ```bash
    node .ai/scripts/ctl-project-governance.mjs sync --apply --init-if-missing
    node .ai/scripts/ctl-project-governance.mjs lint --check
    ```
 
-   `sync --apply` is idempotent and copies the bundle's `State:` into the registry. The bundle stays
-   authoritative; the registry is a derived cache. With the hooks installed, the commit in step 3
-   already ran the sync via `pre-commit` — keep the `lint --check`, skip the manual sync.
+   This step copies the bundle's `State:` into the registry after a context sync. It is not a substitute for archive moves or dedicated drift repair.
+
+   `sync --apply` is idempotent. The bundle stays authoritative; the registry is a derived cache.
 
 ## Stopping for the day
 
-A full pass, plus the question a checkpoint skips: **could a stranger continue from this?** Answer,
-from the bundle alone — what changed, what state the work is in, what the next three actions are
-with their commands and paths, and how to verify success. Whatever still lives only in your head
-goes into `03-implementation-notes.md` or `05-pitfalls.md` before you stop.
+A full pass, plus the question a checkpoint skips: **could a stranger continue from this?** Answer, from the bundle alone — what changed, what state the work is in, what the next three actions are with their commands and paths, and how to verify success. Whatever still lives only in your head goes into `03-implementation-notes.md` or `05-pitfalls.md` before you stop.
 
 Write the next step as an instruction to someone else, not a reminder to yourself.
 
-`./templates/full-pass-checklist.md` is the short form to paste into the bundle; a worked example
-is in `./examples/sample-full-pass.md`.
-
-## Finishing a task
-
-With `State: done` and verification recorded, propose moving `dev-docs/active/<slug>/` to
-`dev-docs/archive/<slug>/`, and wait for approval before moving. The location sets the effective
-status, so archiving is a state transition rather than filing.
-
-```bash
-node .ai/scripts/ctl-project-governance.mjs sync --apply   # registry status becomes archived
-```
-
-When the task's intent, scope, or risk posture changed over its life, refresh its
-`Semantic Feature Brief` in `.ai/project/feature-map.md` in the same change — intent, scope in/out,
-decision, dependencies, risks, success signal, related tasks, next checkpoint. `dashboard.md` keeps
-a short focus index only, never the brief body itself.
-
-## Repairing hub drift
-
-When the request is "the hub is out of date" rather than "I finished a phase":
-
-```bash
-node .ai/scripts/ctl-project-governance.mjs lint --check                       # what is broken
-node .ai/scripts/ctl-project-governance.mjs sync --dry-run --init-if-missing   # preview repairs
-node .ai/scripts/ctl-project-governance.mjs query --status in-progress         # review mappings
-node .ai/scripts/ctl-project-governance.mjs query --status blocked
-node .ai/scripts/ctl-project-governance.mjs sync --apply
-```
-
-A task that is `in-progress` or `blocked` must not sit on `F-000` unless the triage decision is
-stated in the `feature-map.md` briefs. Never hand-edit an AUTO-generated block — regenerate.
+`./templates/full-pass-checklist.md` is the short form to paste into the bundle; a worked example is in `./examples/sample-full-pass.md`.
 
 ## Git hooks
 
-`./assets/githooks/` holds the hooks that automate the linking above. Install once per repository:
+`./assets/githooks/` holds the hooks that automate commit-to-task linking. Install once per repository:
 
 ```bash
 cp -R <this-skill>/assets/githooks/. .githooks/
@@ -128,21 +86,16 @@ node .githooks/install.mjs
 | `commit-msg` | Validates conventional format and any `Task: T-###` trailer |
 | `pre-commit` | Runs hub `sync --apply` when `dev-docs/` files are staged, and stages the result |
 
-The trailer hooks warn by default; `git config hooks.requireTaskTrailer true` makes them block.
-Skip once with `SKIP_TASK_TRAILER=1 git commit …`. `prepare-commit-msg` and `commit-msg` use the
-control script when present and fall back to scanning `.ai-task.yaml` directly, so they work with
-or without the hub.
+The trailer hooks warn by default; `git config hooks.requireTaskTrailer true` makes them block. Skip once with `SKIP_TASK_TRAILER=1 git commit …`. `prepare-commit-msg` and `commit-msg` use the control script when present and fall back to scanning `.ai-task.yaml` directly, so they work with or without the hub.
 
-Hooks are optional. Without them the trailer convention still holds — you write the trailer by
-hand.
+Hooks are optional. Without them the trailer convention still holds — you write the trailer by hand. Details live under `./assets/githooks/`; this section is only the install entry.
 
 ## Rules
 
 - Never describe uncommitted work as landed.
 - Never mark a task `done` without verification evidence in `04-verification.md`.
-- Never move or archive a directory without approval.
-- Never attach a `Task:` trailer to work unrelated to that task. On a task branch doing unrelated
-  work, set `SKIP_TASK_TRAILER=1` for that commit.
+- Never move a bundle into `archive/` from this skill; that is hub-maintenance work after the record is ready.
+- Never attach a `Task:` trailer to work unrelated to that task. On a task branch doing unrelated work, set `SKIP_TASK_TRAILER=1` for that commit.
 - Never delete a prior decision or pitfall; supersede with an explanation.
 - Never hand-edit AUTO-generated hub sections; regenerate with `sync --apply`.
 - Never treat `.ai-task.yaml` `status` as authoritative — `00-overview.md` `State:` wins.

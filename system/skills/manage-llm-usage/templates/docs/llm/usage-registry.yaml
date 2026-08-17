@@ -1,0 +1,34 @@
+# LLM capability usage ledger (SSOT)
+#
+# Primary key: id (stable capability / internal interface)
+# Register orchestration entries, not provider SDK methods.
+#
+# Copy to docs/llm/usage-registry.yaml (copy-if-missing). Merge; do not clobber.
+#
+# Example row shape:
+# - id: example-capability          # kebab-case, stable
+#   status: active                  # active | experimental | retired
+#   summary: "One-line what this capability does for the product"
+#   entry:
+#     kind: use-case                # use-case | agent | http | job | cli
+#     ref: SummarizeDocument        # symbol, route, job name, or agent name
+#   code_entry: src/path/to/entry.ts
+#   llm:
+#     profile: balanced             # preferred when profiles exist
+#     provider: openai              # required if no profile resolution
+#     model: gpt-4.1-mini
+#     prompt_ref: prompts/summarize@v1
+#     call_shape: chat              # chat | embeddings | tools | streaming | mixed
+#   orchestration:
+#     memory: none                  # none | session | long-term | other (short note)
+#     context: "retrieve top-k chunks; trim to N tokens"
+#     cache: none                   # none | response | embedding | other
+#     tools: []                     # tool names if agent/tools
+#   credential_ref: env:OPENAI_API_KEY   # non-secret pointer only
+#   owner: ""
+#   risk: low                       # low | medium | high
+#   notes: ""
+
+version: 1
+
+capabilities: []

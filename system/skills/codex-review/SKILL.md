@@ -1,13 +1,14 @@
 ---
 name: codex-review
-description: Ask Codex CLI (OpenAI's current coding models) for an independent code review of uncommitted changes, a branch diff, a commit, or a specific implementation. This is how OpenAI models are invoked for review work. Use when the user asks Claude to have Codex or an OpenAI/GPT model review work, when the model-selection rubric calls for an independent OpenAI review perspective, or when Codex should audit a diff, find bugs or regressions, or compare Claude's implementation against requirements. For a review by Claude itself, use the normal review process instead.
+description: Ask Codex CLI (OpenAI's current coding models) for an independent code review of uncommitted changes, a branch diff, a commit, or a specific implementation. This is how OpenAI models are invoked for review work. Use when the user asks Claude to have Codex or an OpenAI/GPT model review work, when the model-selection rubric calls for an independent OpenAI review perspective, or when Codex should audit a diff, find bugs or regressions, or compare Claude's implementation against requirements. For a review by the current agent itself, use the self-review workflow instead of this skill.
 ---
 
 # Codex Review
 
 Use Codex as an independent reviewer when the user wants a second-pass review or when a change is broad enough that another agent's perspective is useful.
 
-Prefer Claude's normal review process for small local checks. Do not delegate review just to avoid reading the code yourself. Treat Codex's output as evidence, not authority.
+Prefer a direct self-review with the `review-code` skill for ordinary local checks.
+Do not delegate review just to avoid reading the code yourself. Treat Codex's output as evidence, not authority.
 
 ## Workflow
 

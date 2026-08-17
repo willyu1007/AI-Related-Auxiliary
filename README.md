@@ -23,25 +23,32 @@ checks/          # 本仓库自己的校验，不是分发物
 
 分层的依据很简单：**一个能力是绑在人身上还是绑在项目上。**
 
-`system/` 里是**能力**：技能连同它自己的模板、示例、钩子，装一次即可，对每个项目都成立。
-`packs/` 里是**项目侧脚手架**：契约文档、模板、控制脚本 —— 技能要操作的对象，必须随项目安装。
+`system/` 里是**能力**：技能连同它自己的模板、示例、钩子，装一次即可，对每个项目都成立。 `packs/` 里是**项目侧脚手架**：契约文档、模板、控制脚本 —— 技能要操作的对象，必须随项目安装。
 
 技能发现只扫 `system/skills/` 的第一层，所以那一层保持平铺，不要建分组子目录。
 
 ## system/ —— 全局层
 
-任务治理的五个技能，按实际操作划分 —— 每个对应工作流程里的一个时刻。注意两条回路：
-**`sync → resume` 走仓库**（跨时间、耐久），**`handoff → 新会话` 走对话**（零间隔、易失）。
+任务治理的六个技能，按实际操作划分 —— 每个对应工作流程里的一个时刻。注意两条回路： **`sync → resume` 走仓库**（跨时间、耐久），**`handoff → 新会话` 走对话**（零间隔、易失）。
 
 | Skill | 时刻 | 通道 |
 |---|---|---|
 | [start-task](system/skills/start-task/SKILL.md) | 开任务：查重、roadmap、bundle、分配 ID、注册进 hub | 仓库 |
-| [sync-task](system/skills/sync-task/SKILL.md) | 把记录跟现实拉平：检查点、收工、完成归档、修复漂移；**持有 Git 钩子** | 仓库 |
+| [sync-task](system/skills/sync-task/SKILL.md) | 把记录跟现实拉平：检查点、收工；**持有 Git 钩子** | 仓库 |
+| [maintain-project-hub](system/skills/maintain-project-hub/SKILL.md) | 治理：已验证任务归档、hub/registry 漂移修复 | 仓库 |
 | [resume-task](system/skills/resume-task/SKILL.md) | 冷启动：只凭仓库重建上下文 | 仓库 |
 | [handoff-task](system/skills/handoff-task/SKILL.md) | 热交接：上下文降质时，把当前工作提炼成可粘贴的块 | **对话** |
 | [project-status](system/skills/project-status/SKILL.md) | 跨任务的只读进度问答 | 仓库 |
 
-另有 `codex-*` 三个和 `html-communication`，与任务治理无关。
+另有与任务治理无关的技能：
+
+| Skill | 用途 |
+|---|---|
+| `codex-*`（三个） / `html-communication` | 见各自 `SKILL.md` |
+| [review-code](system/skills/review-code/SKILL.md) | 当前 Agent 自审代码改动并出分级报告（Claude/Codex 通用）；第二意见仍走 `codex-review` |
+| [sync-db-from-prisma](system/skills/sync-db-from-prisma/SKILL.md) | Prisma repo→DB migration 闸门与 LLM schema projection |
+| [manage-llm-usage](system/skills/manage-llm-usage/SKILL.md) | 薄 LLM 能力台账（内部 capability）维护与对齐；含精简调用/调度准则；可选 Web 管理台读写同一 SSOT |
+| [debug-mode](system/skills/debug-mode/SKILL.md) | 证据驱动调试：可选审批门（默认无）、Agent 自行采证、验证后自动清理临时埋点与产物 |
 
 `system/` 是 `~/.claude/` 的版本化镜像。改动流程：
 
@@ -76,12 +83,9 @@ cp -R packs/<pack-name>/files/. /path/to/your/project/
 node checks/run.mjs
 ```
 
-两部分。**静态检查**扫描 `packs/`：引用的脚本是否都随包提供（悬空引用是仓库退役后最容易留下的坑）、
-钩子有没有可执行位（缺了 git 只 warn 然后静默跳过）、有无机器绝对路径。**冒烟测试**把每个 pack
-按文档里那条 `cp -R` 装进临时 git 仓库，再跑该 pack 的 `verify.sh`。
+两部分。**静态检查**扫描 `packs/`：引用的脚本是否都随包提供（悬空引用是仓库退役后最容易留下的坑）、钩子有没有可执行位（缺了 git 只 warn 然后静默跳过）、有无机器绝对路径。**冒烟测试**把每个 pack 按文档里那条 `cp -R` 装进临时 git 仓库，再跑该 pack 的 `verify.sh`。
 
-`checks/` 和 `packs/*/verify.sh` 都**不是分发物** —— 它们校验这个库，`packs/*/files/` 才是库本身。
-这也是本仓库唯一会执行的东西。
+`checks/` 和 `packs/*/verify.sh` 都**不是分发物** —— 它们校验这个库，`packs/*/files/` 才是库本身。这也是本仓库唯一会执行的东西。
 
 其他用法：
 
@@ -93,7 +97,6 @@ node checks/run.mjs --only project-hub    # 只冒烟测一个 pack
 ## 贡献约定
 
 - 内容必须可复用：不绑定某台机器、某个密钥、某条个人路径。
-- 一条规则只定义一次。跨 pack 需要同一条规则时，一个 pack 拥有它，另一个引用它——
-  复制粘贴出来的第二份一定会静默漂移。
+- 一条规则只定义一次。跨 pack 需要同一条规则时，一个 pack 拥有它，另一个引用它——复制粘贴出来的第二份一定会静默漂移。
 - 每个 Skill / Pack 都要写清边界：**不做什么**和做什么同样重要。
 - 文档要能独立读懂，不依赖未提交的本地文件。

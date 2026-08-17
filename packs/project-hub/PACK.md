@@ -1,24 +1,18 @@
 # Pack: project-hub
 
-A registry that aggregates dev-docs task bundles into a Milestone / Feature / Requirement view,
-with deterministic validation and regeneration.
+A registry that aggregates dev-docs task bundles into a Milestone / Feature / Requirement view, with deterministic validation and regeneration.
 
-Answers a different question from `dev-docs-continuity`: not *how do I resume one task*, but
-*what is the state of everything, and does the record still match reality?*
+Answers a different question from `dev-docs-continuity`: not *how do I resume one task*, but *what is the state of everything, and does the record still match reality?*
 
 ## When the pack earns its keep
 
-The hub exists for `lint` and `sync` — deterministic drift detection and idempotent regeneration.
-Every other command is a convenience over what an agent can do by reading files.
+The hub exists for `lint` and `sync` — deterministic drift detection and idempotent regeneration. Every other command is a convenience over what an agent can do by reading files.
 
-Install the hub when several tasks run in parallel and the mapping between work and goals stops
-fitting in one head. For a single active task at a time, `dev-docs-continuity` alone is the better
-trade.
+Install the hub when several tasks run in parallel and the mapping between work and goals stops fitting in one head. For a single active task at a time, `dev-docs-continuity` alone is the better trade.
 
 ## Dependencies
 
-- **`dev-docs-continuity` pack** (required). The hub aggregates task bundles rather than creating
-  them, and does not define what a task is. `dev-docs/AGENTS.md` owns the task layer.
+- **`dev-docs-continuity` pack** (required). The hub aggregates task bundles rather than creating them, and does not define what a task is. `dev-docs/AGENTS.md` owns the task layer.
 - **Node.js** (Node built-ins only — no npm install, no third-party packages).
 
 ## Install
@@ -43,19 +37,17 @@ node .ai/scripts/ctl-project-governance.mjs init
 
 ### Where the skills went
 
-The pack ships no skills. Hub work happens at the moment where each action belongs, inside the
-global task skills in `system/skills/`:
+The pack ships no skills. Hub work happens at the moment where each action belongs, inside the global task skills in `system/skills/`:
 
 | Hub work | Lives in |
 |----------|----------|
 | Find related work, register a new task, map to a Feature | `start-task` |
-| Propagate status, refresh the feature brief, archive, repair drift, the `pre-commit` hook | `sync-task` |
+| Propagate status after a context sync; the `pre-commit` hook | `sync-task` |
+| Archive a verified task; refresh feature brief on close-out; repair hub/registry drift | `maintain-project-hub` |
 | `resume --json` fast path | `resume-task` |
 | Read-only progress questions across tasks | `project-status` |
 
-Governance used to be a layer with its own front-door skill. Splitting by moment instead means each
-governance action sits in the workflow that actually triggers it, and no skill exists solely to
-route between the others.
+Context sync and hub governance are split: `sync-task` keeps the bundle level with the repository; `maintain-project-hub` seals finished work and repairs registry drift.
 
 ## Commands
 
@@ -70,19 +62,15 @@ node .ai/scripts/ctl-project-governance.mjs current-task --format id
 node .ai/scripts/ctl-project-governance.mjs map --task T-001 --feature F-002 --apply
 ```
 
-`resume` is the accelerated form of the protocol in the `resume-task` skill: same semantics,
-one call instead of six reads, with bounded output that will not flood the context window.
+`resume` is the accelerated form of the protocol in the `resume-task` skill: same semantics, one call instead of six reads, with bounded output that will not flood the context window.
 
 ## Single project by design
 
-The hub holds exactly one project. There is no `--project` flag, no `.ai/project/<slug>/`
-partitioning, and no `P-xxx` ID space. A repository genuinely hosting several independent projects
-should run several hubs — one per repository.
+The hub holds exactly one project. There is no `--project` flag, no `.ai/project/<slug>/` partitioning, and no `P-xxx` ID space. A repository genuinely hosting several independent projects should run several hubs — one per repository.
 
 ## Layering
 
-`CONTRACT.md` covers the hub layer only. Task progress, task identity, and the `.ai-task.yaml`
-schema are defined once in `dev-docs/AGENTS.md` and referenced from here, so the two cannot drift.
+`CONTRACT.md` covers the hub layer only. Task progress, task identity, and the `.ai-task.yaml` schema are defined once in `dev-docs/AGENTS.md` and referenced from here, so the two cannot drift.
 
 | Layer | Owner | Covers |
 |-------|-------|--------|
@@ -91,7 +79,6 @@ schema are defined once in `dev-docs/AGENTS.md` and referenced from here, so the
 
 ## Boundaries
 
-- The task bundle stays authoritative for status. The registry is a derived cache: regenerate it,
-  never hand-edit inside AUTO blocks.
+- The task bundle stays authoritative for status. The registry is a derived cache: regenerate it, never hand-edit inside AUTO blocks.
 - `sync --apply` is idempotent and safe after any task change.
 - The hub never implements product code changes.

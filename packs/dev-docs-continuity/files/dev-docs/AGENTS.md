@@ -10,13 +10,12 @@ Persistent task documentation for context preservation across sessions.
 | Work continued in a later session, with nothing carried over | Rebuild context via `resume-task` |
 | A phase completes, a decision is made, or a check is run | Checkpoint via `sync-task` |
 | Stopping for the day | Full pass via `sync-task` |
-| Task completed and verified | `sync-task` marks the task done and archives |
+| Task completed and verified | Full pass via `sync-task`, then archive via `maintain-project-hub` |
 | Context degraded; a fresh session takes over now | Pass a block via `handoff-task` |
 
 ## Decision Gate (MUST)
 
-The gate below is the **single definition**. `start-task` references the gate and MUST NOT
-restate the criteria.
+The gate below is the **single definition**. `start-task` references the gate and MUST NOT restate the criteria.
 
 Create a dev-docs task bundle under `dev-docs/active/<task-slug>/` only when the task is **complex** and benefits from context preservation.
 
@@ -44,32 +43,24 @@ If the user asks for a roadmap/plan before coding:
 
 ## Task Contract (MUST)
 
-The rules in the section are the **single definition** of task identity and progress. Any
-project-level governance layer MUST derive from the rules here rather than restate them.
+The rules in the section are the **single definition** of task identity and progress. Any project-level governance layer MUST derive from the rules here rather than restate them.
 
 ### Task granularity
 
 **One task is one resumable unit of work: one bundle, one `State:`, one stream of commits.**
 
 - Tasks MUST be flat. No parent tasks, no subtasks, no nested bundle directories.
-- Structure *inside* a task belongs in `01-plan.md` as phases. Phases need no id, no bundle, and
-  no separate status.
-- Work that genuinely advances in parallel becomes **sibling tasks**, each with a full bundle. Group
-  them with `feature_id` in the registry when `project-hub` is installed.
+- Structure *inside* a task belongs in `01-plan.md` as phases. Phases need no id, no bundle, and no separate status.
+- Work that genuinely advances in parallel becomes **sibling tasks**, each with a full bundle. Group them with `feature_id` in the registry when `project-hub` is installed.
 
 Two mechanisms make flatness a rule rather than a preference:
 
-- Task discovery scans only the immediate children of `active/` and `archive/`. A bundle nested one
-  level deeper is invisible, and the enclosing directory is mistaken for a task.
-- Task resolution returns exactly one task. A parent and a child both `in-progress` is an ambiguous
-  resolution, so every resume stops to ask which one — and running several strands at once is the
-  reason to split in the first place.
+- Task discovery scans only the immediate children of `active/` and `archive/`. A bundle nested one level deeper is invisible, and the enclosing directory is mistaken for a task.
+- Task resolution returns exactly one task. A parent and a child both `in-progress` is an ambiguous resolution, so every resume stops to ask which one — and running several strands at once is the reason to split in the first place.
 
-A third reason is quieter: `Task: T-###` is single-valued, so commits attach to the child. A parent
-task ends up with no commits, no verification, and no evidence — a status field nobody can check.
+A third reason is quieter: `Task: T-###` is single-valued, so commits attach to the child. A parent task ends up with no commits, no verification, and no evidence — a status field nobody can check.
 
-When a bundle grows unmanageable, the correct reading is that the work was several sibling tasks
-from the start, not that the task needs children.
+When a bundle grows unmanageable, the correct reading is that the work was several sibling tasks from the start, not that the task needs children.
 
 ### Task progress (source of truth)
 
@@ -83,11 +74,8 @@ Under the `## Status` heading there MUST be a bullet:
 ```
 
 - `State:` MUST carry a single value from `planned | in-progress | blocked | done`.
-- A new task starts as `planned` and MUST move to `in-progress` at the first checkpoint once
-  implementation begins. Automatic resume resolution finds only `in-progress` and `blocked`
-  tasks — a task left on `planned` can be resumed only by explicit id or branch name.
-- A task directory under `dev-docs/**/archive/<task-slug>/` has the effective status `archived`,
-  whatever `State:` says.
+- A new task starts as `planned` and MUST move to `in-progress` at the first checkpoint once implementation begins. Automatic resume resolution finds only `in-progress` and `blocked` tasks — a task left on `planned` can be resumed only by explicit id or branch name.
+- A task directory under `dev-docs/**/archive/<task-slug>/` has the effective status `archived`, whatever `State:` says.
 
 ### Task identity (source of truth)
 
@@ -115,12 +103,10 @@ Validation rules:
 - `task_id` MUST match `^T-\d{3}$` and MUST be unique across the whole repository.
 - Task IDs are stable and MUST NOT be reused.
 - If `slug` is present, the value MUST equal the task directory name.
-- If `status` is present, the value MUST be a valid task status. The field is for display only and
-  is **not** authoritative — `00-overview.md` `State:` wins.
+- If `status` is present, the value MUST be a valid task status. The field is for display only and is **not** authoritative — `00-overview.md` `State:` wins.
 - If `updated` is present, the value MUST match `YYYY-MM-DD`.
 
-A missing `.ai-task.yaml` is tolerated, but the task is then unlinked from commits: no `Task:`
-trailer can be validated, so no commit timeline can be rebuilt. An existing file MUST be valid.
+A missing `.ai-task.yaml` is tolerated, but the task is then unlinked from commits: no `Task:` trailer can be validated, so no commit timeline can be rebuilt. An existing file MUST be valid.
 
 ### Allocating a task ID
 
@@ -132,32 +118,21 @@ Every task bundle gets its ID when the bundle is created, not later.
 } | grep -oE 'T-[0-9]{3}' | sort -u | tail -1
 ```
 
-Take the highest ID and add one, zero-padded to three digits; `T-001` when the scan returns
-nothing. Because IDs are never reused, the highest is always the correct base even when lower ones
-were archived or deleted.
+Take the highest ID and add one, zero-padded to three digits; `T-001` when the scan returns nothing. Because IDs are never reused, the highest is always the correct base even when lower ones were archived or deleted.
 
-The scan reads Git history as well as the working tree because the working tree alone is blind to
-other branches. In a linked worktree, a sibling worktree's committed task is invisible to `grep`,
-so both would allocate the same number and the collision would only surface at merge. `--all`
-closes that gap. Two worktrees allocating simultaneously with neither committed can still collide;
-lint reports the duplicate, and the fix is to renumber the newer task before merging.
+The scan reads Git history as well as the working tree because the working tree alone is blind to other branches. In a linked worktree, a sibling worktree's committed task is invisible to `grep`, so both would allocate the same number and the collision would only surface at merge. `--all` closes that gap. Two worktrees allocating simultaneously with neither committed can still collide; lint reports the duplicate, and the fix is to renumber the newer task before merging.
 
-If the `project-hub` pack is installed, `ctl-project-governance.mjs sync --apply` applies the same
-rule and fills in a missing file — but do not depend on that. Allocation belongs to the task layer,
-and a repository without the hub still needs working commit links.
+If the `project-hub` pack is installed, `ctl-project-governance.mjs sync --apply` applies the same rule and fills in a missing file — but do not depend on that. Allocation belongs to the task layer, and a repository without the hub still needs working commit links.
 
 ### Task IDs carry no meaning
 
 `T-###` is an opaque key. It records identity and nothing else.
 
-- MUST NOT encode meaning in the number — no reserved ranges for mainline versus side work, for
-  validation tasks, for parallel branches, or for anything else.
+- MUST NOT encode meaning in the number — no reserved ranges for mainline versus side work, for validation tasks, for parallel branches, or for anything else.
 - MUST NOT infer meaning from a number when reading one.
 - MUST NOT skip ahead to reach a "better" number. Allocation is always highest + 1.
 
-Encoding a scheme in the ID leaves the scheme in one head. Anyone reading `T-901` later — human
-or agent — has no rule for decoding, so they either ignore the convention or invent a conflicting
-one.
+Encoding a scheme in the ID leaves the scheme in one head. Anyone reading `T-901` later — human or agent — has no rule for decoding, so they either ignore the convention or invent a conflicting one.
 
 Categorize with fields that have names:
 
@@ -170,13 +145,12 @@ Categorize with fields that have names:
 ## Coding Gate (MUST)
 
 Before making any code/config changes for a task that meets the Decision Gate:
-1. Ensure the task bundle exists under `dev-docs/active/<task-slug>/`. If it is missing, or the work
-   is ambiguous, or the user asked for a plan/roadmap, run `start-task` first.
+1. Ensure the task bundle exists under `dev-docs/active/<task-slug>/`. If it is missing, or the work is ambiguous, or the user asked for a plan/roadmap, run `start-task` first.
 2. During implementation, keep the bundle current:
    - update `00-overview.md` when status changes
    - append to `03-implementation-notes.md` after each phase
    - record every verification run in `04-verification.md` (commands + outcomes)
-3. Run `sync-task` at each checkpoint, before stopping, and on completion.
+3. Run `sync-task` at each checkpoint and before stopping. On completion, finish the full sync pass, then archive with `maintain-project-hub`.
 
 ## Commit Gate (MUST)
 
@@ -186,14 +160,11 @@ Task docs describe intent and current state; commits record what landed.
 - MAY commit a known-green rollback point before risky changes.
 - MUST add a `Task: T-###` trailer when the commit belongs to that task.
 - MUST NOT attach a task to unrelated work.
-- MUST NOT force broken or unverified work into a commit. Preserve and report any remaining
-  worktree changes accurately.
+- MUST NOT force broken or unverified work into a commit. Preserve and report any remaining worktree changes accurately.
 
-The trailer is what links a commit to a task bundle, and is the only mechanism a later session has
-for reconstructing a timeline.
+The trailer is what links a commit to a task bundle, and is the only mechanism a later session has for reconstructing a timeline.
 
-When hooks are installed (`node .githooks/install.mjs`), `prepare-commit-msg` injects `Task:`
-only from a branch containing one valid task ID.
+When hooks are installed (`node .githooks/install.mjs`), `prepare-commit-msg` injects `Task:` only from a branch containing one valid task ID.
 
 ## File Purposes
 
@@ -211,12 +182,9 @@ only from a branch containing one valid task ID.
 
 ### Resuming Existing Work
 
-For a request that continues earlier work with no context carried over, run `resume-task` **before**
-reading implementation files. The skill owns the full protocol — task resolution order, the
-commit-timeline reconstruction, and the rules for reconciling the documents against Git history.
+For a request that continues earlier work with no context carried over, run `resume-task` **before** reading implementation files. The skill owns the full protocol — task resolution order, the commit-timeline reconstruction, and the rules for reconciling the documents against Git history.
 
-A session that was handed a block by `handoff-task` already has its context and skips the protocol
-entirely; the block is the channel in that case, and the repository in every other.
+A session that was handed a block by `handoff-task` already has its context and skips the protocol entirely; the block is the channel in that case, and the repository in every other.
 
 ### During Work
 
@@ -231,7 +199,8 @@ entirely; the block is the channel in that case, and the repository in every oth
 | Workflow | Use When |
 |----------|----------|
 | `start-task` | Opening a task: roadmap, bundle, or both |
-| `sync-task` | Checkpointing, stopping for the day, finishing, archiving, repairing hub drift |
+| `sync-task` | Checkpointing, stopping for the day; bringing the record level with the repository |
+| `maintain-project-hub` | Archiving a verified task; repairing hub/registry drift |
 | `resume-task` | Cold start: picking work back up from the repository alone |
 | `handoff-task` | Hot start: passing a block to a session beginning right now |
 | `project-status` | Read-only progress questions across tasks |
@@ -239,13 +208,12 @@ entirely; the block is the channel in that case, and the repository in every oth
 ### Archive Rules
 
 When task status changes to "done" and all verification passes:
-1. Move `dev-docs/active/<task-slug>/` to `dev-docs/archive/<task-slug>/`
-2. `sync-task` handles the move when status=done
+1. Complete a full `sync-task` pass so the bundle matches git reality
+2. Move `dev-docs/active/<task-slug>/` to `dev-docs/archive/<task-slug>/` via `maintain-project-hub` (requires user approval for the move)
 
 ### Project Hub Integration (optional)
 
-The section applies **only** when the `project-hub` pack is installed (`.ai/project/registry.yaml`
-exists). Without the hub, dev-docs is self-sufficient and the hub steps are not required.
+The section applies **only** when the `project-hub` pack is installed (`.ai/project/registry.yaml` exists). Without the hub, dev-docs is self-sufficient and the hub steps are not required.
 
 | Event | Action |
 |-------|--------|
