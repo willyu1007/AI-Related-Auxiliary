@@ -1,6 +1,6 @@
 ---
 name: cleanup-repo
-description: Sweep the repository for content whose reason to exist has expired — leftover scripts and temp files, stale or meaningless tests, unused dependencies, dead exports and unread config, docs and comments that no longer match the code, duplicate implementations, expired TODO markers. Use when the user asks to clean up, tidy, prune, or check for stale or redundant content. Deletes only with evidence and approval. Not for reviewing the quality of newly written changes, and not for fixing bugs.
+description: Sweep the repository for content whose reason to exist has expired — leftover scripts and temp files, stale or meaningless tests, unused dependencies, dead exports and unread config, semantic drift between docs/comments and code, dual-track risk from duplicate or legacy implementations (old/v2/wrapper leftovers), lingering tech-debt markers. Use when the user asks to clean up, tidy, prune, check for stale or redundant content, or run a semantic-drift, dual-track, or tech-debt check. Deletes only with evidence and approval. Not for reviewing the quality of newly written changes, not for fixing bugs, and not for simplifying or refactoring code that stays.
 ---
 
 # Cleanup Repo
@@ -15,10 +15,12 @@ Candidates are scoped. **Evidence never is** — "nothing references this" is on
 
 | Request | Candidate scope | Semantic depth |
 |---------|-----------------|----------------|
-| Ordinary cleanup | The area this session's work touched; fall back to directories from recent commits | Shallow drift check may cover the whole repo (cheap); deep drift only for content this session touched |
+| Ordinary cleanup | The area this session's work touched; in a fresh session, the directories touched by roughly the last ten commits | Shallow drift check may cover the whole repo (cheap); deep drift only for content this session touched |
 | "全仓" / "全面清理" / full sweep | Whole repository | Deep drift check across the repo |
 
 Two lenses are global in every run because their detection is inherently repo-wide and cheap: unused dependencies, and exact-duplicate files.
+
+**Gitignored files are out of scope entirely.** The ignore rule already declares their lifecycle, they do not clutter the repository view, and the pile most likely to hide credentials (`.env` and friends) lives there — untracked, unrecoverable, and never a cleanup candidate.
 
 ## Lenses
 
@@ -48,6 +50,8 @@ Drift direction is a judgment: usually the doc is stale and follows the code, bu
 ### C. Duplication
 
 Exact duplicates — identical content under different names — are cheap to find (hash compare) and always checked. Two implementations of the same responsibility (one usually reachable only from tests or nothing) are the expensive cousin: detect within scope, and deciding **which track is canonical** is the user's call whenever it is not obvious. Killing the loser changes behavior — report, do not act, unless approved.
+
+Version-iteration residue is this lens's self-labeling form. LLM iteration leaves files and symbols named `legacy`, `old`, `v2`, `new`, `final`, `backup`, `copy`, and forwarding wrappers or compat shims kept only because call sites were never migrated. The name is a detection signal, not a verdict — the verdict is still reachability: nothing references the old track → delete pile; live references remain → report with the migration path (move the call sites, then kill the track), never a silent rewrite.
 
 ### D. Markers (grep-cheap, verdict varies)
 
@@ -81,13 +85,13 @@ The risk hierarchy is inverted from intuition: deleting a **tracked** file is ch
 
 1. **Fix the scope** and say so in the report. Default is the session's touched area; a full sweep only when asked.
 
-2. **Collect candidates** through the lenses. Search for evidence repository-wide regardless of scope. Every candidate carries its evidence — no evidence, no finding.
+2. **Collect candidates** through the lenses. Search for evidence repository-wide regardless of scope. Use the project's own dead-code tooling when it exists (knip, depcheck, ts-prune, vulture, …) — a tool's output is a candidate list, never a verdict. Every candidate carries its evidence — no evidence, no finding.
 
 3. **Classify** into the three piles and **report**: what, why dead, which pile. Wait for approval.
 
 4. **Execute approvals.** Tracked deletions land as one `chore` commit, separate from any feature work and without a `Task:` trailer unless the cleanup itself is the task. Untracked deletions follow the itemized approvals exactly. Approved dependency removals go through the project's package manager (e.g. `pnpm remove <dep>`).
 
-5. **Verification gate (mandatory).** Run the project's own checks — typecheck, lint, tests, build. Green is the proof the deletions were truly dead; reachability analysis can be fooled by dynamic imports and string-built paths, the gate cannot. A failure reverts the deletion that caused it and gets recorded, not argued with.
+5. **Verification gate (mandatory).** Run the project's own checks — typecheck, lint, tests, build. Green is the proof the deletions were truly dead; reachability analysis can be fooled by dynamic imports and string-built paths, the gate cannot. A failure reverts the deletion that caused it and gets recorded, not argued with. When the failure cannot be attributed to a single deletion, revert the whole cleanup commit and retry in smaller batches. When the project has no runnable checks, the deletions rest on evidence alone — and the handback must say exactly that.
 
 6. **Hand back:** deleted, kept-with-reason, and the report-only list. Scattered session docs found on the way are merged into their task's record if one exists — deleting them without merging just means the next session scatters them again.
 
@@ -99,6 +103,7 @@ The sweep is the cure; prevention is birth rules, and they already exist — tem
 
 - Never delete without stated evidence, and never expand a deletion beyond what was approved.
 - Never delete an untracked file without itemized approval — there is no undo.
+- Never touch gitignored files; `.env` and credential files are never candidates.
 - Never treat a green suite as proof that deleting a *test* was safe.
 - Never rewrite logic; behavior-changing findings are report-only.
 - Never mix cleanup deletions into a feature commit.
