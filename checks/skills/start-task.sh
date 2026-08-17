@@ -1,7 +1,7 @@
 #!/bin/sh
 #
-# Smoke test for project-hub. Run by `node checks/run.mjs` inside a throwaway git repo with this
-# pack and its dependencies already installed. Not part of files/.
+# Smoke test for the hub assets start-task ships. Run by `node checks/run.mjs` inside a throwaway
+# git repo with the declared pack dependencies already installed. Not a distributable.
 #
 # depends: dev-docs-continuity
 #
@@ -10,24 +10,39 @@ set -e
 
 fail() { echo "FAIL: $1"; exit 1; }
 
-[ -f .ai/project/templates/registry.yaml ] || fail "hub templates missing"
 [ -f dev-docs/AGENTS.md ] || fail "dependency dev-docs-continuity was not installed"
-
-# Hooks ship with the sync-task skill, not with either pack. AUX_ROOT is set by checks/run.mjs.
 [ -n "$AUX_ROOT" ] || fail "AUX_ROOT not set; run via node checks/run.mjs"
+
+HUB="$AUX_ROOT/system/skills/start-task/assets/hub/.ai/scripts/ctl-project-governance.mjs"
+[ -f "$HUB" ] || fail "start-task does not ship the hub control script"
+
+# The repository starts with nothing: one command out of the skill must leave it fully provisioned.
+if [ -d .ai ]; then fail "target repo already has .ai/ before install"; fi
+node "$HUB" install --repo-root . >/dev/null
+
+for f in scripts/ctl-project-governance.mjs scripts/lib/yaml-lite.mjs project/CONTRACT.md \
+         project/AGENTS.md project/templates/registry.yaml; do
+  [ -f ".ai/$f" ] || fail "install did not place .ai/$f"
+done
+for f in registry.yaml dashboard.md feature-map.md task-index.md changelog.md; do
+  [ -f ".ai/project/$f" ] || fail "install did not initialize .ai/project/$f"
+done
+
+# Installing again must not disturb what the first run created: shipped assets refresh in place,
+# hub files are project data and stay. A second install that resets the registry would silently
+# discard every task the repository has.
+printf '\n# smoke-marker\n' >> .ai/project/registry.yaml
+node .ai/scripts/ctl-project-governance.mjs install --repo-root . >/dev/null
+grep -q 'smoke-marker' .ai/project/registry.yaml || fail "re-install overwrote hub data"
+
+# Hooks ship with the skill that installs them. AUX_ROOT is set by checks/run.mjs.
 mkdir -p .githooks
 cp -R "$AUX_ROOT/system/skills/sync-task/assets/githooks/." .githooks/
 [ -x .githooks/pre-commit ] || fail ".githooks/pre-commit is not executable"
 
 node .githooks/install.mjs >/dev/null
 
-# The skills route hub setup through --init-if-missing rather than an explicit init, so the smoke
-# test enters the same way: one command must initialize the hub on first use.
-node .ai/scripts/ctl-project-governance.mjs sync --apply --init-if-missing >/dev/null
-
-for f in registry.yaml dashboard.md feature-map.md task-index.md changelog.md; do
-  [ -f ".ai/project/$f" ] || fail "init-if-missing did not create .ai/project/$f"
-done
+node .ai/scripts/ctl-project-governance.mjs sync --apply >/dev/null
 
 # Single-project layout: no per-project subdirectory, no project key in the registry.
 if [ -d .ai/project/main ]; then fail "init created a per-project subdirectory"; fi
@@ -109,4 +124,4 @@ node .ai/scripts/ctl-project-governance.mjs sync --apply >/dev/null
 grep -q 'status: archived' .ai/project/registry.yaml || fail "archive status not propagated"
 node .ai/scripts/ctl-project-governance.mjs lint --strict >/dev/null || fail "lint failed after archive"
 
-echo "init, hook sync, single-project layout, lint, resume, idempotency, map, worktree ids, archive"
+echo "install from skill, re-install safety, hook sync, single-project layout, lint, resume, idempotency, map, worktree ids, archive"

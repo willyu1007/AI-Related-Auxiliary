@@ -34,12 +34,12 @@ The Git hooks that link commits to tasks ship with `sync-task` rather than here,
 - **Allocation** — highest existing id + 1, scanning the working tree *and* `git log --all` so parallel worktrees do not collide.
 - **Opacity** — `T-###` carries no meaning; categorize with `keywords` or the registry instead.
 
-## Composing with project-hub
+## Composing with the project hub
 
-The pack is self-sufficient. Adding `project-hub` gives the same skills a faster path and a cross-task rollup, never a different one:
+The pack is self-sufficient. The hub — the registry that aggregates tasks into a Milestone / Feature / Requirement view — is no longer a pack: it ships under `system/skills/start-task/assets/hub/` and that skill installs it into `.ai/` on its own. Its presence gives the same skills a faster path and a cross-task rollup, never a different one:
 
-| Capability | This pack alone | With project-hub |
-|------------|-----------------|------------------|
+| Capability | This pack alone | With the hub |
+|------------|-----------------|--------------|
 | Cold-start a task | Manual read protocol in `resume-task` | Same skill, `ctl-project-governance.mjs resume --json` fast path |
 | Allocate an id | Scan rule in the Task Contract | `sync --apply` applies the same rule |
 | Validate a `Task:` trailer | Hooks scan `.ai-task.yaml` files | Hooks call the control script |
@@ -50,5 +50,5 @@ The hooks detect `.ai/scripts/ctl-project-governance.mjs` at runtime and use it 
 ## Boundaries
 
 - Owns the **task layer**: granularity, progress, identity, `.ai-task.yaml`, the `Task:` trailer.
-- Does **not** own Milestones, Features, Requirements, or any cross-task rollup — that is `project-hub`.
+- Does **not** own Milestones, Features, Requirements, or any cross-task rollup — that is the hub's job.
 - Ships no skills. Those are global, in `system/skills/`.

@@ -2,13 +2,14 @@
 /**
  * ctl-project-governance.mjs
  *
- * Project governance control tool (init/lint/sync).
+ * Project governance control tool (install/init/lint/sync).
  *
  * @reference .ai/project/CONTRACT.md
- * @reference .ai/skills/standards/naming-conventions/SKILL.md
  *
  * Design notes:
  * - Dependency-free (Node built-ins only).
+ * - Ships inside the skill that provisions the hub and installs itself into the target repository,
+ *   because the Git hooks call it by repository path and cannot reach the skill's own location.
  * - Task progress SoT remains in the dev-docs task bundle (`00-overview.md`).
  * - Task identity SoT is anchored by `.ai-task.yaml` (`task_id`).
  */
@@ -81,6 +82,12 @@ Usage:
   node .ai/scripts/ctl-project-governance.mjs <command> [options]
 
 Commands:
+  install
+    --repo-root <path>        Repo root (default: auto-detect; fallback: cwd)
+    --dry-run                 Show what would be copied and created
+    Copy the shipped hub assets into <repo>/.ai/ and then initialize. Idempotent: shipped
+    material is refreshed, hub files created by init are left alone.
+
   init
     --repo-root <path>        Repo root (default: auto-detect; fallback: cwd)
     --dry-run                 Show what would be created
@@ -960,6 +967,65 @@ function renderTaskMetaYaml(meta) {
   }
   lines.push('');
   return lines.join('\n');
+}
+
+// The shipped tree sits two levels above this script's own directory, so for a skill shipping
+// <skill>/assets/hub/.ai/scripts/, the root that mirrors a target repository is
+// <skill>/assets/hub. The same expression resolves to
+// the repository root once the script has been installed, which is what makes install a no-op copy
+// when it is run from inside a repository that already has it.
+const SHIPPED_ROOT = path.resolve(__dirname, '..', '..');
+
+/** Every file under dir, as paths relative to dir. */
+function collectFiles(dir, base = dir) {
+  const out = [];
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    const abs = path.join(dir, entry.name);
+    if (entry.isDirectory()) out.push(...collectFiles(abs, base));
+    else if (entry.isFile()) out.push(path.relative(base, abs));
+  }
+  return out;
+}
+
+// Install is the entry point for a repository that has nothing yet: the shipped assets are the
+// control script, its lib, the contract, and the templates init reads. Shipped material is
+// overwritten on every run so a re-install upgrades it in place; the hub files init creates are
+// project data and are never touched here.
+function cmdInstall({ repoRoot, dryRun }) {
+  const srcRoot = path.join(SHIPPED_ROOT, '.ai');
+  const dstRoot = path.join(repoRoot, '.ai');
+  const actions = [];
+
+  if (path.resolve(srcRoot) === path.resolve(dstRoot)) {
+    info('[info] Hub assets already live in this repository; skipping the copy.');
+  } else {
+    if (!exists(srcRoot)) {
+      die(`[error] Shipped hub assets are missing at ${toPosix(srcRoot)}`);
+    }
+    for (const rel of collectFiles(srcRoot)) {
+      const from = path.join(srcRoot, rel);
+      const to = path.join(dstRoot, rel);
+      const content = readText(from);
+      if (content === null) {
+        die(`[error] Cannot read shipped asset: ${toPosix(from)}`);
+      }
+      const existed = exists(to);
+      if (dryRun) {
+        actions.push({ op: existed ? 'update' : 'write', path: to, mode: 'dry-run' });
+        continue;
+      }
+      const changed = writeTextIfChanged(to, content);
+      actions.push({ op: changed ? (existed ? 'update' : 'write') : 'same', path: to });
+    }
+
+    ok('[ok] Hub assets installed.');
+    for (const a of actions) {
+      const mode = a.mode ? ` (${a.mode})` : '';
+      console.log(`  ${a.op}: ${toPosix(path.relative(repoRoot, a.path))}${mode}`);
+    }
+  }
+
+  cmdInit({ repoRoot, dryRun, force: false });
 }
 
 function cmdInit({ repoRoot, dryRun, force }) {
@@ -2618,6 +2684,9 @@ function main() {
     opts['repo-root'] ? path.resolve(opts['repo-root']) : findRepoRoot(process.cwd()) || path.resolve(process.cwd());
 
   switch (command) {
+    case 'install':
+      cmdInstall({ repoRoot, dryRun: !!opts['dry-run'] });
+      break;
     case 'init':
       cmdInit({ repoRoot, dryRun: !!opts['dry-run'], force: !!opts.force });
       break;

@@ -11,7 +11,8 @@ system/          # 全局层：跟着人走，镜像 ~/.claude/
   skills/        #   所有 Skill，一层平铺（发现只扫这一层）
     <skill>/
       SKILL.md
-      templates/ examples/ reference/ assets/   # 随技能走的资产，含 Git 钩子
+      templates/ examples/ reference/   # 随技能走的资产
+      assets/<bundle>/                  # 技能自己装进目标仓库的东西（Git 钩子、hub）
   docs/          #   全局 Agent 指令（CLAUDE.md / AGENTS.md）
 packs/           # 项目层：项目侧脚手架，按需复制进目标仓库
   <pack-name>/
@@ -19,11 +20,14 @@ packs/           # 项目层：项目侧脚手架，按需复制进目标仓库
     files/       #   原样复制到目标项目根目录
     verify.sh    #   冒烟测试（不随包分发）
 checks/          # 本仓库自己的校验，不是分发物
+  skills/<skill>.sh   #   技能级冒烟测试
 ```
 
 分层的依据很简单：**一个能力是绑在人身上还是绑在项目上。**
 
-`system/` 里是**能力**：技能连同它自己的模板、示例、钩子，装一次即可，对每个项目都成立。 `packs/` 里是**项目侧脚手架**：契约文档、模板、控制脚本 —— 技能要操作的对象，必须随项目安装。
+`system/` 里是**能力**：技能连同它自己的模板、示例、钩子，装一次即可，对每个项目都成立。 `packs/` 里是**项目侧脚手架**：技能要操作的对象，必须随项目安装。
+
+一个技能要在目标仓库里放东西（控制脚本、契约、模板）时，那些东西放在该技能的 `assets/<bundle>/` 下，按目标仓库的目录形状摆好，由技能自己的 install 命令写进去 —— 用不着先装一个 pack。`project-hub` 就是这样并进 [start-task](system/skills/start-task/SKILL.md) 的。
 
 技能发现只扫 `system/skills/` 的第一层，所以那一层保持平铺，不要建分组子目录。
 
@@ -79,7 +83,6 @@ cp -R packs/<pack-name>/files/. /path/to/your/project/
 | Pack | 能力 | 依赖 |
 |------|------|------|
 | [dev-docs-continuity](packs/dev-docs-continuity/PACK.md) | Task Contract 与 `dev-docs/` 目录结构 | 无 |
-| [project-hub](packs/project-hub/PACK.md) | 任务聚合成 Milestone/Feature/Requirement 视图，带校验与同步 | Node、dev-docs-continuity |
 
 ## 校验
 
@@ -87,15 +90,15 @@ cp -R packs/<pack-name>/files/. /path/to/your/project/
 node checks/run.mjs
 ```
 
-两部分。**静态检查**扫描 `packs/`：引用的脚本是否都随包提供（悬空引用是仓库退役后最容易留下的坑）、钩子有没有可执行位（缺了 git 只 warn 然后静默跳过）、有无机器绝对路径。**冒烟测试**把每个 pack 按文档里那条 `cp -R` 装进临时 git 仓库，再跑该 pack 的 `verify.sh`。
+两部分。**静态检查**扫描 `packs/` 和 `system/skills/`：引用的脚本是否真有人提供（悬空引用是仓库退役后最容易留下的坑）、钩子有没有可执行位（缺了 git 只 warn 然后静默跳过）、有无机器绝对路径、技能之间有没有互相提名、两份全局文档有没有漂移。**冒烟测试**在临时 git 仓库里跑两类装法：pack 按文档里那条 `cp -R` 装，技能则由 `checks/skills/<skill>.sh` 调它自己的 install 命令装 —— 被测的正是那条命令。
 
-`checks/` 和 `packs/*/verify.sh` 都**不是分发物** —— 它们校验这个库，`packs/*/files/` 才是库本身。这也是本仓库唯一会执行的东西。
+`checks/` 和 `packs/*/verify.sh` 都**不是分发物** —— 它们校验这个库，`packs/*/files/` 和 `system/` 才是库本身。这也是本仓库唯一会执行的东西。
 
 其他用法：
 
 ```bash
-node checks/run.mjs --static              # 只跑静态检查
-node checks/run.mjs --only project-hub    # 只冒烟测一个 pack
+node checks/run.mjs --static             # 只跑静态检查
+node checks/run.mjs --only start-task    # 只冒烟测一个 pack 或技能
 ```
 
 ## 贡献约定

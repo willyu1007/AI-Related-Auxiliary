@@ -51,7 +51,7 @@ The rules in the section are the **single definition** of task identity and prog
 
 - Tasks MUST be flat. No parent tasks, no subtasks, no nested bundle directories.
 - Structure *inside* a task belongs in `01-plan.md` as phases. Phases need no id, no bundle, and no separate status.
-- Work that genuinely advances in parallel becomes **sibling tasks**, each with a full bundle. Group them with `feature_id` in the registry when `project-hub` is installed.
+- Work that genuinely advances in parallel becomes **sibling tasks**, each with a full bundle. Group them with `feature_id` in the registry when the project hub is installed.
 
 Two mechanisms make flatness a rule rather than a preference:
 
@@ -122,7 +122,7 @@ Take the highest ID and add one, zero-padded to three digits; `T-001` when the s
 
 The scan reads Git history as well as the working tree because the working tree alone is blind to other branches. In a linked worktree, a sibling worktree's committed task is invisible to `grep`, so both would allocate the same number and the collision would only surface at merge. `--all` closes that gap. Two worktrees allocating simultaneously with neither committed can still collide; lint reports the duplicate, and the fix is to renumber the newer task before merging.
 
-If the `project-hub` pack is installed, `ctl-project-governance.mjs sync --apply` applies the same rule and fills in a missing file — but do not depend on that. Allocation belongs to the task layer, and a repository without the hub still needs working commit links.
+If the project hub is installed, `ctl-project-governance.mjs sync --apply` applies the same rule and fills in a missing file — but do not depend on that. Allocation belongs to the task layer, and a repository without the hub still needs working commit links.
 
 ### Task IDs carry no meaning
 
@@ -139,7 +139,7 @@ Categorize with fields that have names:
 | Need | Use |
 |------|-----|
 | Tag a task (validation, spike, chore) | `keywords:` in `.ai-task.yaml` |
-| Group tasks under one deliverable | `feature_id` / `milestone_id` in the registry (`project-hub`) |
+| Group tasks under one deliverable | `feature_id` / `milestone_id` in the registry (project hub) |
 | Separate lines of work | The branch name |
 
 ## Coding Gate (MUST)
@@ -210,7 +210,7 @@ When task status changes to "done" and all verification passes:
 
 ### Project Hub Integration (optional)
 
-The section applies **only** when the `project-hub` pack is installed (`.ai/project/registry.yaml` exists). Without the hub, dev-docs is self-sufficient and the hub steps are not required.
+The section applies **only** when the project hub is installed (`.ai/project/registry.yaml` exists). Without the hub, dev-docs is self-sufficient and the hub steps are not required.
 
 | Event | Action |
 |-------|--------|

@@ -17,7 +17,7 @@ The **task layer** — task progress, task identity, task status values, and the
 schema — is defined by `dev-docs/AGENTS.md` ("Task Contract"), which ships with the
 `dev-docs-continuity` pack. The hub consumes those definitions and MUST NOT restate them.
 
-The hub is therefore a strict dependent: `dev-docs-continuity` works alone, `project-hub` does not.
+The hub is therefore a strict dependent: `dev-docs-continuity` works alone, the hub does not.
 
 ## 1. Sources of Truth (SoT)
 

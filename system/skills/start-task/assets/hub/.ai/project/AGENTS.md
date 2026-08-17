@@ -58,15 +58,15 @@ node .ai/scripts/ctl-project-governance.mjs commits --task T-001
 ```
 
 7) (Optional) Install Git hooks for automatic sync and commit/task linking. The hooks ship with the
-`sync-task` skill; copy them into `.githooks/` first, then:
+task skills; copy them into `.githooks/` first, then:
 ```bash
 node .githooks/install.mjs
 ```
 
 Installed hooks:
-- `pre-commit` (this pack): Auto-runs governance `sync` when `dev-docs/` files are staged
-- `prepare-commit-msg` (dev-docs-continuity): Injects `Task:` when the branch contains one valid task ID
-- `commit-msg` (dev-docs-continuity): Validates conventional commit format and any `Task: T-###` trailer
+- `pre-commit`: Auto-runs governance `sync` when `dev-docs/` files are staged
+- `prepare-commit-msg`: Injects `Task:` when the branch contains one valid task ID
+- `commit-msg`: Validates conventional commit format and any `Task: T-###` trailer
 
 The trailer check warns by default. To block instead: `git config hooks.requireTaskTrailer true`.
 To skip the trailer hooks once:

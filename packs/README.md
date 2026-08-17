@@ -13,7 +13,6 @@ Nothing here runs in this repository. A pack is material to copy out.
 | Pack | Capability | Dependencies |
 |------|-----------|--------------|
 | [dev-docs-continuity](dev-docs-continuity/PACK.md) | The Task Contract and the `dev-docs/` bundle directories | none |
-| [project-hub](project-hub/PACK.md) | Registry aggregating tasks into Milestone/Feature/Requirement, with lint + sync | Node, `dev-docs-continuity` |
 
 ## Installing
 
@@ -28,7 +27,9 @@ installer to keep in sync with the contents. Read the pack's `PACK.md` for post-
 (some packs have one; most do not).
 
 Git hooks are not pack material. They ship with the `sync-task` skill, which is what documents and
-installs them.
+installs them. The same now goes for the project hub: its control script, contract, and templates
+ship under `system/skills/start-task/assets/hub/` and are installed by that skill's own command, so
+a repository needs no second install step to get them.
 
 ## Layout
 

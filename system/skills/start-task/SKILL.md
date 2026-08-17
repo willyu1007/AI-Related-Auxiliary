@@ -66,12 +66,15 @@ Apply the gate in `dev-docs/AGENTS.md` ("Decision Gate (MUST)"). The criteria li
 
    Follow "Allocating a task ID" in `dev-docs/AGENTS.md` to pick the number. Skipping the step leaves the task unlinked from commits, which means no `Task:` trailer and no timeline to resume from later — the bundle exists but continuity does not.
 
-8. **Register with the project hub**, when `.ai/scripts/ctl-project-governance.mjs` exists — the script being present means the pack is installed; `--init-if-missing` materializes the hub files on first use:
+8. **Provision the project hub and register the task.** The hub ships with this skill, so there is nothing to check for first — `install` copies the control script, contract, and templates into `.ai/`, then creates the hub files it does not already find. Both commands are idempotent:
 
    ```bash
-   node .ai/scripts/ctl-project-governance.mjs sync --apply --init-if-missing
+   node <this-skill>/assets/hub/.ai/scripts/ctl-project-governance.mjs install --repo-root .
+   node .ai/scripts/ctl-project-governance.mjs sync --apply
    node .ai/scripts/ctl-project-governance.mjs map --task T-### --feature F-### --apply
    ```
+
+   `<this-skill>` is the directory holding this `SKILL.md`. Re-running `install` refreshes the shipped assets and leaves every hub file the repository already has untouched.
 
    `sync` adds the task to the registry. Mapping it to a real Feature is what keeps the task off the `F-000` triage bucket; leave it on `F-000` only when triage is genuinely deferred, and say so in the feature brief.
 
@@ -112,3 +115,4 @@ Before handing back, check that a fresh agent reading only these files can answe
 - `./templates/` — the 6 bundle files, plus `roadmap.md` and `requirement.md`
 - `./examples/sample-roadmap.md`, `./examples/sample-task-bundle.md`
 - `./reference/detailed-docs-convention.md` — optional deeper file layout
+- `./assets/hub/` — the project hub as it lands in a repository: control script, contract, templates. Installed by step 8, never read from here at runtime.
