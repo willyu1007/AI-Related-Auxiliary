@@ -48,9 +48,11 @@ Archiving is a **state transition plus a distillation**, not filing. The full bu
 2. **Completion audit** — `State: done` is a claim, not proof. Audit it against reality, by default, every time:
    - Read the goal and acceptance criteria from `00-overview.md`.
    - Check that the commit timeline (`git log --grep="^Task: T-###"`) and the code itself actually deliver them.
-   - Re-run the cheapest decisive verification command recorded in `04-verification.md`, when runnable.
+   - Re-run the cheapest decisive verification command recorded in `04-verification.md`, when runnable — not runnable means the command or its targets no longer exist; expensive still counts as runnable.
 
    Documents saying done while reality disagrees is a stop: send the task back to record what is actually missing. Do not archive on hope.
+
+   The favorable direction stops too: a task that is complete in reality while its record still says `in-progress` is not archivable — the record goes back through the sync workflow first. Never rewrite another session's `State:` as part of archiving; the audit reads reality, it does not edit the claim.
 
 3. **No false "landed" claims** — Uncommitted or unverified work is documented as open, not implied complete.
 
@@ -67,7 +69,11 @@ Archiving is a **state transition plus a distillation**, not filing. The full bu
 
 5. **User approval** — One proposal, one approval, covering both halves: the move `dev-docs/active/<slug>/` → `dev-docs/archive/<slug>/`, and the distillation — show the sealed record and the list of files to delete. Wait for explicit approval before touching anything.
 
-6. **Execute** — Write the sealed record, delete the distilled files, move the directory. Location sets effective status (`archived`), whatever `State:` says.
+6. **Execute** — Write the sealed record, delete the distilled files, move the directory. Location sets effective status (`archived`), whatever `State:` says. Leave `.ai-task.yaml` alone — the sync in the next gate rewrites its display `status` itself. Commit the archive as its own commit, one per task, with the task's trailer, so the seal appears on the task's own timeline:
+
+   ```bash
+   git commit -m "chore(archive): archive T-### <slug>" -m "Task: T-###"
+   ```
 
 7. **Hub propagate** — After the move, so the registry sees the final state:
 
@@ -99,7 +105,7 @@ When the user asks which tasks are ready to archive, or for a global archive-rea
    grep -r "^- State:" --include=00-overview.md dev-docs/active
    ```
 
-2. For each bundle — whatever its `State:` says — run a light completion audit: goal and acceptance criteria from `00-overview.md`, against the commit timeline and the code. This is the point of the sweep: a task sitting on `in-progress` may be finished in reality, and a task claiming `done` may not be.
+2. For each bundle — whatever its `State:` says — run a light completion audit: goal and acceptance criteria from `00-overview.md`, against the commit timeline and the code. This is the point of the sweep: a task sitting on `in-progress` may be finished in reality, and a task claiming `done` may not be. Both divergences report as **not ready** — the first needs its record aligned through the sync workflow, the second needs the missing work — the sweep just makes each visible.
 
 3. Report a table: task, claimed state, audited state, ready / not ready, and the missing gate for every not-ready entry.
 
