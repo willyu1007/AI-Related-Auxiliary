@@ -42,6 +42,12 @@ clear is not a trigger — keep working.
    Skipping the step is how a chain of hot handoffs rots the record — three sessions pass the block
    forward, none writes the bundle, and the next cold start finds a task that stopped days ago.
 
+   If little context remains even after finishing the instruction, shrink the sync rather than
+   skipping — a full pass abandoned halfway leaves the bundle part new, part stale. In descending
+   order of value: `State:` and the next concrete step in `00-overview.md`; the list of uncommitted
+   changes; any pitfall hit in the session. The floor is one commit with a `Task:` trailer whose
+   message states what landed and what is pending.
+
 2. **Render the block** and present it in the conversation for the user to copy.
 
 ## Block format
@@ -49,6 +55,8 @@ clear is not a trigger — keep working.
 ````markdown
 ## T-012 · oauth-provider-integration
 State: in-progress · HEAD: a3f9c21
+> Stale check: if `git rev-parse --short HEAD` is not a3f9c21, discard the block — cold start
+> from the repository instead.
 
 ### Goal
 One sentence. What finishing looks like.
@@ -76,9 +84,9 @@ is what the repository does not have and does not need: what you were about to t
 flaky and should be ignored, what you would not touch yet. That layer has a half-life of one hop,
 which is why an ephemeral block suits the hot layer better than a committed file.
 
-`HEAD` lets the receiving session confirm at a glance that the block matches the checkout. Time
-between handoff and resume is near zero, so drift is not the risk — pasting yesterday's block by
-mistake is.
+The stale check makes the block self-verifying: the receiving session reads only the block, so the
+instruction to verify has to travel inside the block. Time between handoff and resume is near zero,
+so drift is not the risk — pasting yesterday's block by mistake is.
 
 ## Starting the new session
 

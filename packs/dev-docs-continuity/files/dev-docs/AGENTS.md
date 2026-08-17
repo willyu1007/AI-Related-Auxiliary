@@ -83,6 +83,9 @@ Under the `## Status` heading there MUST be a bullet:
 ```
 
 - `State:` MUST carry a single value from `planned | in-progress | blocked | done`.
+- A new task starts as `planned` and MUST move to `in-progress` at the first checkpoint once
+  implementation begins. Automatic resume resolution finds only `in-progress` and `blocked`
+  tasks — a task left on `planned` can be resumed only by explicit id or branch name.
 - A task directory under `dev-docs/**/archive/<task-slug>/` has the effective status `archived`,
   whatever `State:` says.
 

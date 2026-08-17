@@ -1,6 +1,6 @@
 ---
 name: resume-task
-description: Picking up work already underway with nothing carried over from the previous session. Use for "continue the auth work", "where were we", "pick up T-012", "keep going", or when a session starts on a branch that names a task.
+description: Picking up work already underway with nothing carried over from the previous session. Use for "continue the auth work", "where were we", "pick up T-012", or when a session starts on a branch that names a task.
 ---
 
 # Resume Task

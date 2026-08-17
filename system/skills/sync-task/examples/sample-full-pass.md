@@ -1,4 +1,4 @@
-# Example: Handoff update (blocked task)
+# Example: Full pass (blocked task)
 
 ## `00-overview.md` update (sketch)
 - Status: blocked

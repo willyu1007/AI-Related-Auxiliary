@@ -32,8 +32,14 @@ not restated here so the two cannot drift.
    node .ai/scripts/ctl-project-governance.mjs query --status in-progress
    ```
 
-   Without the hub, scan `dev-docs/**/active/*/00-overview.md` directly. If existing work covers
-   the request, stop and use `resume-task` instead of opening a second bundle.
+   Without the hub, scan the bundles directly:
+
+   ```bash
+   grep -r "^- State:" --include=00-overview.md dev-docs
+   ```
+
+   then open the goal of anything active. If existing work covers the request, stop and use
+   `resume-task` instead of opening a second bundle.
 
 2. **Restate the goal in one sentence** and get confirmation.
 
@@ -44,7 +50,8 @@ not restated here so the two cannot drift.
 4. **Confirm a slug.** Kebab-case, derived from the goal, no dates unless asked. The slug names the
    directory and is hard to change later.
 
-5. **Write `roadmap.md`** (when the gate calls for one) from `./templates/roadmap.md`. Keep the
+5. **Write `dev-docs/active/<slug>/roadmap.md`** (when the gate calls for one) from
+   `./templates/roadmap.md`. Keep the
    roadmap macro: phases, milestones, deliverables, verification, risks, rollback. Include the
    "Project structure change preview" section — directory-level paths by default, `(none)` or
    `<TBD>` plus a discovery step when you have not inspected the repo. Never invent file paths,
@@ -72,7 +79,7 @@ not restated here so the two cannot drift.
    ```yaml
    version: 1
    task_id: T-007
-   slug: <slug>
+   slug: oauth-provider-integration
    ```
 
    Follow "Allocating a task ID" in `dev-docs/AGENTS.md` to pick the number. Skipping the step
@@ -89,6 +96,10 @@ not restated here so the two cannot drift.
    `sync` adds the task to the registry. Mapping it to a real Feature is what keeps the task off the
    `F-000` triage bucket; leave it on `F-000` only when triage is genuinely deferred, and say so in
    the feature brief.
+
+   When no existing Feature fits, add one to `registry.yaml` first — a fresh hub contains only the
+   `F-000` inbox. An entry needs `id` (next `F-###`), `title`, `milestone_id`, and `status`;
+   `map --requirement` creates missing requirements, but `--feature` only links existing ones.
 
 9. **Hand back** the confirmed goal, where the artifacts live, and the next three concrete actions.
    Do not start implementing in the same turn unless the user asked you to.

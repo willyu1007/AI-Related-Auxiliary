@@ -1,4 +1,4 @@
-# Handoff checklist
+# Full-pass checklist
 
 - [ ] Current status and next steps are clear.
 - [ ] Key decisions and tradeoffs are recorded.

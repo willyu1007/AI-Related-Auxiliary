@@ -47,6 +47,9 @@ The same action throughout; only the depth changes.
    `05-pitfalls.md` is append-only. Mark an entry resolved or superseded, never delete one. A useful
    entry names the symptom, the root cause, what was tried, the fix, and how to avoid a repeat.
 
+   If the task still reads `State: planned`, the first checkpoint flips the state to `in-progress` — per
+   the Task Contract, a task left on `planned` is invisible to automatic resume resolution.
+
 3. **Commit the verified part** with a `Task: T-###` trailer:
 
    ```bash
@@ -76,8 +79,8 @@ goes into `03-implementation-notes.md` or `05-pitfalls.md` before you stop.
 
 Write the next step as an instruction to someone else, not a reminder to yourself.
 
-`./templates/handoff-checklist.md` is the short form to paste into the bundle; a worked example is
-in `./examples/sample-handoff-update.md`.
+`./templates/full-pass-checklist.md` is the short form to paste into the bundle; a worked example
+is in `./examples/sample-full-pass.md`.
 
 ## Finishing a task
 

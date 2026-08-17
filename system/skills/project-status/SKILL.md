@@ -47,7 +47,8 @@ Pick by what was asked, then follow that reference's **Data Source** commands:
    ```
 
    Report the commit timeline, worktree warnings, and any disagreement between the packet and the
-   documented status. An empty timeline means progress is unknown, not zero.
+   documented status. An empty timeline means progress is unknown, not zero. Without the script,
+   ground the same claim with `git log --grep="^Task: T-###"` directly.
 
 5. **For semantic questions**, quote the `Semantic Feature Briefs` section of
    `.ai/project/feature-map.md`. `dashboard.md` supplies the focus index only, never the semantic
