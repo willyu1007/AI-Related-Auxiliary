@@ -44,8 +44,8 @@ checks/          # 本仓库自己的校验，不是分发物
 |---|---|
 | `codex-*`（三个） / `html-communication` | 见各自 `SKILL.md` |
 | [review-code](system/skills/review-code/SKILL.md) | 当前 Agent 自审代码改动并出分级报告（Claude/Codex 通用）；第二意见仍走 `codex-review` |
-| [sync-db-from-prisma](system/skills/sync-db-from-prisma/SKILL.md) | Prisma repo→DB migration 闸门与 LLM schema projection |
-| [manage-llm-usage](system/skills/manage-llm-usage/SKILL.md) | 薄 LLM 能力台账（内部 capability）维护与对齐；含精简调用/调度准则；可选 Web 管理台读写同一 SSOT |
+| [sync-db-from-prisma](system/skills/sync-db-from-prisma/SKILL.md) | Prisma repo→DB migration 闸门：预览、单独的 apply 批准、按环境应用、验证 |
+| [manage-llm-usage](system/skills/manage-llm-usage/SKILL.md) | 薄 LLM 能力台账（内部 capability）：登记、改完代码后对齐、共享调用准则；手工维护，无校验 |
 | [debug-mode](system/skills/debug-mode/SKILL.md) | 证据驱动调试：可选审批门（默认无）、Agent 自行采证、验证后自动清理临时埋点与产物 |
 
 `system/` 是全局 Agent 配置的版本化镜像。改动流程：

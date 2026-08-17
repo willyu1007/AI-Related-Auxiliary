@@ -39,4 +39,4 @@ Emit or plan for: trace/request id, capability id, provider, model or profile, l
 
 - Add or change LLM usage → update `docs/llm/usage-registry.yaml` in the same change set when possible.
 - Retire capabilities explicitly (`status: retired`) instead of leaving stale rows.
-- A web admin, if present, must write the same SSOT—not a parallel store.
+- A web admin, if present, must write the same ledger file—not a parallel store.

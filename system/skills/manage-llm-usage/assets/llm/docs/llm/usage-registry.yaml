@@ -1,4 +1,4 @@
-# LLM capability usage ledger (SSOT)
+# LLM capability usage ledger
 #
 # Primary key: id (stable capability / internal interface)
 # Register orchestration entries, not provider SDK methods.

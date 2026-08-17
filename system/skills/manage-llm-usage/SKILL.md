@@ -15,7 +15,7 @@ description: >-
 
 Keep a **thin usage ledger** so humans and agents can see, for each internal LLM capability, how the project calls models—without scanning the whole tree for SDK imports.
 
-The ledger is the SSOT for *what uses LLM and how*. An optional web admin may edit the same file; this skill does not implement that UI. Shared **calling guidelines** (single call surface, credentials, routing, reliability) live in `./reference/calling-guidelines.md`.
+The ledger is the one place that records *what uses LLM and how*. It is hand-maintained: nothing derives from it and nothing validates it, so it is worth exactly as much as the last alignment pass put into it. An optional web admin may edit the same file; this skill does not implement that UI. Shared **calling guidelines** (single call surface, credentials, routing, reliability) live in `./reference/calling-guidelines.md`.
 
 ## When to use
 
@@ -33,24 +33,15 @@ The ledger is the SSOT for *what uses LLM and how*. An optional web admin may ed
 
 ## Ledger location
 
-Prefer these fixed paths in the target repo (copy from this skill if missing):
-
-| Path | Role |
-|------|------|
-| `docs/llm/AGENTS.md` | How agents should load the ledger |
-| `docs/llm/usage-registry.yaml` | Capability ledger (SSOT) |
-
-Materialize once:
+`docs/llm/usage-registry.yaml` in the target repository. Materialize it once — `-n` is what keeps a re-run from flattening an existing ledger:
 
 ```bash
-mkdir -p docs/llm
-cp <this-skill>/templates/docs/llm/AGENTS.md docs/llm/AGENTS.md
-cp <this-skill>/templates/docs/llm/usage-registry.yaml docs/llm/usage-registry.yaml
+mkdir -p docs/llm && cp -n <this-skill>/assets/llm/docs/llm/usage-registry.yaml docs/llm/usage-registry.yaml
 ```
 
-`<this-skill>` is the installed directory of this skill. Do not overwrite an existing ledger; merge new capabilities into it.
+`<this-skill>` is the installed directory of this skill. Merge new capabilities into an existing ledger rather than replacing it.
 
-If the project already keeps the same SSOT elsewhere (for example behind an admin API), use that path—but keep one SSOT and point `docs/llm/AGENTS.md` at it.
+If the project already keeps the same record elsewhere (for example behind an admin API), use that path — but keep exactly one.
 
 ## Primary key: capability (internal interface)
 
@@ -65,7 +56,7 @@ Register **orchestration entries**, not raw SDK calls.
 
 ### A. Discover
 
-1. Open `docs/llm/AGENTS.md`, then `docs/llm/usage-registry.yaml`.
+1. Open `docs/llm/usage-registry.yaml` before searching the repository for provider SDKs or model strings.
 2. Find the capability by `id`, `entry.ref`, or `code_entry`.
 3. Only then open implementation or prompt files listed on the row.
 
@@ -90,7 +81,7 @@ After LLM-related edits:
 
 ### D. Optional admin
 
-If a web admin edits the same SSOT, treat UI saves as ledger writes. Do not maintain a second copy in chat or ad-hoc docs.
+If a web admin edits the same file, treat UI saves as ledger writes. Do not maintain a second copy in chat or ad-hoc docs.
 
 ## Boundaries
 
@@ -103,7 +94,6 @@ If a web admin edits the same SSOT, treat UI saves as ledger writes. Do not main
 
 | Path | Role |
 |------|------|
-| `templates/docs/llm/AGENTS.md` | Project entry protocol |
-| `templates/docs/llm/usage-registry.yaml` | Empty ledger + field schema comments |
+| `assets/llm/docs/llm/usage-registry.yaml` | Empty ledger + field schema comments, laid out as it lands in a repository |
 | `examples/usage-registry.sample.yaml` | Two example capabilities |
 | `reference/calling-guidelines.md` | Core scheduling / calling norms |
