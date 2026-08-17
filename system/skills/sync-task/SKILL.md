@@ -29,7 +29,13 @@ When the task is complete, run a **full pass** here (including verification in `
 
    Git history wins when it disagrees with the bundle. Correct the bundle, never the history.
 
-2. **Update the files reality moved:**
+2. **Split what you see by task.** Several tasks advancing in one worktree is ordinary, not an error: the worktree is shared, the record is per task. Every path `git status` reports belongs to exactly one of two piles — this task's, and someone else's. Only the first pile goes into the bundle and into the commit.
+
+   If the current environment can report what this session changed, use it to do the split — it is faster and more accurate than reasoning about the whole worktree. It narrows attribution, never the read: changes this session did not make still have to be seen, and named when they are not this task's.
+
+   Name the second pile in the handback — which paths, and that they are uncommitted and belong elsewhere. Leaving them out silently is how the other task's work goes missing: nobody is watching that pile except you, right now.
+
+3. **Update the files reality moved:**
 
    | File | Record |
    |------|--------|
@@ -44,15 +50,18 @@ When the task is complete, run a **full pass** here (including verification in `
 
    If the task still reads `State: planned`, the first checkpoint flips it to `in-progress`. Automatic resume resolution finds only `in-progress` and `blocked` bundles, so a task left on `planned` can be picked up again only by explicit id or branch name.
 
-3. **Commit the verified part** with a `Task: T-###` trailer:
+4. **Commit the verified part** with a `Task: T-###` trailer, staging the first pile by path:
 
    ```bash
+   git add <paths from this task>
    git commit -m "feat(scope): subject" -m "Task: T-012"
    ```
 
+   `git add -A` is wrong in a worktree carrying several tasks — it is the step that silently attaches someone else's work to this trailer.
+
    The trailer is the only thing linking a commit to a task, and the only input a later session has for rebuilding a timeline. Work that cannot be committed safely stays uncommitted and gets written down — never force broken or unverified changes in for a clean status.
 
-4. **Propagate status to the project hub:**
+5. **Propagate status to the project hub:**
 
    ```bash
    node .ai/scripts/ctl-project-governance.mjs sync --apply
@@ -61,7 +70,7 @@ When the task is complete, run a **full pass** here (including verification in `
 
    This copies the bundle's `State:` into the registry after a context sync. It is not a substitute for archive moves or dedicated drift repair.
 
-   `sync --apply` is idempotent. The bundle stays authoritative; the registry is a derived cache. With the hooks installed, the commit in step 3 already ran the sync via `pre-commit` — keep the `lint --check`, skip the manual sync.
+   `sync --apply` is idempotent. The bundle stays authoritative; the registry is a derived cache. With the hooks installed, the commit in step 4 already ran the sync via `pre-commit` — keep the `lint --check`, skip the manual sync.
 
 ## Stopping for the day
 
@@ -88,9 +97,7 @@ node .githooks/install.mjs
 
 The trailer hooks warn by default; `git config hooks.requireTaskTrailer true` makes them block. Skip once with `SKIP_TASK_TRAILER=1 git commit …`. `prepare-commit-msg` and `commit-msg` use the control script when it is there and fall back to scanning `.ai-task.yaml` directly, so installing them into a repository that has never opened a task still works.
 
-Hooks are optional. Without them the trailer convention still holds — you write the trailer by hand. Details live under `./assets/githooks/`; this section is only the install entry.
-
-The trailer is what links a commit to a task, and the only mechanism a later session has for rebuilding a timeline. Never attach one to unrelated work.
+Hooks are optional. Without them the trailer convention still holds — you write the trailer by hand. On a branch that carries no task id, `prepare-commit-msg` injects nothing, so every trailer is hand-written there. Details live under `./assets/githooks/`; this section is only the install entry.
 
 ## Rules
 
@@ -98,6 +105,7 @@ The trailer is what links a commit to a task, and the only mechanism a later ses
 - Never mark a task `done` without verification evidence in `04-verification.md`.
 - Never move a bundle into `archive/` from this skill; that is hub-maintenance work after the record is ready.
 - Never attach a `Task:` trailer to work unrelated to that task. On a task branch doing unrelated work, set `SKIP_TASK_TRAILER=1` for that commit.
+- Never leave a foreign change unmentioned. It stays in the worktree, and the handback says which paths and that they are not this task's.
 - Never delete a prior decision or pitfall; supersede with an explanation.
 - Never hand-edit AUTO-generated hub sections; regenerate with `sync --apply`.
 - Never treat `.ai-task.yaml` `status` as authoritative — `00-overview.md` `State:` wins.
