@@ -2,24 +2,25 @@
 
 Task: `T-###` · slug: `<slug>`
 
-## Before proposing the move
+## Before proposing (gates 1–4)
 
 - [ ] Full sync pass completed; bundle matches `git status` / task commit timeline
-- [ ] `04-verification.md` records passing evidence for the Definition of Done
-- [ ] `00-overview.md` has `State: done`
+- [ ] Completion audit passed: goal and acceptance criteria from `00-overview.md` hold against the commit timeline and the code — not just against `State: done`
+- [ ] Cheapest decisive verification command from `04-verification.md` re-run, when runnable
 - [ ] Uncommitted or unfinished work is not described as landed
-- [ ] Pitfalls/decisions retained (append-only; no silent deletes)
+- [ ] Sealed record drafted: goal + outcome, key decisions, verification summary, do-not-repeat pitfalls, `git log --grep="^Task: T-###"` pointer
+- [ ] Deletion list drafted: `01-plan.md`, `02-architecture.md`, `03-implementation-notes.md`, `04-verification.md`, `05-pitfalls.md`, `roadmap.md`, `requirement.md`, `artifacts/` (as present)
 
-## Approval
+## Approval (gate 5)
 
-- [ ] Proposed path: `dev-docs/active/<slug>/` → `dev-docs/archive/<slug>/`
-- [ ] User explicitly approved the directory move
+- [ ] Proposed as one package: move `dev-docs/active/<slug>/` → `dev-docs/archive/<slug>/` + sealed record + deletion list
+- [ ] User explicitly approved
 
-## After the move
+## After execution (gates 6–8)
 
-- [ ] Directory is under `dev-docs/archive/<slug>/`
-- [ ] Hub `sync --apply` run (if `.ai/scripts/ctl-project-governance.mjs` exists)
-- [ ] Registry shows archived (when hub present)
+- [ ] Archived bundle is exactly two files: sealed `00-overview.md` + `.ai-task.yaml`
+- [ ] Hub `sync --apply` run after the move; `lint --check` green
+- [ ] Registry shows `archived`
 - [ ] Semantic Feature Brief refreshed if intent/scope/risk changed
 - [ ] `dashboard.md` not used as the brief body
 

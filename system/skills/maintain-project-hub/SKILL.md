@@ -3,30 +3,32 @@ name: maintain-project-hub
 description: >-
   Project-hub governance for finished tasks and registry hygiene. Use when a
   verified task is ready to move from active to archive, when the user asks to
-  archive or close out a task, or when the project hub/registry is out of date,
-  drifting, or needs lint/repair (including stale feature mappings). Not for
-  routine checkpoint or end-of-day task-record updates, and not for read-only
-  progress questions.
+  archive or close out a task, when the user asks which tasks can be archived
+  or for a global archive-readiness check, or when the project hub/registry is
+  out of date, drifting, or needs lint/repair (including stale feature
+  mappings). Not for routine checkpoint or end-of-day task-record updates, and
+  not for read-only progress questions.
 ---
 
 # Maintain Project Hub
 
-Govern the project hub and task lifecycle endpoints that are **not** routine context sync: archive a finished task, and repair hub/registry drift.
+Govern the project hub and the task lifecycle endpoints that are **not** routine context sync: audit what is actually finished, distill and archive it, and repair hub/registry drift.
 
-Task-record alignment (what landed vs what the bundle claims) belongs to the checkpoint / end-of-day sync workflow. This skill assumes that work is already done—or stops and requires it—before archiving.
+Task-record alignment (what landed vs what the bundle claims) belongs to the checkpoint / end-of-day sync workflow. This skill assumes that work is already done — or stops and requires it — before archiving.
 
 ## When to use
 
 | Intent | Workflow |
 |--------|----------|
-| Task verified and ready to seal | **Archive task** |
-| Hub/registry wrong, stale, or inconsistent | **Repair hub drift** |
+| One task verified and ready to seal | **A — Archive task** |
+| "Which tasks can be archived?" / global readiness check | **B — Archive sweep** |
+| Hub/registry wrong, stale, or inconsistent | **C — Repair hub drift** |
 
 ## When not to use
 
 - Mid-work checkpoints or stopping for the day (update the bundle first via the sync workflow)
 - Opening a new task or cold-start resume
-- Read-only “what is in progress?” questions
+- Read-only "what is in progress?" questions
 
 ## Preconditions
 
@@ -37,36 +39,77 @@ Task-record alignment (what landed vs what the bundle claims) belongs to the che
 
 ## Workflow A — Archive task
 
-Archiving is a **state transition**, not filing. Complete every gate below. Use `./templates/archive-checklist.md` as the working list.
+Archiving is a **state transition plus a distillation**, not filing. The full bundle survives forever in git history — one `git log` away — so the archived tree carries only what a future reader needs, and every surviving byte is a cost to every future grep. Use `./templates/archive-checklist.md` as the working list.
 
-### Gates (all required)
+### Gates (all required, in order)
 
 1. **Record aligned** — A full sync pass already ran for this close-out. The bundle matches git reality (history wins over stale docs).
-2. **Verification present** — `04-verification.md` has evidence that the Definition of Done was met. Do not mark done on hope.
-3. **`State: done`** — Written in `00-overview.md` (authoritative). Do not treat `.ai-task.yaml` `status` as source of truth.
-4. **No false “landed” claims** — Uncommitted or unverified work is documented as open, not implied complete.
-5. **User approval to move** — Propose `dev-docs/active/<slug>/` → `dev-docs/archive/<slug>/` and **wait for explicit approval** before moving. Location sets effective status (`archived`).
-6. **Hub propagate:**
+
+2. **Completion audit** — `State: done` is a claim, not proof. Audit it against reality, by default, every time:
+   - Read the goal and acceptance criteria from `00-overview.md`.
+   - Check that the commit timeline (`git log --grep="^Task: T-###"`) and the code itself actually deliver them.
+   - Re-run the cheapest decisive verification command recorded in `04-verification.md`, when runnable.
+
+   Documents saying done while reality disagrees is a stop: send the task back to record what is actually missing. Do not archive on hope.
+
+3. **No false "landed" claims** — Uncommitted or unverified work is documented as open, not implied complete.
+
+4. **Distillation proposed** — Rewrite `00-overview.md` as the sealed record. It carries, and nothing else:
+   - the goal and the outcome — met, partially met, or descoped, and what actually shipped
+   - key decisions worth knowing later, distilled from `02-architecture.md` / `03-implementation-notes.md`
+   - a verification summary distilled from `04-verification.md`: what was run, what it proved
+   - the do-not-repeat pitfalls worth carrying forward, from `05-pitfalls.md`
+   - the pointer to the full trail: `git log --grep="^Task: T-###"`
+
+   Everything else is then deleted: `01-plan.md`, `02-architecture.md`, `03-implementation-notes.md`, `04-verification.md`, `05-pitfalls.md`, `roadmap.md`, `requirement.md`, and any `artifacts/`. The archived bundle is exactly two files: the sealed `00-overview.md` and `.ai-task.yaml` — identity must survive, for ID-uniqueness scans and commit-timeline lookups.
+
+   Nothing is lost, only relocated: content moves into the sealed record before its source file dies, and the full originals stay in git history.
+
+5. **User approval** — One proposal, one approval, covering both halves: the move `dev-docs/active/<slug>/` → `dev-docs/archive/<slug>/`, and the distillation — show the sealed record and the list of files to delete. Wait for explicit approval before touching anything.
+
+6. **Execute** — Write the sealed record, delete the distilled files, move the directory. Location sets effective status (`archived`), whatever `State:` says.
+
+7. **Hub propagate** — After the move, so the registry sees the final state:
 
    ```bash
    node .ai/scripts/ctl-project-governance.mjs sync --apply
+   node .ai/scripts/ctl-project-governance.mjs lint --check
    ```
 
-   Registry status becomes `archived` from the archive path.
-7. **Feature brief** — If intent, scope, or risk posture changed over the task’s life, refresh the Semantic Feature Brief in `.ai/project/feature-map.md` in the same change (intent, scope in/out, decision, dependencies, risks, success signal, related tasks, next checkpoint). `dashboard.md` stays a short index only—never the brief body.
-8. **Handoff** — Confirm the checklist is complete; report archived path and any deferred follow-ups.
+8. **Feature brief** — If intent, scope, or risk posture changed over the task's life, refresh the Semantic Feature Brief in `.ai/project/feature-map.md` in the same change. `dashboard.md` stays a short index only — never the brief body.
+
+9. **Handoff** — Report the archived path, what the sealed record retains, what was deleted, and any deferred follow-ups.
 
 ### Stop conditions
 
-- Missing verification → do not archive; send back to record the checks.
+- Completion audit fails → do not archive; report exactly which criterion reality does not meet.
 - Bundle not aligned with git → do not archive; complete a full sync pass first.
-- User declines the move → leave the bundle under `active/` with `State: done` (or the state they choose); do not move.
+- User declines → leave the bundle under `active/` untouched — no move, no distillation, no deletions.
 
 ---
 
-## Workflow B — Repair hub drift
+## Workflow B — Archive sweep
 
-When the request is hub/registry hygiene rather than sealing one task:
+When the user asks which tasks are ready to archive, or for a global archive-readiness check.
+
+1. List every bundle under `dev-docs/active/`:
+
+   ```bash
+   node .ai/scripts/ctl-project-governance.mjs query --status done
+   grep -r "^- State:" --include=00-overview.md dev-docs/active
+   ```
+
+2. For each bundle — whatever its `State:` says — run a light completion audit: goal and acceptance criteria from `00-overview.md`, against the commit timeline and the code. This is the point of the sweep: a task sitting on `in-progress` may be finished in reality, and a task claiming `done` may not be.
+
+3. Report a table: task, claimed state, audited state, ready / not ready, and the missing gate for every not-ready entry.
+
+4. Tasks the user then picks go through **Workflow A** one at a time — the sweep grants no approvals.
+
+---
+
+## Workflow C — Repair hub drift
+
+When the request is hub/registry hygiene rather than sealing tasks:
 
 ```bash
 node .ai/scripts/ctl-project-governance.mjs lint --check
@@ -79,7 +122,7 @@ node .ai/scripts/ctl-project-governance.mjs sync --apply
 Rules:
 
 - A task that is `in-progress` or `blocked` must not sit on `F-000` unless that triage decision is stated in the `feature-map.md` briefs.
-- Never hand-edit AUTO-generated hub sections—regenerate with `sync --apply`.
+- Never hand-edit AUTO-generated hub sections — regenerate with `sync --apply`.
 - The task bundle remains authoritative for status; the registry is a derived cache.
 
 After apply, re-run `lint --check` and summarize what changed.
@@ -88,11 +131,12 @@ After apply, re-run `lint --check` and summarize what changed.
 
 ## Boundaries
 
-- Never archive without verification evidence and user approval for the move.
+- Never archive without the completion audit and explicit user approval.
+- Never lose information in distillation: content lands in the sealed record before its source file is deleted, and the deletion happens only inside an approved archive — never as loose cleanup.
+- Never distill or delete anything in a bundle that stays under `active/`.
 - Never mark done as part of a casual hub lint; done belongs to the task record.
 - Never hand-edit AUTO blocks in hub files.
-- Never delete prior decisions or pitfalls in a bundle while archiving; supersede if needed during the preceding sync pass.
-- No secrets in hub files or task bundles.
+- No secrets in hub files, task bundles, or sealed records.
 
 ## Assets
 

@@ -33,7 +33,7 @@ checks/          # 本仓库自己的校验，不是分发物
 |---|---|---|
 | [start-task](system/skills/start-task/SKILL.md) | 开任务：装好仓库、查重、roadmap、bundle、分配 ID、注册进 hub；**持有 Task Contract 与项目资产** | 仓库 |
 | [sync-task](system/skills/sync-task/SKILL.md) | 把记录跟现实拉平：检查点、收工；**持有 Git 钩子** | 仓库 |
-| [maintain-project-hub](system/skills/maintain-project-hub/SKILL.md) | 治理：已验证任务归档、hub/registry 漂移修复 | 仓库 |
+| [maintain-project-hub](system/skills/maintain-project-hub/SKILL.md) | 治理：完成度审计（对现实不对文档）、归档蒸馏成两文件封存记录、全局归档扫描、hub/registry 漂移修复 | 仓库 |
 | [resume-task](system/skills/resume-task/SKILL.md) | 冷启动：只凭仓库重建上下文 | 仓库 |
 | [handoff-task](system/skills/handoff-task/SKILL.md) | 热交接：上下文降质时，把当前工作提炼成可粘贴的块 | **对话** |
 | [project-status](system/skills/project-status/SKILL.md) | 跨任务的只读进度问答 | 仓库 |
