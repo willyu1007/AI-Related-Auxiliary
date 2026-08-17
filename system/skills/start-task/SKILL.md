@@ -118,7 +118,7 @@ The scan reads Git history as well as the working tree, because the working tree
 
 10. **Hand back** the confirmed goal, where the artifacts live, and the next three concrete actions. Do not start implementing in the same turn unless the user asked you to.
 
-    Close the handback with the obligation that outlives this skill: from here on, whenever a phase lands, a decision is made, or a check runs, update `00-overview.md`, `03-implementation-notes.md`, and `04-verification.md`, and commit the verified part with its `Task:` trailer. Nobody prompts for that later — the instruction has to travel with the handback.
+    Close the handback with the obligation that outlives this skill: from here on, whenever a phase lands, a decision is made, or a check runs, update `00-overview.md`, `03-implementation-notes.md`, and `04-verification.md`, and commit the verified part with its `Task:` trailer. For a phased task, the plan's **Phase closeout** section is the full form of this obligation — every phase ends by running it. Nobody prompts for that later — the instruction has to travel with the handback.
 
 ## Requirements alignment (optional)
 

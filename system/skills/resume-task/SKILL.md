@@ -68,7 +68,7 @@ Both paths end here.
 - What landed, from the commit timeline
 - Worktree state, and any disagreement with the record
 - The next few concrete actions
-- The recording obligation from here on: whenever a phase lands, a decision is made, or a check runs, update `00-overview.md`, `03-implementation-notes.md`, and `04-verification.md`, and commit the verified part with its `Task:` trailer
+- The recording obligation from here on: whenever a phase lands, a decision is made, or a check runs, update `00-overview.md`, `03-implementation-notes.md`, and `04-verification.md`, and commit the verified part with its `Task:` trailer; for a phased task, the plan's **Phase closeout** section is the full ritual — every phase ends by running it
 
 ## Contract
 
