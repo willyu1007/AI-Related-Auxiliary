@@ -1,15 +1,26 @@
 ---
 name: sync-task
-description: Updating the record while work continues. Use when a phase lands, a decision is made, a check runs, or a blocker appears and the work goes on; when the user asks to sync or repair the project hub; or when setting up commit-to-task linking for a repository.
+description: Bringing the task record level with what the repository contains. Use at a checkpoint — a phase lands, a decision is made, a check runs — when stopping for the day, when the task is finished and ready to archive, when the user asks to sync or repair the project hub, or when setting up commit-to-task linking.
 ---
 
 # Sync Task
 
-Keep the record level with reality while the work is still moving. Small and frequent beats one
-catch-up pass at the end: a bundle that lags three days is not a slow record, it is a wrong one, and
-a wrong record is worse than none.
+Close the gap between what the repository contains and what the task bundle claims. That is the
+whole job, whether the gap opened five minutes ago or is the last one this task will ever have.
 
-A checkpoint touches only what changed. The full reader-facing pass belongs to `handoff-task`.
+The bundle is the durable channel: anything not written into it is gone when the session ends. A
+record that lags is not a slow record but a wrong one, and confidently wrong is worse than
+absent.
+
+## Depth by moment
+
+The same action throughout; only the depth changes.
+
+| Moment | Depth |
+|--------|-------|
+| Checkpoint mid-work | Touch the files the change affected. Minutes. |
+| Stopping for the day | Full pass. Tomorrow starts from what is written now. |
+| Task finished | Full pass, mark `done`, then archive. |
 
 ## Workflow
 
@@ -22,7 +33,7 @@ A checkpoint touches only what changed. The full reader-facing pass belongs to `
 
    Git history wins when it disagrees with the bundle. Correct the bundle, never the history.
 
-2. **Update only the files reality moved:**
+2. **Update the files reality moved:**
 
    | File | Record |
    |------|--------|
@@ -42,7 +53,7 @@ A checkpoint touches only what changed. The full reader-facing pass belongs to `
    git commit -m "feat(scope): subject" -m "Task: T-012"
    ```
 
-   The trailer is the only thing linking a commit to a task, and the only input `resume-task` has
+   The trailer is the only thing linking a commit to a task, and the only input a later session has
    for rebuilding a timeline. Work that cannot be committed safely stays uncommitted and gets
    written down — never force broken or unverified changes in for a clean status.
 
@@ -56,14 +67,41 @@ A checkpoint touches only what changed. The full reader-facing pass belongs to `
    `sync --apply` is idempotent and copies the bundle's `State:` into the registry. The bundle stays
    authoritative; the registry is a derived cache.
 
+## Stopping for the day
+
+A full pass, plus the question a checkpoint skips: **could a stranger continue from this?** Answer,
+from the bundle alone — what changed, what state the work is in, what the next three actions are
+with their commands and paths, and how to verify success. Whatever still lives only in your head
+goes into `03-implementation-notes.md` or `05-pitfalls.md` before you stop.
+
+Write the next step as an instruction to someone else, not a reminder to yourself.
+
+`./templates/handoff-checklist.md` is the short form to paste into the bundle; a worked example is
+in `./examples/sample-handoff-update.md`.
+
+## Finishing a task
+
+With `State: done` and verification recorded, propose moving `dev-docs/active/<slug>/` to
+`dev-docs/archive/<slug>/`, and wait for approval before moving. The location sets the effective
+status, so archiving is a state transition rather than filing.
+
+```bash
+node .ai/scripts/ctl-project-governance.mjs sync --apply   # registry status becomes archived
+```
+
+When the task's intent, scope, or risk posture changed over its life, refresh its
+`Semantic Feature Brief` in `.ai/project/feature-map.md` in the same change — intent, scope in/out,
+decision, dependencies, risks, success signal, related tasks, next checkpoint. `dashboard.md` keeps
+a short focus index only, never the brief body itself.
+
 ## Repairing hub drift
 
 When the request is "the hub is out of date" rather than "I finished a phase":
 
 ```bash
-node .ai/scripts/ctl-project-governance.mjs lint --check                    # what is broken
-node .ai/scripts/ctl-project-governance.mjs sync --dry-run --init-if-missing  # preview repairs
-node .ai/scripts/ctl-project-governance.mjs query --status in-progress      # review mappings
+node .ai/scripts/ctl-project-governance.mjs lint --check                       # what is broken
+node .ai/scripts/ctl-project-governance.mjs sync --dry-run --init-if-missing   # preview repairs
+node .ai/scripts/ctl-project-governance.mjs query --status in-progress         # review mappings
 node .ai/scripts/ctl-project-governance.mjs query --status blocked
 node .ai/scripts/ctl-project-governance.mjs sync --apply
 ```
@@ -97,6 +135,8 @@ hand.
 ## Rules
 
 - Never describe uncommitted work as landed.
+- Never mark a task `done` without verification evidence in `04-verification.md`.
+- Never move or archive a directory without approval.
 - Never attach a `Task:` trailer to work unrelated to that task. On a task branch doing unrelated
   work, set `SKIP_TASK_TRAILER=1` for that commit.
 - Never delete a prior decision or pitfall; supersede with an explanation.

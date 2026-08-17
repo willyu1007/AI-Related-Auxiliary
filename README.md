@@ -30,15 +30,16 @@ checks/          # 本仓库自己的校验，不是分发物
 
 ## system/ —— 全局层
 
-任务治理的五个技能，按实际操作划分 —— 每个对应工作流程里的一个时刻：
+任务治理的五个技能，按实际操作划分 —— 每个对应工作流程里的一个时刻。注意两条回路：
+**`sync → resume` 走仓库**（跨时间、耐久），**`handoff → 新会话` 走对话**（零间隔、易失）。
 
-| Skill | 时刻 | 写 |
+| Skill | 时刻 | 通道 |
 |---|---|---|
-| [start-task](system/skills/start-task/SKILL.md) | 创建任务：查重、roadmap、bundle、分配 ID、注册进 hub | ✓ |
-| [sync-task](system/skills/sync-task/SKILL.md) | 同步改动：检查点、带尾注提交、传播状态、修复漂移；**持有 Git 钩子** | ✓ |
-| [handoff-task](system/skills/handoff-task/SKILL.md) | 创建 handoff：完整 pass、刷新 feature brief、归档 | ✓ |
-| [resume-task](system/skills/resume-task/SKILL.md) | 接受 handoff：重建上下文、对账文档与 Git 历史 | — |
-| [project-status](system/skills/project-status/SKILL.md) | 跨任务的只读进度问答 | — |
+| [start-task](system/skills/start-task/SKILL.md) | 开任务：查重、roadmap、bundle、分配 ID、注册进 hub | 仓库 |
+| [sync-task](system/skills/sync-task/SKILL.md) | 把记录跟现实拉平：检查点、收工、完成归档、修复漂移；**持有 Git 钩子** | 仓库 |
+| [resume-task](system/skills/resume-task/SKILL.md) | 冷启动：只凭仓库重建上下文 | 仓库 |
+| [handoff-task](system/skills/handoff-task/SKILL.md) | 热交接：上下文降质时，把当前工作提炼成可粘贴的块 | **对话** |
+| [project-status](system/skills/project-status/SKILL.md) | 跨任务的只读进度问答 | 仓库 |
 
 另有 `codex-*` 三个和 `html-communication`，与任务治理无关。
 

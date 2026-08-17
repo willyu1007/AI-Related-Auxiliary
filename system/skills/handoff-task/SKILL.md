@@ -1,28 +1,29 @@
 ---
 name: handoff-task
-description: Ending a session with the task still open, or closing the task for good. Use when the user asks to pause, stop, hand off, or archive; or when context has degraded enough to risk the quality of the next work.
+description: Handing the current work to a fresh session as a pasteable block. Use when this session's context has degraded enough to risk the quality of what comes next, or when the user asks for something to carry into a new session.
 ---
 
 # Handoff Task
 
-Leave the task in a state someone else can walk into cold. Not a status update — a transfer of
-everything you know that is not already in the code.
+Pass the baton to a session that is about to start, right now. The output is a markdown block in
+the conversation for the user to copy — no file is written, nothing is left behind to clean up or
+accidentally commit.
 
-The bar is concrete: a fresh reader, with no memory of the session, can answer what changed, what
-state the work is in, what the next three actions are, and how to verify success. Anything still
-living only in your head is the thing to write down.
+Uniquely among these skills, the product never lands in the repository — and the distinction
+matters: the durable record is the task bundle, which gets updated first. The block is a fast lane over that
+record, never a substitute. Lose the block and nothing is lost.
 
 ## Finish the work first
 
 Complete the instruction in hand before starting a handoff. A handoff produced by abandoning the
 requested work is a worse outcome than no handoff — the user asked for something and receives
-documentation about the absence of it.
+documentation about the absence of that work.
 
 That applies most sharply to the context trigger, which is the one that can occur to you
 mid-request. Running short of context is not a reason to stop early, but a reason to stop
 *cleanly*, once the current piece is finished.
 
-### Judging context
+## Judging context
 
 The signal is degraded work, not a percentage. Watch for:
 
@@ -35,74 +36,69 @@ clear is not a trigger — keep working.
 
 ## Workflow
 
-1. **Bring the bundle current first.** Run the `sync-task` workflow — establish what landed, update
-   the six files, commit the verified part with its `Task:` trailer. Everything below assumes that
-   pass is complete, and is not repeated here.
+1. **Land the durable layer.** Run the `sync-task` workflow: bring the bundle level with the
+   repository and commit the verified part with its `Task:` trailer.
 
-2. **Set the closing state.** In `00-overview.md`, `- State:` becomes `blocked` or `done`, or stays
-   `in-progress` for a plain pause. Write the next concrete step as an instruction to a stranger,
-   with commands and paths — not a note to yourself.
+   Skipping the step is how a chain of hot handoffs rots the record — three sessions pass the block
+   forward, none writes the bundle, and the next cold start finds a task that stopped days ago.
 
-3. **Separate landed from pending, explicitly.** The single most useful sentence in a handoff is
-   which changes are committed and which are sitting in the worktree. Record the dirty state rather
-   than forcing a commit to make `git status` look clean.
+2. **Render the block** and present it in the conversation for the user to copy.
 
-4. **Fill the gaps a reader will hit.** Walk `03-implementation-notes.md` and `05-pitfalls.md`
-   against the reader test. Dead ends already explored belong in the pitfalls log — a successor
-   repeating them is the most expensive failure a handoff can cause.
+## Block format
 
-5. **Refresh the project hub**, when `.ai/project/registry.yaml` exists:
+````markdown
+## T-012 · oauth-provider-integration
+State: in-progress · HEAD: a3f9c21
 
-   ```bash
-   node .ai/scripts/ctl-project-governance.mjs sync --apply --changelog
-   node .ai/scripts/ctl-project-governance.mjs lint --check
-   ```
+### Goal
+One sentence. What finishing looks like.
 
-   If the task's intent, scope, or risk posture changed, update the `Semantic Feature Brief` in
-   `.ai/project/feature-map.md` in the same change — intent, scope in/out, decision, dependencies,
-   risks, success signal, related tasks, next checkpoint. `dashboard.md` keeps a short focus index
-   only, never the brief body itself.
+### Landed
+- What is committed, with short shas.
 
-6. **Archive when done.** With `State: done` and verification passing, propose moving
-   `dev-docs/active/<slug>/` to `dev-docs/archive/<slug>/`, and wait for approval before moving.
-   Archiving changes the task's effective status — a state transition rather than filing.
+### Uncommitted
+- Which files are dirty and what is half-done. "Clean" if nothing.
 
-   ```bash
-   node .ai/scripts/ctl-project-governance.mjs sync --apply   # registry status becomes archived
-   ```
+### Next
+1. First concrete action, with the command or the file path.
+2.
+3.
 
-## When the budget is short
+### Do not
+- Dead ends already explored, so the next session does not walk back into them.
 
-A full pass abandoned halfway is worse than a small honest one: the bundle ends up part new and
-part stale, and the next reader cannot tell which is which. So write in descending order of value
-and stop at a clean point.
+### Open
+- Questions the next session has to resolve, and who can answer them.
+````
 
-| Budget | Write |
-|--------|-------|
-| Comfortable | The full pass above |
-| Tight | Three things only: `State:` and the next concrete step in `00-overview.md`; the list of uncommitted changes; any pitfall hit this session |
-| Nearly gone | One commit with a `Task: T-###` trailer whose message states what landed and what is still pending |
+Two layers go in. The **durable layer** is what `sync-task` just wrote, condensed. The **hot layer**
+is what the repository does not have and does not need: what you were about to try, which test is
+flaky and should be ignored, what you would not touch yet. That layer has a half-life of one hop,
+which is why an ephemeral block suits the hot layer better than a committed file.
 
-The next step and the uncommitted list are what a successor needs first. Architecture notes and
-verification history can wait for the next session; those two cannot.
+`HEAD` lets the receiving session confirm at a glance that the block matches the checkout. Time
+between handoff and resume is near zero, so drift is not the risk — pasting yesterday's block by
+mistake is.
 
-## Handoff checklist
+## Starting the new session
 
-`./templates/handoff-checklist.md` is the short form to paste into the bundle. A worked example is
-in `./examples/sample-handoff-update.md`.
+The block is the portable form and works anywhere the user can paste. Where the environment can
+create a session and inject content programmatically, that is a better path — but it belongs to the
+environment's own tooling, since this skill ships to projects that have no such capability.
+
+The receiving session does not need to run a resume: the block is sufficient by construction. Cold
+starts, where no block was carried over, are what `resume-task` is for.
 
 ## Rules
 
-- Never mark a task `done` without verification evidence recorded in `04-verification.md`.
-- Never describe uncommitted work as landed.
-- Never force broken or unverified work into a commit to obtain a clean worktree.
-- Never move or archive a directory without approval.
-- Never delete a prior decision or pitfall; supersede with an explanation.
-- Never leave tribal knowledge unwritten — whatever the next person needs, the bundle needs.
 - Never break off a request part-way to write a handoff; finish what was asked, then hand off.
-- Never leave a full pass half-applied. Under pressure, write less and finish the smaller thing.
-- No secrets, credentials, or tokens in any artifact.
+- Never render the block without landing the durable layer first.
+- Never write the block to a file in the repository; the conversation is the channel.
+- Never describe uncommitted work as landed.
+- Never leave a dead end out of "Do not" — a successor re-walking one is the most expensive
+  failure a handoff can cause.
+- No secrets, credentials, or tokens in the block.
 
 ## Contract
 
-Task layer: `dev-docs/AGENTS.md`. Hub layer: `.ai/project/CONTRACT.md`.
+Task layer: `dev-docs/AGENTS.md`.

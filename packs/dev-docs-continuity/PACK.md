@@ -48,7 +48,7 @@ cross-task rollup, never a different one:
 
 | Capability | This pack alone | With project-hub |
 |------------|-----------------|------------------|
-| Resume a task | Manual read protocol in `resume-task` | Same skill, `ctl-project-governance.mjs resume --json` fast path |
+| Cold-start a task | Manual read protocol in `resume-task` | Same skill, `ctl-project-governance.mjs resume --json` fast path |
 | Allocate an id | Scan rule in the Task Contract | `sync --apply` applies the same rule |
 | Validate a `Task:` trailer | Hooks scan `.ai-task.yaml` files | Hooks call the control script |
 | Cross-task rollup | Not available | `registry.yaml` and derived views |

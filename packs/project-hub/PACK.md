@@ -49,8 +49,7 @@ global task skills in `system/skills/`:
 | Hub work | Lives in |
 |----------|----------|
 | Find related work, register a new task, map to a Feature | `start-task` |
-| Propagate status, repair drift, the `pre-commit` hook | `sync-task` |
-| Refresh the feature brief, append the changelog, archive | `handoff-task` |
+| Propagate status, refresh the feature brief, archive, repair drift, the `pre-commit` hook | `sync-task` |
 | `resume --json` fast path | `resume-task` |
 | Read-only progress questions across tasks | `project-status` |
 

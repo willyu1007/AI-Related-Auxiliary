@@ -7,10 +7,11 @@ Persistent task documentation for context preservation across sessions.
 | Condition | Action |
 |-----------|--------|
 | Complex task (multi-module, multi-session, >2 hours) | Open a bundle via `start-task` |
-| Work already in flight is continued, or a handoff is accepted | Rebuild context via `resume-task` |
+| Work continued in a later session, with nothing carried over | Rebuild context via `resume-task` |
 | A phase completes, a decision is made, or a check is run | Checkpoint via `sync-task` |
-| User requests a pause or handoff | Full pass via `handoff-task` |
-| Task completed and verified | Archive via `handoff-task` with status=done |
+| Stopping for the day | Full pass via `sync-task` |
+| Task completed and verified | `sync-task` marks the task done and archives |
+| Context degraded; a fresh session takes over now | Pass a block via `handoff-task` |
 
 ## Decision Gate (MUST)
 
@@ -172,7 +173,7 @@ Before making any code/config changes for a task that meets the Decision Gate:
    - update `00-overview.md` when status changes
    - append to `03-implementation-notes.md` after each phase
    - record every verification run in `04-verification.md` (commands + outcomes)
-3. Run `sync-task` at each checkpoint, and `handoff-task` before any pause, handoff, or completion.
+3. Run `sync-task` at each checkpoint, before stopping, and on completion.
 
 ## Commit Gate (MUST)
 
@@ -185,8 +186,8 @@ Task docs describe intent and current state; commits record what landed.
 - MUST NOT force broken or unverified work into a commit. Preserve and report any remaining
   worktree changes accurately.
 
-The trailer is what links a commit to a task bundle, and is the only mechanism `resume-task`
-has to reconstruct a timeline.
+The trailer is what links a commit to a task bundle, and is the only mechanism a later session has
+for reconstructing a timeline.
 
 When hooks are installed (`node .githooks/install.mjs`), `prepare-commit-msg` injects `Task:`
 only from a branch containing one valid task ID.
@@ -207,9 +208,12 @@ only from a branch containing one valid task ID.
 
 ### Resuming Existing Work
 
-For a request that continues work already in flight, run `resume-task` **before** reading
-implementation files. The skill owns the full protocol — task resolution order, the commit-timeline
-reconstruction, and the rules for reconciling the documents against Git history.
+For a request that continues earlier work with no context carried over, run `resume-task` **before**
+reading implementation files. The skill owns the full protocol — task resolution order, the
+commit-timeline reconstruction, and the rules for reconciling the documents against Git history.
+
+A session that was handed a block by `handoff-task` already has its context and skips the protocol
+entirely; the block is the channel in that case, and the repository in every other.
 
 ### During Work
 
@@ -224,16 +228,16 @@ reconstruction, and the rules for reconciling the documents against Git history.
 | Workflow | Use When |
 |----------|----------|
 | `start-task` | Opening a task: roadmap, bundle, or both |
-| `sync-task` | Checkpointing mid-work; repairing hub drift |
-| `handoff-task` | Pausing, handing off, completing, archiving |
-| `resume-task` | Picking up work already in flight; accepting a handoff |
+| `sync-task` | Checkpointing, stopping for the day, finishing, archiving, repairing hub drift |
+| `resume-task` | Cold start: picking work back up from the repository alone |
+| `handoff-task` | Hot start: passing a block to a session beginning right now |
 | `project-status` | Read-only progress questions across tasks |
 
 ### Archive Rules
 
 When task status changes to "done" and all verification passes:
 1. Move `dev-docs/active/<task-slug>/` to `dev-docs/archive/<task-slug>/`
-2. `handoff-task` handles the move when status=done
+2. `sync-task` handles the move when status=done
 
 ### Project Hub Integration (optional)
 

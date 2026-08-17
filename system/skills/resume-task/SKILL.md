@@ -1,15 +1,18 @@
 ---
 name: resume-task
-description: Picking up work already underway. Use for "continue the auth work", "where were we", "pick up T-012", "keep going"; when a session starts on a branch that names a task; or when accepting a handoff.
+description: Picking up work already underway with nothing carried over from the previous session. Use for "continue the auth work", "where were we", "pick up T-012", "keep going", or when a session starts on a branch that names a task.
 ---
 
 # Resume Task
 
 Reconstruct what happened before you arrived, then say what is next. Nothing else.
 
-Resuming is the moment with the least context and the highest cost of guessing: the code has moved
-since the documents were written, and the previous session's reasoning is gone. Read the record and
-the repository, and reconcile them explicitly — never open implementation files first and infer.
+This is the cold start: no block was pasted in, so the repository is the only witness. The code has
+moved since the documents were written and the previous session's reasoning is gone, which makes
+for the moment with the least context and the highest cost of guessing. Read the record and the
+repository, reconcile them explicitly, and never open implementation files first to infer.
+
+A session handed a block from `handoff-task` already has its context and skips the whole protocol.
 
 ## Fast path
 
@@ -71,7 +74,7 @@ Both paths end here.
 - Never guess between ambiguous candidates.
 - Never start implementing in the same turn as the resume unless the user asked you to. Report
   state and the next three actions first.
-- Never modify the bundle here; that belongs to `sync-task`.
+- Never modify the bundle here; recording belongs to `sync-task`.
 
 ## Output
 
