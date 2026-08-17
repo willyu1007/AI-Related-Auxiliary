@@ -11,6 +11,14 @@ for execution detail, and an id that links future commits back to both.
 Both artifacts are gated. Writing a bundle for a 20-minute fix is the common failure: the bundle
 costs more to maintain than the task returns, and trains everyone to stop reading bundles at all.
 
+## Provisioning check
+
+The gate, the Task Contract, and the id-allocation rule all live in `dev-docs/AGENTS.md`. If the
+file is missing, the task system is not installed in the repository — do not scaffold `dev-docs/`
+ad hoc, because the structure would exist without the contract every later session depends on.
+Offer the `dev-docs-continuity` pack from the user's library, and deliver an in-chat plan in the
+meantime.
+
 ## Decision Gate
 
 Apply the gate in `dev-docs/AGENTS.md` ("Decision Gate (MUST)"). The criteria live there and are
@@ -86,10 +94,12 @@ not restated here so the two cannot drift.
    leaves the task unlinked from commits, which means no `Task:` trailer and no timeline to resume
    from later — the bundle exists but continuity does not.
 
-8. **Register with the project hub**, when `.ai/project/registry.yaml` exists:
+8. **Register with the project hub**, when `.ai/scripts/ctl-project-governance.mjs` exists — the
+   script being present means the pack is installed; `--init-if-missing` materializes the hub
+   files on first use:
 
    ```bash
-   node .ai/scripts/ctl-project-governance.mjs sync --apply
+   node .ai/scripts/ctl-project-governance.mjs sync --apply --init-if-missing
    node .ai/scripts/ctl-project-governance.mjs map --task T-### --feature F-### --apply
    ```
 
@@ -122,6 +132,8 @@ Conflicts you cannot resolve go into the roadmap's open questions. Never drop on
 ## Rules
 
 - Write nothing under `dev-docs/` for a change that fails the gate.
+- Never build `dev-docs/` structure in a repository that lacks `dev-docs/AGENTS.md`; offer the
+  pack instead.
 - Never open a second bundle for work an existing task already covers.
 - Do not modify application code, configuration, or database state while scaffolding.
 - Do not invent project-specific facts. No evidence means a discovery step, not a guess.

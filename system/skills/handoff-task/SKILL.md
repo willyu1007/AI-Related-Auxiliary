@@ -1,6 +1,6 @@
 ---
 name: handoff-task
-description: Handing the current work to a fresh session as a pasteable block. Use when this session's context has degraded enough to risk the quality of what comes next, or when the user asks for something to carry into a new session.
+description: Handing the current work to a fresh session as a pasteable block. Use when this session's context has degraded enough to risk the quality of what comes next, or when the user asks for something to carry into a new session starting now.
 ---
 
 # Handoff Task
@@ -36,8 +36,9 @@ clear is not a trigger — keep working.
 
 ## Workflow
 
-1. **Land the durable layer.** Run the `sync-task` workflow: bring the bundle level with the
-   repository and commit the verified part with its `Task:` trailer.
+1. **Land the durable layer.** Run the `sync-task` workflow at checkpoint depth — touch what the
+   session changed, commit the verified part with its `Task:` trailer. The block carries the hot
+   layer, so the deeper stopping-for-the-day pass is not required here.
 
    Skipping the step is how a chain of hot handoffs rots the record — three sessions pass the block
    forward, none writes the bundle, and the next cold start finds a task that stopped days ago.

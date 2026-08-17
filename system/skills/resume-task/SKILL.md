@@ -23,7 +23,8 @@ bounded so it will not flood the context window:
 node .ai/scripts/ctl-project-governance.mjs resume --json
 ```
 
-Pass `--task T-###` when the request names a task. Then go to Interpretation.
+Pass `--task T-###` when the request names a task. A non-zero exit reports ambiguity or absence —
+stop and ask, exactly as in the manual path. Otherwise go to Interpretation.
 
 ## Manual path
 

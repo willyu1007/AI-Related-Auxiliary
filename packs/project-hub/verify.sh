@@ -20,10 +20,13 @@ cp -R "$AUX_ROOT/system/skills/sync-task/assets/githooks/." .githooks/
 [ -x .githooks/pre-commit ] || fail ".githooks/pre-commit is not executable"
 
 node .githooks/install.mjs >/dev/null
-node .ai/scripts/ctl-project-governance.mjs init >/dev/null
+
+# The skills route hub setup through --init-if-missing rather than an explicit init, so the smoke
+# test enters the same way: one command must initialize the hub on first use.
+node .ai/scripts/ctl-project-governance.mjs sync --apply --init-if-missing >/dev/null
 
 for f in registry.yaml dashboard.md feature-map.md task-index.md changelog.md; do
-  [ -f ".ai/project/$f" ] || fail "init did not create .ai/project/$f"
+  [ -f ".ai/project/$f" ] || fail "init-if-missing did not create .ai/project/$f"
 done
 
 # Single-project layout: no per-project subdirectory, no project key in the registry.

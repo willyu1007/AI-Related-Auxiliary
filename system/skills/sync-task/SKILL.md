@@ -60,15 +60,16 @@ The same action throughout; only the depth changes.
    for rebuilding a timeline. Work that cannot be committed safely stays uncommitted and gets
    written down — never force broken or unverified changes in for a clean status.
 
-4. **Propagate to the project hub**, when `.ai/project/registry.yaml` exists:
+4. **Propagate to the project hub**, when `.ai/scripts/ctl-project-governance.mjs` exists:
 
    ```bash
-   node .ai/scripts/ctl-project-governance.mjs sync --apply
+   node .ai/scripts/ctl-project-governance.mjs sync --apply --init-if-missing
    node .ai/scripts/ctl-project-governance.mjs lint --check
    ```
 
    `sync --apply` is idempotent and copies the bundle's `State:` into the registry. The bundle stays
-   authoritative; the registry is a derived cache.
+   authoritative; the registry is a derived cache. With the hooks installed, the commit in step 3
+   already ran the sync via `pre-commit` — keep the `lint --check`, skip the manual sync.
 
 ## Stopping for the day
 
