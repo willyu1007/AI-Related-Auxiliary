@@ -30,10 +30,8 @@ Task-record alignment (what landed vs what the bundle claims) belongs to the che
 
 ## Preconditions
 
-- Task contract: `dev-docs/AGENTS.md` (from the continuity pack)
-- Hub (optional but usual): `.ai/project/CONTRACT.md` and `.ai/scripts/ctl-project-governance.mjs`
-
-Without a hub, archive still moves the bundle directory; skip registry commands. Repair drift requires the hub control script.
+- A task bundle under `dev-docs/active/<slug>/` whose record is already aligned
+- `.ai/project/CONTRACT.md` and `.ai/scripts/ctl-project-governance.mjs`, both installed when the first task was opened
 
 ---
 
@@ -48,7 +46,7 @@ Archiving is a **state transition**, not filing. Complete every gate below. Use 
 3. **`State: done`** — Written in `00-overview.md` (authoritative). Do not treat `.ai-task.yaml` `status` as source of truth.
 4. **No false “landed” claims** — Uncommitted or unverified work is documented as open, not implied complete.
 5. **User approval to move** — Propose `dev-docs/active/<slug>/` → `dev-docs/archive/<slug>/` and **wait for explicit approval** before moving. Location sets effective status (`archived`).
-6. **Hub propagate** (when the control script exists):
+6. **Hub propagate:**
 
    ```bash
    node .ai/scripts/ctl-project-governance.mjs sync --apply
@@ -72,7 +70,7 @@ When the request is hub/registry hygiene rather than sealing one task:
 
 ```bash
 node .ai/scripts/ctl-project-governance.mjs lint --check
-node .ai/scripts/ctl-project-governance.mjs sync --dry-run --init-if-missing
+node .ai/scripts/ctl-project-governance.mjs sync --dry-run
 node .ai/scripts/ctl-project-governance.mjs query --status in-progress
 node .ai/scripts/ctl-project-governance.mjs query --status blocked
 node .ai/scripts/ctl-project-governance.mjs sync --apply
@@ -104,4 +102,4 @@ After apply, re-run `lint --check` and summarize what changed.
 
 ## Contract
 
-Task layer: `dev-docs/AGENTS.md`. Hub layer: `.ai/project/CONTRACT.md`.
+Progress is `00-overview.md` `State:`; the archive path is what makes a task `archived`. Hub layer: `.ai/project/CONTRACT.md`.

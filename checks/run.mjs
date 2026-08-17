@@ -4,27 +4,25 @@
  *
  * Self-check for this library. Two parts:
  *
- *   static  - scan packs/ and system/ for dangling references, missing hook exec bits, cross-linked
- *             skills, drifted global docs, and hygiene problems
- *   smoke   - provision a throwaway git repo and run the matching verify script
+ *   static  - scan system/ for dangling references, missing hook exec bits, cross-linked skills,
+ *             drifted global docs, and hygiene problems
+ *   smoke   - run each checks/skills/<skill>.sh inside a throwaway git repo
  *
- * `checks/` validates the library; `packs/<name>/files/` and `system/` are the library. Nothing in
- * checks/ and nothing in packs/<name>/verify.sh is ever copied into a target project.
+ * `checks/` validates the library; `system/` is the library. Nothing under checks/ is ever copied
+ * into a target project.
  *
  * Design notes:
  *   - Dependency-free (Node built-ins only).
- *   - A pack is installed with the same `cp -R` the docs tell users to run, so the documented
- *     command is what gets exercised. A skill instead installs itself from inside
- *     checks/skills/<skill>.sh, because there the install command is the thing under test.
- *   - A pack declares smoke-test prerequisites with a `# depends: <pack>, <pack>` line in its
- *     verify.sh. Packs without a verify.sh are installed and otherwise left alone.
+ *   - A smoke test starts from an empty repository and provisions it by running the skill's own
+ *     install command, so the install path is the thing under test rather than a `cp -R` that only
+ *     the test knows how to perform.
  *   - POSIX shell is required for the smoke tests (as it is for the shipped Git hooks).
  *
  * Usage:
- *   node checks/run.mjs                 # everything
- *   node checks/run.mjs --static        # static checks only
- *   node checks/run.mjs --smoke         # smoke tests only
- *   node checks/run.mjs --only <pack>   # restrict the smoke tests to one pack
+ *   node checks/run.mjs                  # everything
+ *   node checks/run.mjs --static         # static checks only
+ *   node checks/run.mjs --smoke          # smoke tests only
+ *   node checks/run.mjs --only <skill>   # restrict the smoke tests to one skill
  */
 
 import { execFileSync } from 'node:child_process';
@@ -34,11 +32,11 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const PACKS_DIR = path.join(REPO_ROOT, 'packs');
 const SKILLS_DIR = path.join(REPO_ROOT, 'system', 'skills');
 const DOCS_DIR = path.join(REPO_ROOT, 'system', 'docs');
 const SKILL_CHECKS_DIR = path.join(REPO_ROOT, 'checks', 'skills');
 
+const NUL = String.fromCharCode(0);
 const SCRIPT_REF_RE = /\.ai\/scripts\/[a-z0-9-]+\.mjs/g;
 const MACHINE_PATH_RE = /(?:\/Users\/|\/home\/[a-z]|\/Volumes\/|[A-Z]:\\\\)/;
 
@@ -51,14 +49,9 @@ const c = {
 };
 
 const failures = [];
-const notes = [];
 
 function fail(check, message) {
   failures.push(`${check}: ${message}`);
-}
-
-function note(message) {
-  notes.push(message);
 }
 
 /** All files under dir, recursively, as absolute paths. */
@@ -82,7 +75,7 @@ function readTextOrNull(filePath) {
   try {
     const raw = fs.readFileSync(filePath, 'utf8');
     // Treat anything with a NUL byte as binary and skip it.
-    return raw.includes('\u0000') ? null : raw;
+    return raw.includes(NUL) ? null : raw;
   } catch {
     return null;
   }
@@ -100,46 +93,12 @@ function listSkillChecks() {
   }
 }
 
-function listPacks() {
-  return fs
-    .readdirSync(PACKS_DIR, { withFileTypes: true })
-    .filter((e) => e.isDirectory())
-    .map((e) => e.name)
-    .sort();
-}
-
 // --------------------------------------------------------------------------------------------
 // Static checks
 // --------------------------------------------------------------------------------------------
 
-function runStatic(packs) {
+function runStatic() {
   console.log(c.bold('\nStatic checks'));
-
-  // Who ships which control script, e.g. ".ai/scripts/foo.mjs" -> the pack or skill that installs
-  // it. A skill ships its installable tree under assets/<bundle>/, laid out exactly as it lands in
-  // the target repository, so the path below the bundle directory is the shipped path.
-  const provider = new Map();
-  for (const pack of packs) {
-    const filesDir = path.join(PACKS_DIR, pack, 'files');
-    for (const abs of walk(filesDir)) {
-      const shipped = path.relative(filesDir, abs).split(path.sep).join('/');
-      if (shipped.startsWith('.ai/scripts/')) provider.set(shipped, { owner: pack, kind: 'pack' });
-    }
-  }
-  for (const abs of walk(SKILLS_DIR)) {
-    const rel = path.relative(SKILLS_DIR, abs).split(path.sep).join('/');
-    const m = rel.match(/^([^/]+)\/assets\/[^/]+\/(\.ai\/scripts\/.+)$/);
-    if (m) provider.set(m[2], { owner: m[1], kind: 'skill' });
-  }
-
-  // A skill smoke test is named after the skill it exercises, so a renamed or deleted skill leaves
-  // a test that installs nothing and passes.
-  for (const file of listSkillChecks()) {
-    const skill = path.basename(file, '.sh');
-    if (!fs.existsSync(path.join(SKILLS_DIR, skill, 'SKILL.md'))) {
-      fail('stale-check', `checks/skills/${file} exercises "${skill}", which is not a skill`);
-    }
-  }
 
   // The two global instruction files land on different tools (~/.claude/CLAUDE.md and
   // ~/.codex/AGENTS.md) and are copied verbatim, so everything they have in common is a second
@@ -188,12 +147,31 @@ function runStatic(packs) {
     skillByDir.set(entry.name, declared);
   }
 
-  // Skill assets carry the same hazards as pack files: a dead reference or a hook that lost its
-  // exec bit fails silently.
+  // Who ships which control script, e.g. ".ai/scripts/foo.mjs" -> the skill that installs it. A
+  // skill ships its installable tree under assets/<bundle>/, laid out exactly as it lands in the
+  // target repository, so the path below the bundle directory is the shipped path.
+  const provider = new Map();
+  for (const abs of walk(SKILLS_DIR)) {
+    const rel = path.relative(SKILLS_DIR, abs).split(path.sep).join('/');
+    const m = rel.match(/^([^/]+)\/assets\/[^/]+\/(\.ai\/scripts\/.+)$/);
+    if (m) provider.set(m[2], m[1]);
+  }
+
+  // A skill smoke test is named after the skill it exercises, so a renamed or deleted skill leaves
+  // a test that installs nothing and passes.
+  for (const file of listSkillChecks()) {
+    const skill = path.basename(file, '.sh');
+    if (!skillByDir.has(skill)) {
+      fail('stale-check', `checks/skills/${file} exercises "${skill}", which is not a skill`);
+    }
+  }
+
   for (const abs of walk(SKILLS_DIR)) {
     const shipped = path.relative(SKILLS_DIR, abs).split(path.sep).join('/');
     const owner = skillByDir.get(shipped.split('/')[0]);
 
+    // Hooks are ignored by Git unless they carry the exec bit, and Git only warns.
+    // cp -R preserves mode, so the bit has to be right here.
     if (shipped.includes('/assets/githooks/') && !shipped.endsWith('.mjs')) {
       if (!(fs.statSync(abs).mode & 0o111)) {
         fail('exec-bit', `system/skills/${shipped} is not executable`);
@@ -208,6 +186,9 @@ function runStatic(packs) {
     if (MACHINE_PATH_RE.test(text)) {
       fail('hygiene', `system/skills/${shipped} contains a machine-specific absolute path`);
     }
+
+    // Every referenced control script must be shipped by some skill. A reference to a script
+    // nothing provides is the failure mode that survives a source repo being retired.
     for (const ref of text.match(SCRIPT_REF_RE) || []) {
       if (!provider.has(ref)) {
         fail('dangling-ref', `system/skills/${shipped} references ${ref}, which nothing ships`);
@@ -228,62 +209,10 @@ function runStatic(packs) {
     }
   }
 
-  for (const pack of packs) {
-    const packDir = path.join(PACKS_DIR, pack);
-    const filesDir = path.join(packDir, 'files');
-
-    if (!fs.existsSync(filesDir)) {
-      fail('layout', `${pack} has no files/ directory`);
-      continue;
-    }
-    if (!fs.existsSync(path.join(packDir, 'PACK.md'))) {
-      fail('layout', `${pack} has no PACK.md`);
-    }
-
-    const packMd = readTextOrNull(path.join(packDir, 'PACK.md')) || '';
-
-    for (const abs of walk(filesDir)) {
-      const shipped = path.relative(filesDir, abs).split(path.sep).join('/');
-
-      // Hooks are ignored by Git unless they carry the exec bit, and Git only warns.
-      // cp -R preserves mode, so the bit has to be right here.
-      if (shipped.startsWith('.githooks/') && !shipped.endsWith('.mjs')) {
-        if (!(fs.statSync(abs).mode & 0o111)) {
-          fail('exec-bit', `${pack}: ${shipped} is not executable`);
-        }
-      }
-
-      if (path.basename(abs) === '.DS_Store') {
-        fail('hygiene', `${pack}: ${shipped} should not be committed`);
-      }
-
-      const text = readTextOrNull(abs);
-      if (text === null) continue;
-
-      if (MACHINE_PATH_RE.test(text)) {
-        fail('hygiene', `${pack}: ${shipped} contains a machine-specific absolute path`);
-      }
-
-      // Every referenced control script must be shipped by something. A reference to a script
-      // nothing provides is the failure mode that survives a source repo being retired. A pack
-      // leaning on another *pack* must say so; a script a skill installs needs no pack-level
-      // declaration, since installing the skill is what puts it there.
-      for (const ref of text.match(SCRIPT_REF_RE) || []) {
-        const p = provider.get(ref);
-        if (!p) {
-          fail('dangling-ref', `${pack}: ${shipped} references ${ref}, which nothing ships`);
-        } else if (p.kind === 'pack' && p.owner !== pack && !packMd.includes(p.owner)) {
-          fail(
-            'undeclared-dep',
-            `${pack}: ${shipped} references ${ref} from "${p.owner}", but PACK.md never mentions "${p.owner}"`
-          );
-        }
-      }
-    }
-  }
-
   if (failures.length === 0) {
-    console.log(c.green('  ok') + c.dim(`  layout, exec bits, hygiene, references, ${skillOwner.size} skills`));
+    console.log(
+      c.green('  ok') + c.dim(`  layout, exec bits, hygiene, references, docs, ${skillOwner.size} skills`)
+    );
   }
 }
 
@@ -291,95 +220,31 @@ function runStatic(packs) {
 // Smoke tests
 // --------------------------------------------------------------------------------------------
 
-/** Prerequisite packs declared by a `# depends: a, b` line in verify.sh. */
-function readDeps(verifyPath) {
-  const text = readTextOrNull(verifyPath) || '';
-  const m = text.match(/^#\s*depends:\s*(.+)$/m);
-  if (!m) return [];
-  return m[1]
-    .split(',')
-    .map((s) => s.trim())
-    .filter(Boolean);
-}
-
-function installPack(pack, targetDir) {
-  const filesDir = path.join(PACKS_DIR, pack, 'files');
-  // The command the docs tell users to run.
-  execFileSync('cp', ['-R', `${filesDir}/.`, targetDir]);
-}
-
-/**
- * One case per pack and per `checks/skills/<skill>.sh`. A pack is installed for its own test with
- * the documented `cp -R`; a skill installs itself from inside its test, because the install command
- * is the thing under test.
- */
-function collectSmokeCases(packs) {
-  const cases = packs.map((pack) => {
-    const verifyPath = path.join(PACKS_DIR, pack, 'verify.sh');
-    const hasVerify = fs.existsSync(verifyPath);
-    return {
-      name: pack,
-      kind: 'pack',
-      verifyPath: hasVerify ? verifyPath : null,
-      deps: hasVerify ? readDeps(verifyPath) : [],
-      preinstall: [pack],
-    };
-  });
-
-  for (const file of listSkillChecks()) {
-    const verifyPath = path.join(SKILL_CHECKS_DIR, file);
-    cases.push({
-      name: path.basename(file, '.sh'),
-      kind: 'skill',
-      verifyPath,
-      deps: readDeps(verifyPath),
-      preinstall: [],
-    });
-  }
-
-  return cases;
-}
-
-function runSmoke(cases) {
+function runSmoke(files) {
   console.log(c.bold('\nSmoke tests'));
 
-  for (const testCase of cases) {
-    const { name, kind, verifyPath, deps, preinstall } = testCase;
-    const label = kind === 'skill' ? `${name} ${c.dim('(skill)')}` : name;
+  for (const file of files) {
+    const name = path.basename(file, '.sh');
+    const verifyPath = path.join(SKILL_CHECKS_DIR, file);
 
     const tmp = fs.mkdtempSync(path.join(os.tmpdir(), `aux-${name}-`));
     try {
       execFileSync('git', ['init', '-q'], { cwd: tmp });
 
-      for (const dep of deps) {
-        if (!fs.existsSync(path.join(PACKS_DIR, dep, 'files'))) {
-          fail('smoke', `${name}: declared dependency "${dep}" does not exist`);
-          throw new Error('missing dependency');
-        }
-        installPack(dep, tmp);
-      }
-      for (const pack of preinstall) installPack(pack, tmp);
-
-      if (!verifyPath) {
-        console.log(`  ${c.yellow('skip')} ${label} ${c.dim('(installs cleanly; no verify.sh)')}`);
-        continue;
-      }
-
       const out = execFileSync('sh', [verifyPath], {
         cwd: tmp,
         encoding: 'utf8',
         stdio: ['ignore', 'pipe', 'pipe'],
-        // Assets live with the skill that installs them, so a test needs the repo root to reach
-        // system/skills/<skill>/assets/.
+        // The test provisions the repository from the skill's own assets, so it needs the repo
+        // root to reach system/skills/<skill>/assets/.
         env: { ...process.env, AUX_ROOT: REPO_ROOT },
       });
       const summary = out.trim().split('\n').filter(Boolean).pop() || '';
-      const withDeps = deps.length ? c.dim(` +${deps.join(',')}`) : '';
-      console.log(`  ${c.green('ok')}   ${label}${withDeps} ${c.dim(summary)}`);
+      console.log(`  ${c.green('ok')}   ${name} ${c.dim(summary)}`);
     } catch (e) {
       const detail = [e.stdout, e.stderr].filter(Boolean).join('').trim();
       fail('smoke', `${name} failed`);
-      console.log(`  ${c.red('FAIL')} ${label}`);
+      console.log(`  ${c.red('FAIL')} ${name}`);
       if (detail) console.log(detail.split('\n').map((l) => `       ${l}`).join('\n'));
     } finally {
       fs.rmSync(tmp, { recursive: true, force: true });
@@ -392,7 +257,7 @@ function runSmoke(cases) {
 function main() {
   const args = process.argv.slice(2);
   if (args.includes('-h') || args.includes('--help')) {
-    console.log('Usage: node checks/run.mjs [--static] [--smoke] [--only <pack>]');
+    console.log('Usage: node checks/run.mjs [--static] [--smoke] [--only <skill>]');
     process.exit(0);
   }
 
@@ -402,22 +267,19 @@ function main() {
   const wantStatic = args.includes('--static') || !args.includes('--smoke');
   const wantSmoke = args.includes('--smoke') || !args.includes('--static');
 
-  const all = listPacks();
-  const cases = collectSmokeCases(all);
-  if (cases.length === 0) {
-    console.error(c.red('[error] Nothing to smoke test: no packs and no checks/skills/*.sh.'));
+  const tests = listSkillChecks();
+  if (tests.length === 0) {
+    console.error(c.red('[error] No smoke tests found under checks/skills/.'));
     process.exit(1);
   }
-  if (only && !cases.some((t) => t.name === only)) {
-    const names = cases.map((t) => t.name).join(', ');
-    console.error(c.red(`[error] Unknown pack or skill: ${only} (have: ${names})`));
+  if (only && !tests.includes(`${only}.sh`)) {
+    const names = tests.map((f) => path.basename(f, '.sh')).join(', ');
+    console.error(c.red(`[error] No smoke test for: ${only} (have: ${names})`));
     process.exit(1);
   }
 
-  if (wantStatic) runStatic(all);
-  if (wantSmoke) runSmoke(only ? cases.filter((t) => t.name === only) : cases);
-
-  for (const n of notes) console.log(c.yellow(`  note  ${n}`));
+  if (wantStatic) runStatic();
+  if (wantSmoke) runSmoke(only ? [`${only}.sh`] : tests);
 
   console.log('');
   if (failures.length > 0) {

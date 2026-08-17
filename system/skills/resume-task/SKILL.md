@@ -21,7 +21,7 @@ Pass `--task T-###` when the request names a task. A non-zero exit reports ambig
 
 ## Manual path
 
-Without the script, the same steps in order:
+The same steps the packet performs, in order. Follow them directly when the packet is unavailable or when its answer needs checking:
 
 1. **Resolve the task.** Take the first match:
    1. a `T-###` named in the request
@@ -68,7 +68,8 @@ Both paths end here.
 - What landed, from the commit timeline
 - Worktree state, and any disagreement with the record
 - The next few concrete actions
+- The recording obligation from here on: whenever a phase lands, a decision is made, or a check runs, update `00-overview.md`, `03-implementation-notes.md`, and `04-verification.md`, and commit the verified part with its `Task:` trailer
 
 ## Contract
 
-Task layer: `dev-docs/AGENTS.md`.
+Progress is `00-overview.md` `State:` and nothing else; a bundle under `dev-docs/archive/` is `archived` whatever it says.

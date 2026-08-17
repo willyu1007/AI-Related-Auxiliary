@@ -85,8 +85,8 @@ Commands:
   install
     --repo-root <path>        Repo root (default: auto-detect; fallback: cwd)
     --dry-run                 Show what would be copied and created
-    Copy the shipped hub assets into <repo>/.ai/ and then initialize. Idempotent: shipped
-    material is refreshed, hub files created by init are left alone.
+    Copy the shipped project tree (.ai/ and dev-docs/) into <repo> and then initialize.
+    Idempotent: shipped material is refreshed, hub files created by init are left alone.
 
   init
     --repo-root <path>        Repo root (default: auto-detect; fallback: cwd)
@@ -987,20 +987,20 @@ function collectFiles(dir, base = dir) {
   return out;
 }
 
-// Install is the entry point for a repository that has nothing yet: the shipped assets are the
-// control script, its lib, the contract, and the templates init reads. Shipped material is
-// overwritten on every run so a re-install upgrades it in place; the hub files init creates are
-// project data and are never touched here.
+// Install is the entry point for a repository that has nothing yet: the shipped tree is the control
+// script, its lib, the contract, the templates init reads, and the empty task directories. Shipped
+// material is overwritten on every run so a re-install upgrades it in place; the hub files init
+// creates are project data and are never touched here.
 function cmdInstall({ repoRoot, dryRun }) {
-  const srcRoot = path.join(SHIPPED_ROOT, '.ai');
-  const dstRoot = path.join(repoRoot, '.ai');
+  const srcRoot = SHIPPED_ROOT;
+  const dstRoot = repoRoot;
   const actions = [];
 
   if (path.resolve(srcRoot) === path.resolve(dstRoot)) {
-    info('[info] Hub assets already live in this repository; skipping the copy.');
+    info('[info] Shipped assets already live in this repository; skipping the copy.');
   } else {
     if (!exists(srcRoot)) {
-      die(`[error] Shipped hub assets are missing at ${toPosix(srcRoot)}`);
+      die(`[error] Shipped project assets are missing at ${toPosix(srcRoot)}`);
     }
     for (const rel of collectFiles(srcRoot)) {
       const from = path.join(srcRoot, rel);
@@ -1018,7 +1018,7 @@ function cmdInstall({ repoRoot, dryRun }) {
       actions.push({ op: changed ? (existed ? 'update' : 'write') : 'same', path: to });
     }
 
-    ok('[ok] Hub assets installed.');
+    ok('[ok] Project assets installed.');
     for (const a of actions) {
       const mode = a.mode ? ` (${a.mode})` : '';
       console.log(`  ${a.op}: ${toPosix(path.relative(repoRoot, a.path))}${mode}`);

@@ -42,7 +42,7 @@ When the task is complete, run a **full pass** here (including verification in `
 
    `05-pitfalls.md` is append-only. Mark an entry resolved or superseded, never delete one. A useful entry names the symptom, the root cause, what was tried, the fix, and how to avoid a repeat.
 
-   If the task still reads `State: planned`, the first checkpoint flips the state to `in-progress`.
+   If the task still reads `State: planned`, the first checkpoint flips it to `in-progress`. Automatic resume resolution finds only `in-progress` and `blocked` bundles, so a task left on `planned` can be picked up again only by explicit id or branch name.
 
 3. **Commit the verified part** with a `Task: T-###` trailer:
 
@@ -52,16 +52,16 @@ When the task is complete, run a **full pass** here (including verification in `
 
    The trailer is the only thing linking a commit to a task, and the only input a later session has for rebuilding a timeline. Work that cannot be committed safely stays uncommitted and gets written down — never force broken or unverified changes in for a clean status.
 
-4. **Propagate status to the project hub**, when `.ai/scripts/ctl-project-governance.mjs` exists:
+4. **Propagate status to the project hub:**
 
    ```bash
-   node .ai/scripts/ctl-project-governance.mjs sync --apply --init-if-missing
+   node .ai/scripts/ctl-project-governance.mjs sync --apply
    node .ai/scripts/ctl-project-governance.mjs lint --check
    ```
 
-   This step copies the bundle's `State:` into the registry after a context sync. It is not a substitute for archive moves or dedicated drift repair.
+   This copies the bundle's `State:` into the registry after a context sync. It is not a substitute for archive moves or dedicated drift repair.
 
-   `sync --apply` is idempotent. The bundle stays authoritative; the registry is a derived cache.
+   `sync --apply` is idempotent. The bundle stays authoritative; the registry is a derived cache. With the hooks installed, the commit in step 3 already ran the sync via `pre-commit` — keep the `lint --check`, skip the manual sync.
 
 ## Stopping for the day
 
@@ -86,9 +86,11 @@ node .githooks/install.mjs
 | `commit-msg` | Validates conventional format and any `Task: T-###` trailer |
 | `pre-commit` | Runs hub `sync --apply` when `dev-docs/` files are staged, and stages the result |
 
-The trailer hooks warn by default; `git config hooks.requireTaskTrailer true` makes them block. Skip once with `SKIP_TASK_TRAILER=1 git commit …`. `prepare-commit-msg` and `commit-msg` use the control script when present and fall back to scanning `.ai-task.yaml` directly, so they work with or without the hub.
+The trailer hooks warn by default; `git config hooks.requireTaskTrailer true` makes them block. Skip once with `SKIP_TASK_TRAILER=1 git commit …`. `prepare-commit-msg` and `commit-msg` use the control script when it is there and fall back to scanning `.ai-task.yaml` directly, so installing them into a repository that has never opened a task still works.
 
 Hooks are optional. Without them the trailer convention still holds — you write the trailer by hand. Details live under `./assets/githooks/`; this section is only the install entry.
+
+The trailer is what links a commit to a task, and the only mechanism a later session has for rebuilding a timeline. Never attach one to unrelated work.
 
 ## Rules
 
@@ -103,4 +105,4 @@ Hooks are optional. Without them the trailer convention still holds — you writ
 
 ## Contract
 
-Task layer: `dev-docs/AGENTS.md`. Hub layer: `.ai/project/CONTRACT.md`.
+Progress is `00-overview.md` `State:` and nothing else. Hub layer: `.ai/project/CONTRACT.md`.

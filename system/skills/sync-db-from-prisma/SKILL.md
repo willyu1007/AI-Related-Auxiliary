@@ -29,7 +29,7 @@ node <this-skill>/scripts/ctl-db-schema.mjs status --repo-root <repo>
 
 1. Restate the intended persistent-model change, target environment, target database identity in redacted form, and acceptance criteria.
 2. Inspect the target repository's local instructions and Prisma configuration.
-3. If `dev-docs/AGENTS.md` exists and its Decision Gate requires a tracked task, use:
+3. If the repository tracks tasks and this change belongs to one, use:
    `dev-docs/active/<slug>/artifacts/db/`.
 4. Otherwise use `.ai/.tmp/db-sync/<run-id>/`.
 5. Copy the five files from `./templates/` into that evidence directory. Evidence contains commands, decisions, and redacted summaries—not credentials.

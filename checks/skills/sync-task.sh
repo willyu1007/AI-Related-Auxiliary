@@ -1,26 +1,22 @@
 #!/bin/sh
 #
-# Smoke test for dev-docs-continuity. Run by `node checks/run.mjs` inside a throwaway git repo
-# with this pack already installed. Not part of files/ — never copied into a target project.
+# Smoke test for the Git hooks sync-task ships. Run by `node checks/run.mjs` inside an empty
+# throwaway git repo. Not a distributable.
 #
-# No `# depends:` line on purpose: the pack must work entirely on its own, with no control script
-# anywhere in the repo.
+# Nothing else is installed on purpose: hooks must work in a repository that has no control script,
+# which is the case whenever they are installed before any task exists.
 #
 
 set -e
 
 fail() { echo "FAIL: $1"; exit 1; }
 
-[ -f dev-docs/AGENTS.md ] || fail "dev-docs/AGENTS.md missing"
-
-# Hooks ship with the sync-task skill, not with this pack. AUX_ROOT is set by checks/run.mjs.
 [ -n "$AUX_ROOT" ] || fail "AUX_ROOT not set; run via node checks/run.mjs"
 mkdir -p .githooks
 cp -R "$AUX_ROOT/system/skills/sync-task/assets/githooks/." .githooks/
 [ -x .githooks/commit-msg ] || fail ".githooks/commit-msg is not executable"
 [ -x .githooks/prepare-commit-msg ] || fail ".githooks/prepare-commit-msg is not executable"
 
-# The whole point of this test: no project-hub control script is present.
 if [ -f .ai/scripts/ctl-project-governance.mjs ]; then
   fail "control script present; this is no longer a standalone test"
 fi
@@ -31,18 +27,17 @@ mkdir -p dev-docs/active/sample
 printf '# Sample\n\n## Status\n- State: in-progress\n- Next step: verify\n\n## Goal\nSmoke test.\n' \
   > dev-docs/active/sample/00-overview.md
 
-# Coverage boundary: this pack ships no allocator. Allocating T-### is a rule in the Task Contract
-# that start-task follows, so a shell test cannot exercise it -- the bundle below starts
-# from an already-allocated id on purpose. What is under test here is everything downstream: that
-# the hooks work off .ai-task.yaml alone, with no control script present.
+# Coverage boundary: allocating T-### is a rule an agent follows, so a shell test cannot exercise
+# it -- the bundle below starts from an already-allocated id on purpose. What is under test here is
+# everything downstream: that the hooks work off .ai-task.yaml alone, with no control script.
 printf 'version: 1\ntask_id: T-001\nslug: sample\n' > dev-docs/active/sample/.ai-task.yaml
 
-# The allocation scan from the Task Contract must be executable exactly as written, including on a
+# The allocation scan the skills document must be executable exactly as written, including on a
 # repository with no commits yet (git log fails, the working-tree half still answers).
 NEXT=$( { grep -rh '^task_id:' --include='.ai-task.yaml' . 2>/dev/null
           git log --all --format=%B 2>/dev/null | grep -E '^Task: T-[0-9]{3}'
         } | grep -oE 'T-[0-9]{3}' | sort -u | tail -1)
-[ "$NEXT" = "T-001" ] || fail "task-id scan from the Task Contract returned '$NEXT', expected T-001"
+[ "$NEXT" = "T-001" ] || fail "the documented task-id scan returned '$NEXT', expected T-001"
 
 git checkout -q -b feat/T-001-sample
 git add -A
@@ -70,4 +65,4 @@ if SKIP_TASK_TRAILER=1 git -c user.email=ci@local -c user.name=ci \
   fail "commit-msg accepted a non-conventional subject"
 fi
 
-echo "standalone install, id-scan rule, shell-fallback trailer injection, negative case, format gate"
+echo "hooks with no control script, id-scan rule, shell-fallback trailer injection, negative case, format gate"

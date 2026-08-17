@@ -26,7 +26,7 @@ Pick by what was asked, then follow that reference's **Data Source** commands:
 1. **Classify the question** and open the matching reference.
 
 2. **Gather from the hub.** Run the reference's data-source commands — usually
-   `ctl-project-governance.mjs query` with a `--status` or `--text` filter. Never guess task details; open `00-overview.md` when the query output is not enough. Without a hub, scan `dev-docs/**/active/*/00-overview.md` for `State:` directly.
+   `ctl-project-governance.mjs query` with a `--status` or `--text` filter. Never guess task details; open `00-overview.md` when the query output is not enough, or scan `dev-docs/**/active/*/00-overview.md` for `State:` when you want the unmediated answer.
 
 3. **Check consistency, do not fix it.** `lint --check` reveals drift between the registry and the task bundles. When lint reports errors, include `sync --apply` in the output as a suggested remediation and leave the running to the user.
 
@@ -36,7 +36,7 @@ Pick by what was asked, then follow that reference's **Data Source** commands:
    node .ai/scripts/ctl-project-governance.mjs resume --task <T-###> --json
    ```
 
-   Report the commit timeline, worktree warnings, and any disagreement between the packet and the documented status. An empty timeline means progress is unknown, not zero. Without the script, ground the same claim with `git log --grep="^Task: T-###"` directly.
+   Report the commit timeline, worktree warnings, and any disagreement between the packet and the documented status. An empty timeline means progress is unknown, not zero; `git log --grep="^Task: T-###"` is the same evidence without the packet around it.
 
 5. **For semantic questions**, quote the `Semantic Feature Briefs` section of `.ai/project/feature-map.md`. `dashboard.md` supplies the focus index only, never the semantic body.
 
@@ -51,4 +51,4 @@ Pick by what was asked, then follow that reference's **Data Source** commands:
 
 ## Contract
 
-Hub sources of truth: `.ai/project/CONTRACT.md`. Task status semantics: `dev-docs/AGENTS.md`.
+Hub sources of truth: `.ai/project/CONTRACT.md`. Task progress is `00-overview.md` `State:`; a bundle under `dev-docs/archive/` is `archived` whatever it says.

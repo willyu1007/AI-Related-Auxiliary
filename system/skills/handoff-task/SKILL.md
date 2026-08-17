@@ -72,4 +72,4 @@ If the current environment provides a tool that creates a session and sets its f
 
 ## Contract
 
-Task layer: `dev-docs/AGENTS.md`.
+Progress is `00-overview.md` `State:` and nothing else.

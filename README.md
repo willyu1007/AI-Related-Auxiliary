@@ -4,40 +4,34 @@
 
 **本仓库不执行任何东西。** 里面的内容——包括脚本——都是被复制出去使用的材料，不是运行时。
 
-## 两层结构
+## 结构
 
 ```text
-system/          # 全局层：跟着人走，镜像 ~/.claude/
+system/          # 库本身：跟着人走的全局层
   skills/        #   所有 Skill，一层平铺（发现只扫这一层）
     <skill>/
       SKILL.md
       templates/ examples/ reference/   # 随技能走的资产
-      assets/<bundle>/                  # 技能自己装进目标仓库的东西（Git 钩子、hub）
+      assets/<bundle>/                  # 技能装进目标仓库的东西，按目标仓库的目录形状摆好
   docs/          #   全局 Agent 指令（CLAUDE.md / AGENTS.md）
-packs/           # 项目层：项目侧脚手架，按需复制进目标仓库
-  <pack-name>/
-    PACK.md      #   这是什么 / 依赖什么 / 怎么装 / 不做什么
-    files/       #   原样复制到目标项目根目录
-    verify.sh    #   冒烟测试（不随包分发）
 checks/          # 本仓库自己的校验，不是分发物
+  run.mjs
   skills/<skill>.sh   #   技能级冒烟测试
 ```
 
-分层的依据很简单：**一个能力是绑在人身上还是绑在项目上。**
+**一个技能自带它需要的一切。** 要在目标仓库里放东西（控制脚本、契约、模板、空目录）时，那些东西放在该技能的 `assets/<bundle>/` 下，由技能自己的 install 命令幂等地写进去。没有需要先装的 pack，技能正文里也就没有"如果 X 存在"这类分支。
 
-`system/` 里是**能力**：技能连同它自己的模板、示例、钩子，装一次即可，对每个项目都成立。 `packs/` 里是**项目侧脚手架**：技能要操作的对象，必须随项目安装。
-
-一个技能要在目标仓库里放东西（控制脚本、契约、模板）时，那些东西放在该技能的 `assets/<bundle>/` 下，按目标仓库的目录形状摆好，由技能自己的 install 命令写进去 —— 用不着先装一个 pack。`project-hub` 就是这样并进 [start-task](system/skills/start-task/SKILL.md) 的。
+控制脚本必须落进目标仓库，这不是风格选择：Git 钩子按仓库路径调用它，够不到 `~/.claude/skills/`。
 
 技能发现只扫 `system/skills/` 的第一层，所以那一层保持平铺，不要建分组子目录。
 
-## system/ —— 全局层
+## system/ —— 技能
 
 任务治理的六个技能，按实际操作划分 —— 每个对应工作流程里的一个时刻。注意两条回路： **`sync → resume` 走仓库**（跨时间、耐久），**`handoff → 新会话` 走对话**（零间隔、易失）。
 
 | Skill | 时刻 | 通道 |
 |---|---|---|
-| [start-task](system/skills/start-task/SKILL.md) | 开任务：查重、roadmap、bundle、分配 ID、注册进 hub | 仓库 |
+| [start-task](system/skills/start-task/SKILL.md) | 开任务：装好仓库、查重、roadmap、bundle、分配 ID、注册进 hub；**持有 Task Contract 与项目资产** | 仓库 |
 | [sync-task](system/skills/sync-task/SKILL.md) | 把记录跟现实拉平：检查点、收工；**持有 Git 钩子** | 仓库 |
 | [maintain-project-hub](system/skills/maintain-project-hub/SKILL.md) | 治理：已验证任务归档、hub/registry 漂移修复 | 仓库 |
 | [resume-task](system/skills/resume-task/SKILL.md) | 冷启动：只凭仓库重建上下文 | 仓库 |
@@ -70,40 +64,27 @@ cp ~/.codex/AGENTS.md system/docs/AGENTS.md
 
 `AGENTS.md` 是 `CLAUDE.md` 去掉末尾"选模型"那一节 —— 那节讲的是怎么调度 Codex 和 Claude 子 agent，对读 `AGENTS.md` 的 Codex 自己没有意义。两份共有的部分必须逐字一致，`checks/run.mjs` 用前缀比对盯着：改了一边没改另一边，检查会红。
 
-## packs/ —— 项目层
-
-见 [packs/README.md](packs/README.md)。安装永远是同一条命令：
-
-```bash
-cp -R packs/<pack-name>/files/. /path/to/your/project/
-```
-
-当前可用：
-
-| Pack | 能力 | 依赖 |
-|------|------|------|
-| [dev-docs-continuity](packs/dev-docs-continuity/PACK.md) | Task Contract 与 `dev-docs/` 目录结构 | 无 |
-
 ## 校验
 
 ```bash
 node checks/run.mjs
 ```
 
-两部分。**静态检查**扫描 `packs/` 和 `system/skills/`：引用的脚本是否真有人提供（悬空引用是仓库退役后最容易留下的坑）、钩子有没有可执行位（缺了 git 只 warn 然后静默跳过）、有无机器绝对路径、技能之间有没有互相提名、两份全局文档有没有漂移。**冒烟测试**在临时 git 仓库里跑两类装法：pack 按文档里那条 `cp -R` 装，技能则由 `checks/skills/<skill>.sh` 调它自己的 install 命令装 —— 被测的正是那条命令。
+两部分。**静态检查**扫描 `system/`：引用的脚本是否真有人提供（悬空引用是仓库退役后最容易留下的坑）、钩子有没有可执行位（缺了 git 只 warn 然后静默跳过）、有无机器绝对路径、技能之间有没有互相提名、两份全局文档有没有漂移。**冒烟测试**从一个空的临时 git 仓库出发，由 `checks/skills/<skill>.sh` 调技能自己的 install 命令把仓库装起来 —— 被测的正是那条命令，而不是只有测试知道怎么写的 `cp -R`。
 
-`checks/` 和 `packs/*/verify.sh` 都**不是分发物** —— 它们校验这个库，`packs/*/files/` 和 `system/` 才是库本身。这也是本仓库唯一会执行的东西。
+`checks/` **不是分发物** —— 它校验这个库，`system/` 才是库本身。这也是本仓库唯一会执行的东西。
 
 其他用法：
 
 ```bash
 node checks/run.mjs --static             # 只跑静态检查
-node checks/run.mjs --only start-task    # 只冒烟测一个 pack 或技能
+node checks/run.mjs --only start-task    # 只冒烟测一个技能
 ```
 
 ## 贡献约定
 
 - 内容必须可复用：不绑定某台机器、某个密钥、某条个人路径。
-- 一条规则只定义一次。跨 pack 需要同一条规则时，一个 pack 拥有它，另一个引用它——复制粘贴出来的第二份一定会静默漂移。
-- 每个 Skill / Pack 都要写清边界：**不做什么**和做什么同样重要。
+- 一条规则只定义一次。每个技能只写自己那一刀，完整的规范交给脚本的 `lint` 去机器校验——复制粘贴出来的第二份一定会静默漂移。
+- 技能之间不互相提名。要跳到别的技能时，说该做的动作，让 router 去选人。
+- 每个 Skill 都要写清边界：**不做什么**和做什么同样重要。
 - 文档要能独立读懂，不依赖未提交的本地文件。

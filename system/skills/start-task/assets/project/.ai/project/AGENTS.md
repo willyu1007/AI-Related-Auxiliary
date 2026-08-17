@@ -4,9 +4,9 @@ Entry point for AI agents working with **project-level** governance in the repos
 
 ## Prerequisite
 
-The hub aggregates dev-docs task bundles; it does not create them. `dev-docs/AGENTS.md` (from the
-`dev-docs-continuity` pack) MUST be present and owns the task layer — task progress, task identity,
-and the `.ai-task.yaml` schema.
+The hub aggregates dev-docs task bundles; it does not create them. `dev-docs/active/` and
+`dev-docs/archive/` arrive with the same install that placed this file, and the task skills are what
+write bundles into them.
 
 ## Quick start
 
@@ -81,7 +81,7 @@ node .githooks/install.mjs --uninstall
 
 ## Key principles
 - Task execution progress is maintained in `dev-docs/**` (task bundle is the SoT for status).
-- Task identity is anchored by `.ai-task.yaml` (`task_id`); the schema belongs to `dev-docs/AGENTS.md`.
+- Task identity is anchored by `.ai-task.yaml` (`task_id`); see `CONTRACT.md` section 4 for the schema.
 - Project semantic mapping lives in `.ai/project/registry.yaml`.
 - Derived views are not authoritative; regenerate them instead of editing AUTO sections.
 

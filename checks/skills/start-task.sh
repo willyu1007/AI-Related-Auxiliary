@@ -1,28 +1,28 @@
 #!/bin/sh
 #
-# Smoke test for the hub assets start-task ships. Run by `node checks/run.mjs` inside a throwaway
-# git repo with the declared pack dependencies already installed. Not a distributable.
-#
-# depends: dev-docs-continuity
+# Smoke test for the project assets start-task ships. Run by `node checks/run.mjs` inside an empty
+# throwaway git repo. Not a distributable.
 #
 
 set -e
 
 fail() { echo "FAIL: $1"; exit 1; }
 
-[ -f dev-docs/AGENTS.md ] || fail "dependency dev-docs-continuity was not installed"
 [ -n "$AUX_ROOT" ] || fail "AUX_ROOT not set; run via node checks/run.mjs"
 
-HUB="$AUX_ROOT/system/skills/start-task/assets/hub/.ai/scripts/ctl-project-governance.mjs"
-[ -f "$HUB" ] || fail "start-task does not ship the hub control script"
+CTL="$AUX_ROOT/system/skills/start-task/assets/project/.ai/scripts/ctl-project-governance.mjs"
+[ -f "$CTL" ] || fail "start-task does not ship the control script"
 
 # The repository starts with nothing: one command out of the skill must leave it fully provisioned.
-if [ -d .ai ]; then fail "target repo already has .ai/ before install"; fi
-node "$HUB" install --repo-root . >/dev/null
+if [ -d .ai ] || [ -d dev-docs ]; then fail "target repo is not empty before install"; fi
+node "$CTL" install --repo-root . >/dev/null
 
-for f in scripts/ctl-project-governance.mjs scripts/lib/yaml-lite.mjs project/CONTRACT.md \
-         project/AGENTS.md project/templates/registry.yaml; do
-  [ -f ".ai/$f" ] || fail "install did not place .ai/$f"
+for f in .ai/scripts/ctl-project-governance.mjs .ai/scripts/lib/yaml-lite.mjs \
+         .ai/project/CONTRACT.md .ai/project/AGENTS.md .ai/project/templates/registry.yaml; do
+  [ -f "$f" ] || fail "install did not place $f"
+done
+for d in dev-docs/active dev-docs/archive; do
+  [ -d "$d" ] || fail "install did not create $d"
 done
 for f in registry.yaml dashboard.md feature-map.md task-index.md changelog.md; do
   [ -f ".ai/project/$f" ] || fail "install did not initialize .ai/project/$f"
@@ -124,4 +124,4 @@ node .ai/scripts/ctl-project-governance.mjs sync --apply >/dev/null
 grep -q 'status: archived' .ai/project/registry.yaml || fail "archive status not propagated"
 node .ai/scripts/ctl-project-governance.mjs lint --strict >/dev/null || fail "lint failed after archive"
 
-echo "install from skill, re-install safety, hook sync, single-project layout, lint, resume, idempotency, map, worktree ids, archive"
+echo "install from empty repo, re-install safety, hook sync, single-project layout, lint, resume, idempotency, map, worktree ids, archive"
