@@ -28,7 +28,7 @@ This is the default self-review path. When the user explicitly wants an independ
 - Delegating review to another agent/CLI for a second opinion
 - Project-hub / task-record lint (governance drift is a different concern)
 - Primary work is fixing compile errors or frontend crashes (review may follow)
-- Only aligning task docs with the repository (`sync-task` territory)
+- Only aligning task docs with the repository
 
 ## Review target
 

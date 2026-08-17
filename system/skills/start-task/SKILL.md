@@ -1,6 +1,6 @@
 ---
 name: start-task
-description: Opening a new tracked task. Use when the user asks for a plan, roadmap, or milestones before coding, or when substantial new work is about to start. Not for a trivial change — answer that in chat and write no files. `dev-docs/AGENTS.md` must exist.
+description: Opening a new tracked task. Use when the user asks for a plan, roadmap, or milestones before coding, or when substantial new work is about to start. Not for a trivial change — answer that in chat and write no files.
 ---
 
 # Start Task
@@ -9,26 +9,36 @@ Set up the artifacts a task needs to survive a session boundary: a roadmap for d
 
 Both artifacts are gated. Writing a bundle for a 30-minute fix is the common failure: the bundle costs more to maintain than the task returns.
 
+## Provisioning check
+
+The gate, the Task Contract, and the id-allocation rule all live in `dev-docs/AGENTS.md`. If the file is missing, the task system is not installed in the repository — do not scaffold `dev-docs/` ad hoc, because the structure would exist without the contract every later session depends on. Offer the `dev-docs-continuity` pack from the user's library, and deliver an in-chat plan in the meantime.
+
 ## Decision Gate
 
 Apply the gate in `dev-docs/AGENTS.md` ("Decision Gate (MUST)"). The criteria live there and are not restated here so the two cannot drift.
+
+| Outcome | Do this |
+|---------|---------|
+| Trivial change | Answer with an in-chat plan. Write nothing under `dev-docs/`. |
+| Gate met, direction unclear or user asked for a plan | Write `roadmap.md`, then continue to the bundle. |
+| Gate met, direction already clear | Write the bundle. A roadmap is optional. |
 
 ## Workflow
 
 1. **Look for the task before creating one.** Duplicate tasks are the expensive mistake here — two bundles for one piece of work split the commit timeline and neither resumes correctly.
 
-```bash
-node .ai/scripts/ctl-project-governance.mjs query --text "<keywords>"
-node .ai/scripts/ctl-project-governance.mjs query --status in-progress
-```
+   ```bash
+   node .ai/scripts/ctl-project-governance.mjs query --text "<keywords>"
+   node .ai/scripts/ctl-project-governance.mjs query --status in-progress
+   ```
 
-Without the hub, scan the bundles directly:
+   Without the hub, scan the bundles directly:
 
-```bash
-grep -r "^- State:" --include=00-overview.md dev-docs
-```
+   ```bash
+   grep -r "^- State:" --include=00-overview.md dev-docs
+   ```
 
-then open the goal of anything active. If existing work covers the request, stop and use `resume-task` instead of opening a second bundle.
+   then open the goal of anything active. If existing work covers the request, stop and continue that task instead of opening a second bundle.
 
 2. **Restate the goal in one sentence** and get confirmation.
 

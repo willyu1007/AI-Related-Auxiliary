@@ -21,7 +21,7 @@ The signal is degraded work, not context consumption. Watch for:
 
 ## Workflow
 
-1. **Land the durable layer.** Run the `sync-task` workflow at checkpoint depth — touch what the session changed, commit the verified part with its `Task:` trailer.
+1. **Land the durable layer.** Bring the task bundle level with the repository at checkpoint depth — touch what the session changed, commit the verified part with its `Task:` trailer.
 
 2. **Render the block** and present it in the conversation for the user to copy.
 
@@ -56,9 +56,11 @@ One sentence. What finishing looks like.
 
 The stale check makes the block self-verifying: the receiving session reads only the block. Time between handoff and resume is near zero, so drift is not the risk — pasting yesterday's block by mistake is.
 
-## Starting the new session
+## Delivering the block
 
-The block is the portable form and works anywhere the user can paste. It would be better if you could create a new task/session and inject content programmatically — if you have such tools.
+Default: render the block in the conversation for the user to paste into a new session.
+
+If the current environment provides a tool that creates a session and sets its first message, use it instead: create the session with the block as that message, then report that the session is ready. Never do both — one block, one destination.
 
 ## Rules
 

@@ -7,7 +7,7 @@ description: Ask Codex CLI (OpenAI's current coding models) for an independent c
 
 Use Codex as an independent reviewer when the user wants a second-pass review or when a change is broad enough that another agent's perspective is useful.
 
-Prefer a direct self-review with the `review-code` skill for ordinary local checks.
+Prefer reviewing the change yourself for ordinary local checks.
 Do not delegate review just to avoid reading the code yourself. Treat Codex's output as evidence, not authority.
 
 ## Workflow

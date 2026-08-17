@@ -114,6 +114,7 @@ function runStatic(packs) {
   // frontmatter `name` but lives in a directory, so a rename that updates one and not the other
   // breaks routing just as silently.
   const skillOwner = new Map();
+  const skillByDir = new Map();
   for (const entry of fs.readdirSync(SKILLS_DIR, { withFileTypes: true })) {
     if (!entry.isDirectory()) continue;
     const skillMd = path.join(SKILLS_DIR, entry.name, 'SKILL.md');
@@ -140,27 +141,14 @@ function runStatic(packs) {
       fail('skill-name', `system/skills/${entry.name}/SKILL.md declares "${declared}"`);
     }
     skillOwner.set(declared, entry.name);
-  }
-
-  // Descriptions are the routing signal and are all loaded at once, so a description naming a
-  // sibling puts that sibling's name in an entry that is not the sibling — the router then matches
-  // the name in several places. The sibling is already visible in the same list with its own
-  // trigger, so the cross-reference adds nothing. Boundaries belong in the positive trigger
-  // ("while work continues" vs "session ends"); pointers to non-skills are fine and stay.
-  for (const [name, dir] of skillOwner) {
-    const desc = (readTextOrNull(path.join(SKILLS_DIR, dir, 'SKILL.md')) || '')
-      .match(/^description:([\s\S]*?)(?=\n[a-z_]+:|\n---)/m)?.[1] || '';
-    for (const other of skillOwner.keys()) {
-      if (other !== name && desc.includes(other)) {
-        fail('description-crosslink', `${name} names "${other}" in its description`);
-      }
-    }
+    skillByDir.set(entry.name, declared);
   }
 
   // Skill assets carry the same hazards as pack files: a dead reference or a hook that lost its
   // exec bit fails silently.
   for (const abs of walk(SKILLS_DIR)) {
     const shipped = path.relative(SKILLS_DIR, abs).split(path.sep).join('/');
+    const owner = skillByDir.get(shipped.split('/')[0]);
 
     if (shipped.includes('/assets/githooks/') && !shipped.endsWith('.mjs')) {
       if (!(fs.statSync(abs).mode & 0o111)) {
@@ -179,6 +167,19 @@ function runStatic(packs) {
     for (const ref of text.match(SCRIPT_REF_RE) || []) {
       if (!provider.has(ref)) {
         fail('dangling-ref', `system/skills/${shipped} references ${ref}, which no pack ships`);
+      }
+    }
+
+    // No skill names another skill, anywhere in what it ships. In a description the cost is
+    // routing: descriptions are all loaded at once, so a sibling's name in an entry that is not
+    // the sibling makes the router match that name in several places. In a body the cost is
+    // coupling: a skill that hands off by name pins the pair together, and a rename has to find
+    // every mention or the handoff points at nothing. State the action instead ("continue that
+    // task") and let the router pick who performs it. Naming yourself is fine, as is pointing at
+    // anything that is not a skill.
+    for (const other of skillOwner.keys()) {
+      if (other !== owner && text.includes(other)) {
+        fail('skill-crosslink', `system/skills/${shipped} names the "${other}" skill`);
       }
     }
   }

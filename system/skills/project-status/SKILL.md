@@ -7,7 +7,7 @@ description: Progress questions spanning tasks, answered without writing anythin
 
 Answer the question from what is written down, and make the answer actionable.
 
-Read-only is the point of this skill, not a limitation. Scope is the portfolio: several tasks at once, the shape of the whole. A question about one specific task the user intends to continue is `resume-task`.
+Read-only is the point of this skill, not a limitation. Scope is the portfolio: several tasks at once, the shape of the whole. A question about one specific task the user intends to continue is a different job — that one rebuilds the task's context rather than summarizing it.
 
 ## Response templates
 

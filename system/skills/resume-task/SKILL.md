@@ -1,6 +1,6 @@
 ---
 name: resume-task
-description: Picking up work already underway. Use for "continue the work", "where were we", "pick up a task", or when a session starts on a branch that names a task.
+description: Picking up work already underway with nothing carried over from the previous session. Use for "continue the auth work", "where were we", "pick up T-012", or when a session starts on a branch that names a task.
 ---
 
 # Resume Task
@@ -51,7 +51,7 @@ Both paths end here.
 
 - **A dirty worktree outranks the documents.** Inspect `git status --short` and `git diff` before writing code; someone stopped mid-change.
 - **An empty timeline means progress is unknown, not zero.** The work may predate the trailer convention, or may sit uncommitted.
-- **Git history wins ties.** When the record and the history disagree about what landed, believe the history, then fix the document with `sync-task`.
+- **Git history wins ties.** When the record and the history disagree about what landed, believe the history; correcting the document is a separate operation, not part of the resume.
 - **Report the reconciliation.** Say what the documents claim, what the repository shows, and where the two disagree — do not silently pick one.
 
 ## Rules
@@ -59,7 +59,7 @@ Both paths end here.
 - Never run task recovery for work unrelated to the request. A task id in the branch name is relevant only when the request concerns that task.
 - Never guess between ambiguous candidates.
 - Never start implementing in the same turn as the resume unless the user asked you to. Report state and the next few actions first.
-- Never modify the bundle here; recording belongs to `sync-task`.
+- Never modify the bundle here; recording is a separate operation.
 
 ## Output
 
