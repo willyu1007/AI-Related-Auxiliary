@@ -47,6 +47,7 @@ checks/          # 本仓库自己的校验，不是分发物
 | [sync-db-from-prisma](system/skills/sync-db-from-prisma/SKILL.md) | Prisma repo→DB migration 闸门：预览、单独的 apply 批准、按环境应用、验证 |
 | [manage-llm-usage](system/skills/manage-llm-usage/SKILL.md) | 薄 LLM 能力台账（内部 capability）：登记、改完代码后对齐、共享调用准则；手工维护，无校验 |
 | [debug-mode](system/skills/debug-mode/SKILL.md) | 证据驱动调试：可选审批门（默认无）、Agent 自行采证、验证后自动清理临时埋点与产物 |
+| [cleanup-repo](system/skills/cleanup-repo/SKILL.md) | 清理存在理由已过期的内容：遗留文件、过时测试、未用依赖、死出口、漂移文档、重复实现；证据+批准后删除，校验门收尾 |
 
 `system/` 是全局 Agent 配置的版本化镜像。改动流程：
 
