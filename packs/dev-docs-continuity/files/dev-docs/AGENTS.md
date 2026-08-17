@@ -156,11 +156,8 @@ Before making any code/config changes for a task that meets the Decision Gate:
 
 Task docs describe intent and current state; commits record what landed.
 
-- SHOULD commit after completing and verifying a revertible work unit.
-- MAY commit a known-green rollback point before risky changes.
 - MUST add a `Task: T-###` trailer when the commit belongs to that task.
 - MUST NOT attach a task to unrelated work.
-- MUST NOT force broken or unverified work into a commit. Preserve and report any remaining worktree changes accurately.
 
 The trailer is what links a commit to a task bundle, and is the only mechanism a later session has for reconstructing a timeline.
 

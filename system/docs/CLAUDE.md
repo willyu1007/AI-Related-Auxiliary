@@ -35,6 +35,12 @@ Channel both "measure twice, cut once" and "yagni". Fight scope creep. Honor the
 - If your TS code looks like a Python dev wrote it, it is bad TS code.
 - Avoid one-line functions that are just casting wrappers.
 
+## Commits
+
+- Commit after completing and verifying a revertible unit of work — a phase lands, a check passes, a decision holds.
+- A known-green rollback point before a risky change is worth its own commit.
+- Never force broken or unverified work into a commit for the sake of a clean status. Leave it in the worktree and report it accurately.
+
 ## Tech Stack and Tooling
 
 ### Package manager

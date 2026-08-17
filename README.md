@@ -50,17 +50,21 @@ checks/          # 本仓库自己的校验，不是分发物
 | [manage-llm-usage](system/skills/manage-llm-usage/SKILL.md) | 薄 LLM 能力台账（内部 capability）维护与对齐；含精简调用/调度准则；可选 Web 管理台读写同一 SSOT |
 | [debug-mode](system/skills/debug-mode/SKILL.md) | 证据驱动调试：可选审批门（默认无）、Agent 自行采证、验证后自动清理临时埋点与产物 |
 
-`system/` 是 `~/.claude/` 的版本化镜像。改动流程：
+`system/` 是全局 Agent 配置的版本化镜像。改动流程：
 
 ```bash
 # 从本仓库同步到全局
 cp -R system/skills/. ~/.claude/skills/
 cp system/docs/CLAUDE.md ~/.claude/CLAUDE.md
+cp system/docs/AGENTS.md ~/.codex/AGENTS.md
 
 # 从全局回收改动到本仓库
 cp -R ~/.claude/skills/. system/skills/
 cp ~/.claude/CLAUDE.md system/docs/CLAUDE.md
+cp ~/.codex/AGENTS.md system/docs/AGENTS.md
 ```
+
+`AGENTS.md` 是 `CLAUDE.md` 去掉末尾"选模型"那一节 —— 那节讲的是怎么调度 Codex 和 Claude 子 agent，对读 `AGENTS.md` 的 Codex 自己没有意义。两份共有的部分必须逐字一致，`checks/run.mjs` 用前缀比对盯着：改了一边没改另一边，检查会红。
 
 ## packs/ —— 项目层
 

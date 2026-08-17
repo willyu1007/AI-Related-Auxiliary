@@ -34,6 +34,7 @@ import { fileURLToPath } from 'node:url';
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const PACKS_DIR = path.join(REPO_ROOT, 'packs');
 const SKILLS_DIR = path.join(REPO_ROOT, 'system', 'skills');
+const DOCS_DIR = path.join(REPO_ROOT, 'system', 'docs');
 
 const SCRIPT_REF_RE = /\.ai\/scripts\/[a-z0-9-]+\.mjs/g;
 const MACHINE_PATH_RE = /(?:\/Users\/|\/home\/[a-z]|\/Volumes\/|[A-Z]:\\\\)/;
@@ -107,6 +108,18 @@ function runStatic(packs) {
       const shipped = path.relative(filesDir, abs).split(path.sep).join('/');
       if (shipped.startsWith('.ai/scripts/')) provider.set(shipped, pack);
     }
+  }
+
+  // The two global instruction files land on different tools (~/.claude/CLAUDE.md and
+  // ~/.codex/AGENTS.md) and are copied verbatim, so everything they have in common is a second
+  // copy that drifts the moment one is edited alone. AGENTS.md is CLAUDE.md minus the Claude-only
+  // tail; enforcing the prefix is what makes a one-sided edit fail here instead of six weeks later.
+  const claudeMd = readTextOrNull(path.join(DOCS_DIR, 'CLAUDE.md'));
+  const agentsMd = readTextOrNull(path.join(DOCS_DIR, 'AGENTS.md'));
+  if (claudeMd === null || agentsMd === null) {
+    fail('docs-drift', 'system/docs/ must hold both CLAUDE.md and AGENTS.md');
+  } else if (!claudeMd.startsWith(agentsMd)) {
+    fail('docs-drift', 'system/docs/AGENTS.md is no longer a prefix of CLAUDE.md — their shared part drifted');
   }
 
   // Skills are global and live one level under system/skills/, because skill discovery only scans
