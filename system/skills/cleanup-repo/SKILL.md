@@ -18,13 +18,13 @@ Candidates are scoped. **Evidence never is** — "nothing references this" is on
 | Ordinary cleanup | The directories this session's work touched; in a fresh session, the directories touched by the last ten commits | Shallow drift check may cover the whole repo (cheap); deep drift only for content this session touched |
 | "全仓" / "全面清理" / full sweep | Whole repository | Deep drift check across the repo |
 
-Directory granularity is literal: everything inside a touched directory is a candidate, including untracked files — they have no history to appear in, so a diff-based reading would exclude the highest-risk pile forever.
+Directory granularity is literal: everything inside a touched directory is a candidate, including untracked files — they have no history to appear in, so a diff-based reading would exclude the highest-risk pile forever. The repository root is the one exception: root-level files count individually, and the root is never a container that sweeps in every top-level directory — otherwise one touched root file collapses ordinary cleanup into a full sweep.
 
 Rot is anti-correlated with recent activity — code is dead precisely because nobody touches it — so the default scope selects where rot is least likely. Two consequences: the handback always names the directories the sweep did not cover, and four lenses run globally in every sweep because they are repo-wide and cheap. Two act: unused dependencies, exact-duplicate files. Two only report: a name-signal grep for version-iteration residue (`legacy`, `old`, `v2`, `deprecated`, `backup`, `copy`) and a scan for skipped or TODO-marked tests — the poison categories live precisely where the scope never reaches, so they at least get named.
 
 **Gitignored files are out of scope entirely.** The ignore rule already declares their lifecycle, they do not clutter the repository view, and the pile most likely to hide credentials (`.env` and friends) lives there — untracked, unrecoverable, and never a cleanup candidate.
 
-One carve-out: entries under `.ai/.tmp/` that do not belong to the current session are itemized-confirm candidates. That directory is where disposable artifacts are deliberately concentrated, and a session that crashed instead of finishing leaves debris there with no other reaper.
+**Except** `.ai/.tmp/`: entries there that do not belong to the current session are itemized-confirm candidates despite being ignored. That directory is where disposable artifacts are deliberately concentrated, and a session that crashed instead of finishing leaves debris there with no other reaper. Unable to tell whether an entry is current? Treat it as not yours and list it — the user decides.
 
 ## Lenses
 
@@ -54,7 +54,7 @@ Drift direction is a judgment: usually the doc is stale and follows the code, bu
 
 ### C. Duplication
 
-Exact duplicates — identical content under different names — are cheap to find (hash compare) and always checked. The verdict follows references: a copy nothing references goes to a delete pile; when **both** copies are referenced, deduplication is a refactor and the finding is report-only. Skip trivially small files and structural duplicates — per-package licenses, vendored copies, generated output. Two implementations of the same responsibility are the expensive cousin: detect within scope, and deciding **which track is canonical** is the user's call whenever it is not obvious — obvious means the reference asymmetry is total, one side with zero live importers. Killing the loser changes behavior — report, do not act, unless approved.
+Exact duplicates — identical content under different names — are cheap to find (hash compare) and always checked. The verdict follows references: a copy nothing references goes to a delete pile; when **both** copies are referenced, deduplication is a refactor and the finding is report-only. Skip trivially small files and structural duplicates — per-package licenses, vendored copies, generated output. Two implementations of the same responsibility are the expensive cousin: detect within scope, and deciding **which track is canonical** is the user's call whenever it is not obvious — obvious means the reference asymmetry is total, one side with zero live importers. A loser with zero live importers is an ordinary unreachable file and follows the delete piles; killing a loser that **still has importers** changes behavior — report, do not act, unless approved.
 
 Version-iteration residue is this lens's self-labeling form. LLM iteration leaves files and symbols named `legacy`, `old`, `v2`, `new`, `final`, `backup`, `copy`, and forwarding wrappers or compat shims kept only because call sites were never migrated. The name is a detection signal, not a verdict — the verdict is still reachability: nothing references the old track → delete pile; live references remain → report with the migration path (move the call sites, then kill the track), never a silent rewrite.
 
@@ -115,6 +115,7 @@ The sweep is the cure; prevention is birth rules, and they already exist — tem
 ## Rules
 
 - Never delete without stated evidence, and never expand a deletion beyond what was approved.
+- Never read a blanket approval as covering report-only findings. Approving the report authorizes the delete piles and the listed edits; a report-only item acts only on its own, named instruction.
 - Never delete an untracked file without itemized approval — there is no undo.
 - Never touch gitignored files; `.env` and credential files are never candidates.
 - Never treat a green suite as proof that deleting a *test* was safe.
