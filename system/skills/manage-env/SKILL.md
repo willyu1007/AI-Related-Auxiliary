@@ -18,6 +18,7 @@ Every env problem is a difference between two of them.
 ## Secrets discipline (applies everywhere)
 
 - Key **names** may appear in chat and in `.env.example`; secret **values** never appear anywhere but the developer's local files. Report a value only as `set`, `empty`, or `missing`.
+- The discipline covers the inspection itself: never read a local env file raw — `cat` or a file-read puts every value into the transcript. Extract names only (`cut -d= -f1 .env.local`) and test emptiness without echoing (`grep -c '^KEY=$'`).
 - `.env.example` carries placeholders and comments, never real values — not even harmless-looking ones, because the next person cannot tell which ones were harmless.
 - Local env files stay gitignored and are never committed, never staged, never quoted.
 
@@ -40,13 +41,14 @@ When the local environment is broken, the app complains about missing variables,
    | Difference | Meaning | Action |
    |------------|---------|--------|
    | read, not documented | contract drift | add to `.env.example` with placeholder and comment |
-   | read, not present locally | the likely breakage | add to the local file as a placeholder; tell the user which keys need real values — never invent one |
+   | read, not present locally, **required** | the likely breakage | add to the local file with an **empty** value (`KEY=`) — empty keeps the check honestly red until the real value arrives, where a fake string would turn it silently green; tell the user which keys need real values — never invent one |
+   | read, not present locally, **optional with a working default** | not a breakage | document in the example; touch the local file only if the user wants the default overridden |
    | documented, never read | dead config | report; remove from the example only with approval |
    | present locally, never read | leftover | report; the user decides |
    | present but empty, and required | the quiet breakage | flag it — `set`/`empty`/`missing` is exactly what the report may say |
 
-3. **Verify** with the project's own cheapest signal — the dev server booting, a config-loading unit test, a health check. A doctor that never re-runs the failing thing has not finished diagnosing.
-4. **Hand back:** which keys were the problem, what was placeholdered and awaits a real value, and any contract drift fixed along the way.
+3. **Verify** with the project's own cheapest signal — the dev server booting, a config-loading unit test, a health check. A doctor that never re-runs the failing thing has not finished diagnosing. **Correctly still red is a valid terminal state**: when the only remaining gap is a secret nobody but the user can supply, the re-run fails for exactly the right reason, and the handback says so.
+4. **Hand back:** which keys were the problem, what awaits a real value, and any contract drift fixed along the way. The example fix is ordinary committable work and follows the session's normal commit rules; local env files are never part of any commit.
 
 ## Rules
 
