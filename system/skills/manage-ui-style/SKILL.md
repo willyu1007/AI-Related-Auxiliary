@@ -35,17 +35,19 @@ What turns up decides the mode — you do not ask for it:
 
 1. **Load the house layer** (`taste-rubric.md`, `anti-patterns.md`) and the project layer if it exists. Before generating, not after.
 
-2. **Mock first.** For any non-trivial screen, layout, or copy change: build several distinct static HTML mocks, deliver them, report where they are, and stop. Wait for a pick before touching real components. Mocks go in a dedicated directory outside the repository unless they are meant to become maintained assets.
+2. **Mock first.** For any non-trivial screen, layout, or copy change: build several distinct static HTML mocks, deliver them, report where they are, and stop. Wait for a pick before touching real components. Mocks belong in a dedicated directory outside the repository; when that is not possible, a temporary directory inside it, named in the handback. After the pick, mocks are deleted — unless one is being promoted to an exemplar, which is Workflow B.
 
 3. **Derive, do not invent.** In strict mode, new screens come from the nearest exemplar — copy its composition and swap the content. Only tokens and primitives supply values; a literal color, radius, or font-size in a feature file is the drift starting.
 
-4. **Constrain the vocabulary, not just the behavior.** Configure the utility framework's theme to expose only the project's scale, so out-of-scale classes stop existing rather than relying on discipline not to type them. Take **behavior** from libraries (focus management, ARIA, keyboard navigation, portals, dismissal) — hand-written dialogs are how a codebase ends up with three modal implementations and four z-index values. Take **appearance** from tokens, always.
+   **When the token layer does not cover the value you need** — a project with colors but no type scale is the common case — the exemplar's existing values are the implicit scale: match one of them exactly rather than inventing a neighbour, and say in the handback which scale is missing so it can be declared. Adding the missing token is a proposal, never a silent side effect, and it is never applied retroactively to files this task did not touch.
+
+4. **Constrain the vocabulary, not just the behavior.** Where the project styles with utility classes, configure the framework's theme to expose only its scale, so out-of-scale classes stop existing rather than relying on discipline not to type them — check how the *exemplar* is written, not what is installed; a framework present but unused by real code is not the project's styling approach, and constraining it is busywork. Take **behavior** from libraries (focus management, ARIA, keyboard navigation, portals, dismissal) — hand-written dialogs are how a codebase ends up with three modal implementations and four z-index values. Take **appearance** from tokens, always.
 
 5. **Close with the mechanical set** from `./reference/anti-patterns.md`. Report hits with what you did about them.
 
 ## Workflow B — Crystallize
 
-Run when a project has produced UI worth keeping and has no project layer yet — usually right after a mock is picked.
+Run when a project has produced UI worth keeping and the project layer does not yet cover it — either because there is no layer at all, or because a genuinely new pattern landed that no exemplar covers (the first hero, the first wizard, the first data-dense board). A style record written once and never revisited goes stale by standing still; incremental crystallization is what keeps it honest.
 
 1. Extract the tokens actually used into the project's real token file — the one the app consumes, not a document.
 2. Mark one to three screens as exemplars: a list, a form, a detail or overview. These are what later work copies.
