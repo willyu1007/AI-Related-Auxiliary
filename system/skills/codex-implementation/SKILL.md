@@ -1,23 +1,27 @@
 ---
 name: codex-implementation
-description: Ask Codex CLI (OpenAI's current coding models) to implement scoped code changes in the current repository, then have Claude inspect the resulting diff and verification. This is how OpenAI models are invoked for implementation work. Use when the user asks Claude to delegate implementation to Codex or an OpenAI/GPT model, when the model-selection rubric routes the work to Codex, or when a bounded task would benefit from another coding agent producing a patch.
+description: >-
+  Use when the user asks for a repository change to be implemented by Codex
+  CLI, or when the intended behavior or design is already defined and the
+  main work is coding or mechanical execution rather than unresolved product,
+  UI, copy, or API design decisions.
 ---
 
-# Codex Implementation
+## Boundaries
 
-Use Codex as a separate implementation agent for bounded code changes. Claude remains responsible for scoping the task, reviewing the diff, running or checking verification, and explaining the final result.
-
-Use this when the user asks for Codex or delegation, or when a bounded task would benefit from a parallel implementation agent producing a patch. Do not let Codex commit, push, deploy, or edit global config unless the user explicitly asked for that.
+Claude owns task scoping, diff review, verification, and final reporting. Codex must not commit, push, deploy, or edit global configuration unless the user explicitly requests it.
 
 ## Workflow
 
 1. Pin the current state with `git status --short` and note any user changes already present.
 2. Define the implementation scope: files or behavior to change, files to avoid, constraints, and verification commands.
-3. Create a temporary artifact directory for Codex's report.
-4. Run `codex exec` with repo write access.
-5. After Codex exits, inspect `git status` and `git diff`.
-6. Run the cheapest reliable verification yourself when practical.
-7. Report what Codex changed, what Claude verified, and any remaining risks.
+3. Keep related changes in one Codex run when they share context and acceptance criteria. Split only independent scopes or work that cannot be verified clearly as one unit.
+4. Create a temporary artifact directory for Codex's report.
+5. Run `codex exec` with repo write access.
+6. After Codex exits, inspect `git status` and `git diff`.
+7. Run proportionate verification yourself.
+8. If the diff or verification exposes a bounded Codex-created problem, correct it directly or give Codex an evidence-backed follow-up, then repeat inspection and verification. Do not repeat the same failed approach.
+9. Report what Codex changed, what Claude verified, and any remaining risks.
 
 Use this command shape:
 
@@ -32,7 +36,7 @@ codex exec \
   --add-dir "$ARTIFACT_DIR" \
   -s workspace-write \
   -o "$REPORT" \
-  "$(cat "$PROMPT")"
+  - < "$PROMPT"
 ```
 
 Pick the model tier per the model-selection rubric in CLAUDE.md and pass it with `--model`; omit the flag to use the `~/.codex/config.toml` default.
@@ -52,7 +56,7 @@ Tell Codex:
 - Which verification commands to run, or to explain why they were skipped.
 - To write a concise final report with files changed, verification, and unresolved questions.
 
-Keep the task bounded. If the requested work bundles several substantial changes, split it into separate Codex runs or ask the user to choose the first scope.
+Keep each Codex run coherent. Let Codex complete related implementation work end to end; split independent scopes when doing so improves isolation or verification. Ask the user only when choosing a boundary would change the requested outcome.
 
 ## Example Prompt
 
@@ -89,6 +93,8 @@ Report:
 
 ## Review After Codex
 
-Always inspect Codex's diff before telling the user the work is done. Revert only Codex-created mistakes when you are sure they are not user changes. If Codex leaves the repo in a worse state or changes unrelated files, stop and report the issue with the diff summary.
+Always inspect Codex's diff before telling the user the work is done. When a bounded defect or failed check is attributable to Codex's changes, correct it directly or provide a follow-up containing the new evidence, then rerun the relevant verification. Continue while each iteration makes progress; stop when the same failure recurs, requirements are ambiguous, required access or dependencies are unavailable, or Codex changes cannot be separated safely from user work.
 
-If `codex` is not installed or the command fails, report the error and offer to implement the change directly instead.
+Revert only Codex-created mistakes when you are sure they are not user changes. Remove unrelated Codex changes and continue when they can be separated safely; otherwise stop and report the diff summary.
+
+If `codex` is not installed or fails to start, implement the change directly when it remains in scope. Report a blocker only when direct implementation is not viable.

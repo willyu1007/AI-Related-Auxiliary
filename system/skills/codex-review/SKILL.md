@@ -1,21 +1,21 @@
 ---
 name: codex-review
-description: Ask Codex CLI (OpenAI's current coding models) for an independent code review of uncommitted changes, a branch diff, a commit, or a specific implementation. This is how OpenAI models are invoked for review work. Use when the user asks Claude to have Codex or an OpenAI/GPT model review work, when the model-selection rubric calls for an independent OpenAI review perspective, or when Codex should audit a diff, find bugs or regressions, or compare Claude's implementation against requirements. For a review by the current agent itself, use the self-review workflow instead of this skill.
+description: >-
+  Use Codex CLI as the primary or an additional reviewer for implementation
+  plans or repository changes produced by a non-Codex model, or whenever the
+  user explicitly requests a Codex review.
 ---
-
-# Codex Review
-
-Use Codex as an independent reviewer when the user wants a second-pass review or when a change is broad enough that another agent's perspective is useful.
-
-Prefer reviewing the change yourself for ordinary local checks.
-Do not delegate review just to avoid reading the code yourself. Treat Codex's output as evidence, not authority.
 
 ## Workflow
 
-1. Identify the review target: uncommitted changes, base branch, commit SHA, PR checkout, or specific files.
-2. Create a temporary artifact directory for the Codex report.
-3. Run `codex review` with a focused review prompt.
-4. Read Codex's report and verify important claims against the code before presenting them.
+1. Identify the review target and the model that produced it.
+2. Assign the review role:
+   - For non-Codex-authored work, Codex is the primary reviewer unless the caller explicitly assigns it an additional-review role.
+   - For Codex-authored work, Claude is the primary reviewer of requirements, behavior, architecture, security, and failure modes. Treat Codex's review as supplemental; deterministic verification may still be delegated to Codex through the relevant workflow.
+3. Choose exactly one review input: a built-in target (`--uncommitted`, `--base`, or `--commit`) or custom instructions that identify the target.
+4. Create a temporary artifact directory for the Codex report.
+5. Run `codex review` with the selected input.
+6. Read Codex's report and verify important claims against the code before presenting them.
 
 Use one of these command shapes:
 
@@ -23,33 +23,36 @@ Use one of these command shapes:
 ARTIFACT_DIR="$(mktemp -d "${TMPDIR:-/tmp}/codex-review.XXXXXX")"
 REPORT="$ARTIFACT_DIR/report.md"
 PROMPT="$ARTIFACT_DIR/prompt.md"
+MODEL="gpt-5.6-sol"
+SHA="<commit-sha>"
 
-# Review staged, unstaged, and untracked changes.
-codex -C "$PWD" review --uncommitted - < "$PROMPT" > "$REPORT"
+# Built-in targets: choose one and do not also pass a custom prompt.
+codex -C "$PWD" --model "$MODEL" review --uncommitted > "$REPORT"
 
-# Review current branch against a base branch.
-codex -C "$PWD" review --base main - < "$PROMPT" > "$REPORT"
+codex -C "$PWD" --model "$MODEL" review --base main > "$REPORT"
 
-# Review a single commit.
-codex -C "$PWD" review --commit <sha> - < "$PROMPT" > "$REPORT"
+codex -C "$PWD" --model "$MODEL" review --commit "$SHA" > "$REPORT"
+
+# Custom instructions: identify the target in $PROMPT and omit target flags.
+codex -C "$PWD" --model "$MODEL" review - < "$PROMPT" > "$REPORT"
 ```
 
-For an independent review, default to the strongest Codex tier in the CLAUDE.md model-selection rubric (pass with `--model`); a weaker reviewer defeats the purpose of a second pass.
+Use `gpt-5.6-sol` for primary or additional Codex reviews unless the user or the CLAUDE.md model-selection rubric chooses another model. Keep `--model` before the `review` subcommand.
 
-## Review Prompt
+## Custom Review Prompt
 
-Ask Codex to use a code-review stance:
+Use a custom prompt only when a built-in target review is insufficient. The prompt must identify what to review because custom instructions cannot be combined with `--uncommitted`, `--base`, or `--commit`.
 
 ```text
-Review these changes for bugs, regressions, missing tests, security issues, and requirement mismatches.
+Review the specified changes for concrete bugs, regressions, security issues, requirement mismatches, and missing coverage only when it leaves a concrete failure undetected.
 
-Prioritize findings over summary. For each finding include:
+Report only actionable findings; omit style preferences, nits, and speculative risks without a concrete failure mode. For each finding include:
 - severity
 - file and line reference
 - concrete failure mode
 - suggested fix direction
 
-Do not edit files. If there are no substantive findings, say so and name any residual test gaps.
+Do not edit files. If there are no substantive findings, say so and name only residual risks or test gaps tied to concrete behavior.
 ```
 
 Add task-specific context when useful: requirements, risky areas, expected behavior, relevant tests, or files Claude is unsure about.
@@ -60,4 +63,4 @@ Before relaying a Codex finding, inspect the cited code or diff enough to decide
 
 If Codex finds nothing, say that clearly and mention what review target it inspected.
 
-If `codex` is not installed or the command fails, report the error and offer to review the changes directly instead.
+If `codex` is not installed or the command fails, review the changes directly when practical. Report a blocker only when no viable review route remains.
