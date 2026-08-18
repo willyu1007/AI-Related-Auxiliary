@@ -9,7 +9,7 @@ Ideas that are worth doing but not now die in chat scrollback. The ledger is the
 
 ## Ledger location
 
-`.ai/project/ideas/ideas.yaml` in the target repository. Materialize once — `-n` keeps a re-run from flattening an existing ledger:
+`.ai/project/ideas/ideas.yaml` in the target repository. Materialize only when absent — `-n` keeps a re-run from flattening an existing ledger:
 
 ```bash
 mkdir -p .ai/project/ideas && cp -n <this-skill>/assets/ideas/.ai/project/ideas/ideas.yaml .ai/project/ideas/ideas.yaml
@@ -48,7 +48,7 @@ The capture moment is usually mid-task — something valuable surfaces and the u
 2. Allocate the next `I-###`: highest existing id + 1.
 3. Confirm the id in one line and return to the interrupted work.
 
-Ask for missing context only when the summary would otherwise be too thin to judge later — never run an intake interview.
+Fill optional fields from what was actually said or is visibly true — **blank beats invented**. One quick follow-up question is fine when the answer is on the tip of the conversation; a questionnaire is not. Ask beyond that only when the summary would otherwise be too thin to judge later.
 
 ## Review
 
@@ -58,7 +58,7 @@ When the user asks what is parked, what is worth starting, or whether the ledger
 2. Flag **needs review**: `review_after` in the past.
 3. Flag **promotion candidates**: `trigger` matches what is now true — the blocking work landed, the assumption changed.
 4. Flag **drop candidates**: the assumption in `summary` or `why_not_now` no longer holds.
-5. Answer as a table — `id`, `title`, `status`, one-line recommendation — and treat every recommendation as a suggestion. Persist a change only when the user says so.
+5. Answer as a table — `id`, `title`, `status`, one-line recommendation — and treat every recommendation as a suggestion. **No signal is a valid verdict**: when the repository offers no evidence for or against a trigger or assumption, say so instead of forcing a call. Persist a change only when the user says so.
 
 Promoting an idea means it leaves the ledger's custody: open tracked work for it, record the task id in `linked_tasks`, set `status: promoted`. The ledger keeps the pointer, the task record takes over the work.
 
