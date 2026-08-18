@@ -29,6 +29,7 @@ secrets.json
 tmp/
 temp/
 .cache/
+.ai/.tmp/
 
 # Node
 node_modules/
