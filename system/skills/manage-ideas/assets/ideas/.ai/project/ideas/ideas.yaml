@@ -1,0 +1,24 @@
+# Deferred ideas ledger — "worth doing, not now".
+# One entry per idea. Required: id, title, status, summary, created, updated.
+# Optional: why_not_now, trigger, review_after, tags, linked_tasks.
+#
+# id:     I-###, unique, immutable, allocated highest + 1
+# status: deferred | promoted | implemented | dropped
+#         (staleness is derived from review_after, never a status)
+#
+# Example entry:
+#   - id: I-001
+#     title: CSV export for reports
+#     status: deferred
+#     summary: >-
+#       Reports are copied into spreadsheets by hand today; a CSV endpoint removes that.
+#     why_not_now: Blocked by the reporting rewrite.
+#     trigger: Reporting v2 lands.
+#     review_after: "2026-09-01"
+#     tags: [reporting]
+#     linked_tasks: [T-012]
+#     created: "2026-08-18"
+#     updated: "2026-08-18"
+
+version: 1
+ideas: []
