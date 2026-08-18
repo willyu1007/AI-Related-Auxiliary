@@ -5,7 +5,7 @@ Use when user asks about overall progress, project status, or completion state.
 ## Data Source
 
 ```bash
-node .ai/scripts/ctl-project-governance.mjs query --json
+node .ai/scripts/ctl-project-governance.mjs query --all-worktrees --json
 ```
 
 ## Output Template

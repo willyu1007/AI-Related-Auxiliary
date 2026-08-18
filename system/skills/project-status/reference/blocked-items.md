@@ -5,7 +5,7 @@ Use when user asks about blockers, obstacles, or what's stuck.
 ## Data Source
 
 ```bash
-node .ai/scripts/ctl-project-governance.mjs query --status blocked --json
+node .ai/scripts/ctl-project-governance.mjs query --all-worktrees --status blocked --json
 ```
 
 ## Output Template
@@ -24,6 +24,6 @@ node .ai/scripts/ctl-project-governance.mjs query --status blocked --json
 
 ## Rules
 - If no blockers exist, report "No blocked tasks"
-- Read task's `00-overview.md` for blocking reason if not in metadata
+- Read the returned canonical `status_doc_path` for `Blocker:`; use legacy fallback only when identified by the query
 - Report "unknown" if reason not documented; do not invent reasons
 - Suggest concrete unblocking actions when possible

@@ -81,6 +81,20 @@ function readTextOrNull(filePath) {
   }
 }
 
+function gitIndexMarksExecutable(filePath) {
+  const rel = path.relative(REPO_ROOT, filePath).split(path.sep).join('/');
+  try {
+    const row = execFileSync('git', ['ls-files', '--stage', '--', rel], {
+      cwd: REPO_ROOT,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+    }).trim();
+    return row.startsWith('100755 ');
+  } catch {
+    return false;
+  }
+}
+
 /** Skill smoke tests, named `<skill>.sh` after the skill they exercise. */
 function listSkillChecks() {
   try {
@@ -173,7 +187,9 @@ function runStatic() {
     // Hooks are ignored by Git unless they carry the exec bit, and Git only warns.
     // cp -R preserves mode, so the bit has to be right here.
     if (shipped.includes('/assets/githooks/') && !shipped.endsWith('.mjs')) {
-      if (!(fs.statSync(abs).mode & 0o111)) {
+      // Windows does not expose POSIX execute bits through fs.stat; the Git index remains the
+      // authoritative transport mode there.
+      if (!(fs.statSync(abs).mode & 0o111) && !gitIndexMarksExecutable(abs)) {
         fail('exec-bit', `system/skills/${shipped} is not executable`);
       }
     }

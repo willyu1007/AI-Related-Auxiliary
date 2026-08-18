@@ -50,7 +50,7 @@ State the target in the report summary. Do not claim a full review of files you 
 3. **Review top-down** using the rubric below: contracts and boundaries first, then implementation detail.
 4. **Classify findings** as must fix / should fix / may fix. Every must-fix item needs evidence, why it matters, a proposed fix direction, and a verification action.
 5. **Emit the report** using `./templates/review-report.template.md` (checklist: `./templates/review-checklist.md`). Prefer the conversation as the channel unless the user asks to write a file.
-6. **Soft handoff to task docs** — if `dev-docs/active/<slug>/04-verification.md` exists and the review named concrete checks, offer to record them on the next sync; do not invent a task solely to store a review.
+6. **Soft handoff to task docs** — if `dev-docs/active/<slug>/verification.md` exists and the review named concrete checks, offer to record the latest decisive evidence on the next sync; use legacy `04-verification.md` only when no canonical file exists, and do not invent a task solely to store a review.
 
 ## Rubric
 

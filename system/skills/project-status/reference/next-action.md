@@ -5,13 +5,13 @@ Use when user asks what to do next, needs guidance on priorities, or is picking 
 ## Data Source
 
 ```bash
-node .ai/scripts/ctl-project-governance.mjs query --json
+node .ai/scripts/ctl-project-governance.mjs query --all-worktrees --json
 ```
 
 For the selected task, read its bounded recovery packet:
 
 ```bash
-node .ai/scripts/ctl-project-governance.mjs resume --task T-xxx --json
+node .ai/scripts/ctl-project-governance.mjs resume --repo-root <worktree_path> --task T-xxx --json
 ```
 
 ## Priority Rules
@@ -44,9 +44,9 @@ node .ai/scripts/ctl-project-governance.mjs resume --task T-xxx --json
 
 ## Rules
 - Always provide at least one actionable command
-- If continuing in-progress task, suggest reading its overview first
+- If continuing an in-progress task, suggest reading its canonical status head first
 - For blocked tasks, suggest investigation steps
-- Use `timeline.commits` for landed work and `overview` for task intent.
+- Use `timeline.commits` for landed work and `status` for the task goal and next step.
 - Report an empty timeline as unknown progress, not zero progress.
 - If `worktree.clean` is false, inspect the returned `suggested_commands` first.
 - Surface packet warnings instead of silently overriding task documentation.

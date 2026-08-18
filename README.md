@@ -31,12 +31,12 @@ checks/          # 本仓库自己的校验，不是分发物
 
 | Skill | 时刻 | 通道 |
 |---|---|---|
-| [start-task](system/skills/start-task/SKILL.md) | 开任务：装好仓库、查重、roadmap、bundle、分配 ID、注册进 hub；**持有 Task Contract 与项目资产** | 仓库 |
-| [sync-task](system/skills/sync-task/SKILL.md) | 把记录跟现实拉平：检查点、收工；**持有 Git 钩子** | 仓库 |
-| [maintain-project-hub](system/skills/maintain-project-hub/SKILL.md) | 治理：完成度审计（对现实不对文档）、归档蒸馏成两文件封存记录、全局归档扫描、hub/registry 漂移修复 | 仓库 |
-| [resume-task](system/skills/resume-task/SKILL.md) | 冷启动：只凭仓库重建上下文 | 仓库 |
-| [handoff-task](system/skills/handoff-task/SKILL.md) | 热交接：上下文降质时，把当前工作提炼成可粘贴的块 | **对话** |
-| [project-status](system/skills/project-status/SKILL.md) | 跨任务的只读进度问答 | 仓库 |
+| [task-start](system/skills/task-start/SKILL.md) | 开任务：查重、建立 roadmap/status bundle、分配 ID、记录跨任务边界并注册进 hub；**持有 Task Contract 与项目资产** | 仓库 |
+| [task-sync](system/skills/task-sync/SKILL.md) | 把记录与仓库现实拉平，保持当前态证据而非追加流水账；**持有 Git 钩子** | 仓库 |
+| [project-hub-maintain](system/skills/project-hub-maintain/SKILL.md) | 执行已选任务的归档转换，或修复 hub/registry 与派生视图漂移 | 仓库 |
+| [task-resume](system/skills/task-resume/SKILL.md) | 冷启动：只凭仓库重建已跟踪任务的上下文 | 仓库 |
+| [task-handoff](system/skills/task-handoff/SKILL.md) | 热交接：上下文降质时，把当前工作提炼成可粘贴的块 | **对话** |
+| [project-status](system/skills/project-status/SKILL.md) | 跨任务的只读进度、归档就绪度与 hub 漂移审计 | 仓库 |
 
 另有与任务治理无关的技能：
 
@@ -81,7 +81,7 @@ node checks/run.mjs
 
 ```bash
 node checks/run.mjs --static             # 只跑静态检查
-node checks/run.mjs --only start-task    # 只冒烟测一个技能
+node checks/run.mjs --only task-start    # 只冒烟测一个技能
 ```
 
 ## 贡献约定
