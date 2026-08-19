@@ -45,12 +45,10 @@ Update these as current snapshots. Git history retains superseded states; avoid 
 
 Progress lives in `01-status.md` under `## Progress` as exactly one `State:` value:
 
-| State | Meaning |
-|---|---|
-| `planned` | The task is opened but no later alignment, discovery, or implementation checkpoint has landed |
-| `in-progress` | Work is actively advancing |
-| `blocked` | External input or a dependency prevents meaningful progress |
-| `done` | Every current completion condition is satisfied with decisive verification evidence |
+- **`planned`** — The task is opened but no later alignment, discovery, or implementation checkpoint has landed.
+- **`in-progress`** — Work is actively advancing.
+- **`blocked`** — External input or a dependency prevents meaningful progress.
+- **`done`** — Every current completion condition is satisfied with decisive verification evidence.
 
 Implementation readiness lives separately in the roadmap kickoff gate:
 
@@ -66,7 +64,7 @@ A completed task remains active with `State: done` until its separately approved
 
 Use each source only for what it proves:
 
-- The task documents own the intent described in the responsibility table above; one document never overrides another document's responsibility.
+- The task documents own the intent described in the responsibilities above; one document never overrides another document's responsibility.
 - Git history proves committed work; a task commit carries exactly one `Task: T-###` trailer.
 - The worktree proves current uncommitted work.
 - `.ai-task.yaml`, the registry, and generated hub views must not override the task documents or repository reality.
