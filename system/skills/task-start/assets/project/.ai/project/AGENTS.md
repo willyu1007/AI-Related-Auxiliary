@@ -57,8 +57,8 @@ The hub consumes these task facts:
 
 ## Consistency and worktrees
 
-- Configured task roots take precedence over discovery; only immediate children of `active/`
-  and `archive/` are task bundles.
+- Configured task roots are repository-relative and cannot escape the repository. They take
+  precedence over discovery; only immediate children of `active/` and `archive/` are task bundles.
 - Allocation and write-mode mapping use the shared governance lock under Git's common directory.
 - Task allocation considers metadata in every linked worktree, the current registry, and task
   trailers across branch history. Feature and Requirement allocation considers every linked

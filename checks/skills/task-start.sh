@@ -45,6 +45,54 @@ done
 node -e "const r=require('./.ai/project/registry.json');process.exit(Array.isArray(r.task_doc_roots)&&r.task_doc_roots.length===0?0:1)" \
   || fail "registry template disabled task-root discovery"
 
+# CLI mistakes must fail explicitly instead of producing a plausible empty or dry-run result.
+if node .ai/scripts/ctl-project-governance.mjs query --bogus >/dev/null 2>&1; then
+  fail "query accepted an unknown option"
+fi
+if node .ai/scripts/ctl-project-governance.mjs query --status typo >/dev/null 2>&1; then
+  fail "query accepted an invalid status filter"
+fi
+if node .ai/scripts/ctl-project-governance.mjs query --id T-1 >/dev/null 2>&1; then
+  fail "query accepted an invalid task ID filter"
+fi
+if node .ai/scripts/ctl-project-governance.mjs sync --dry-run --apply >/dev/null 2>&1; then
+  fail "sync accepted conflicting write modes"
+fi
+if node .ai/scripts/ctl-project-governance.mjs resume --limit nope >/dev/null 2>&1; then
+  fail "resume accepted a non-numeric commit limit"
+fi
+
+# Empty governance data and task roots outside the repository are hard errors.
+cp .ai/project/registry.json registry.tmp
+: > .ai/project/registry.json
+if node .ai/scripts/ctl-project-governance.mjs lint --check >/dev/null 2>&1; then
+  fail "lint accepted an empty registry"
+fi
+if node .ai/scripts/ctl-project-governance.mjs sync --apply >/dev/null 2>&1; then
+  fail "sync accepted an empty registry"
+fi
+mv registry.tmp .ai/project/registry.json
+
+cp .ai/project/registry.json registry.tmp
+node -e "const fs=require('fs');const p='.ai/project/registry.json';const r=JSON.parse(fs.readFileSync(p,'utf8'));r.task_doc_roots=['../outside/dev-docs'];fs.writeFileSync(p,JSON.stringify(r,null,2)+'\n')"
+if node .ai/scripts/ctl-project-governance.mjs lint --check >/dev/null 2>&1; then
+  fail "lint accepted a task root outside the repository"
+fi
+if node .ai/scripts/ctl-project-governance.mjs sync --apply >/dev/null 2>&1; then
+  fail "sync accepted a task root outside the repository"
+fi
+if node .ai/scripts/ctl-project-governance.mjs query --json >/dev/null 2>&1; then
+  fail "query silently ignored a task root outside the repository"
+fi
+mv registry.tmp .ai/project/registry.json
+
+cp .ai/project/registry.json registry.tmp
+node -e "const fs=require('fs');const p='.ai/project/registry.json';const r=JSON.parse(fs.readFileSync(p,'utf8'));delete r.milestones[0].status;fs.writeFileSync(p,JSON.stringify(r,null,2)+'\n')"
+if node .ai/scripts/ctl-project-governance.mjs lint --check >/dev/null 2>&1; then
+  fail "lint accepted a Milestone without status"
+fi
+mv registry.tmp .ai/project/registry.json
+
 # Installing again must not disturb what the first run created: shipped assets refresh in place,
 # hub files are project data and stay. A second install that resets the registry would silently
 # discard every task the repository has.
@@ -124,6 +172,31 @@ if node .ai/scripts/ctl-project-governance.mjs sync --apply >/dev/null 2>&1; the
   fail "sync accepted malformed task metadata"
 fi
 mv dev-docs/active/sample/.ai-task.tmp dev-docs/active/sample/.ai-task.json
+
+# Empty required task documents are invalid content, not valid placeholders.
+cp dev-docs/active/sample/01-status.md dev-docs/active/sample/01-status.tmp
+: > dev-docs/active/sample/01-status.md
+if node .ai/scripts/ctl-project-governance.mjs lint --check >/dev/null 2>&1; then
+  fail "lint accepted an empty status document"
+fi
+if node .ai/scripts/ctl-project-governance.mjs sync --apply >/dev/null 2>&1; then
+  fail "sync accepted an empty status document"
+fi
+mv dev-docs/active/sample/01-status.tmp dev-docs/active/sample/01-status.md
+
+cp dev-docs/active/sample/00-roadmap.md dev-docs/active/sample/00-roadmap.tmp
+: > dev-docs/active/sample/00-roadmap.md
+if node .ai/scripts/ctl-project-governance.mjs lint --check >/dev/null 2>&1; then
+  fail "lint accepted an empty roadmap"
+fi
+mv dev-docs/active/sample/00-roadmap.tmp dev-docs/active/sample/00-roadmap.md
+
+cp .ai/project/registry.json registry.tmp
+node -e "const fs=require('fs');const p='.ai/project/registry.json';const r=JSON.parse(fs.readFileSync(p,'utf8'));delete r.tasks.find(x=>x.id==='T-001').status;fs.writeFileSync(p,JSON.stringify(r,null,2)+'\n')"
+if node .ai/scripts/ctl-project-governance.mjs lint --check >/dev/null 2>&1; then
+  fail "lint accepted a registry Task without status"
+fi
+mv registry.tmp .ai/project/registry.json
 
 # A task cannot claim completion while its completion conditions remain unchecked.
 cp dev-docs/active/sample/01-status.md dev-docs/active/sample/01-status.tmp
@@ -360,4 +433,4 @@ node -e "const r=require('./.ai/project/registry.json');process.exit(r.tasks.som
   || fail "archive status not propagated"
 node .ai/scripts/ctl-project-governance.mjs lint --strict >/dev/null || fail "lint failed after archive"
 
-echo "install/guidance refresh, root discovery, pending seed example, kickoff/completion gates, roadmap and registry lint, resume, hook sync, Milestone progress and feature/requirement mapping, lightweight Ideas, JSON round-trip, worktree allocation, archive"
+echo "install/guidance refresh, strict CLI/data guards, root discovery, pending seed example, kickoff/completion gates, roadmap and registry lint, resume, hook sync, Milestone progress and feature/requirement mapping, lightweight Ideas, JSON round-trip, worktree allocation, archive"

@@ -2,7 +2,7 @@
 /**
  * ctl-project-governance.mjs
  *
- * Project governance control tool (install/init/lint/sync).
+ * Project governance control tool.
  *
  * @reference .ai/project/AGENTS.md
  *
@@ -180,35 +180,87 @@ Examples:
   process.exit(exitCode);
 }
 
+const COMMAND_OPTIONS = Object.freeze({
+  install: { values: ['repo-root'], flags: ['dry-run'] },
+  init: { values: ['repo-root'], flags: ['dry-run'] },
+  lint: { values: ['repo-root'], flags: ['check', 'strict'], conflicts: [['check', 'strict']] },
+  sync: { values: ['repo-root'], flags: ['dry-run', 'apply'], conflicts: [['dry-run', 'apply']] },
+  query: { values: ['repo-root', 'id', 'status', 'text'], flags: ['json'] },
+  'task-exists': { values: ['repo-root', 'task'], flags: [] },
+  resume: { values: ['repo-root', 'task', 'limit', 'scan'], flags: [] },
+  map: {
+    values: ['repo-root', 'task', 'feature', 'requirement'],
+    flags: ['dry-run', 'apply'],
+    conflicts: [['dry-run', 'apply']],
+  },
+  feature: {
+    values: ['repo-root', 'title', 'description'],
+    flags: ['dry-run', 'apply', 'json'],
+    conflicts: [['dry-run', 'apply']],
+  },
+  requirement: {
+    values: ['repo-root', 'title', 'feature', 'description'],
+    flags: ['dry-run', 'apply', 'json'],
+    conflicts: [['dry-run', 'apply']],
+  },
+});
+
 function parseArgs(argv) {
   const args = argv.slice(2);
   if (args.length === 0 || args[0] === '-h' || args[0] === '--help') usage(0);
 
   const command = args.shift();
+  const spec = COMMAND_OPTIONS[command];
+  if (!spec) {
+    console.error(`[error] Unknown command: ${command}`);
+    usage(1);
+  }
+
+  const valueOptions = new Set(spec.values || []);
+  const flagOptions = new Set(spec.flags || []);
   const opts = {};
 
   while (args.length > 0) {
     const token = args.shift();
     if (token === '-h' || token === '--help') usage(0);
     if (!token.startsWith('--')) {
-      console.error(`[warning] Ignoring unrecognized argument: "${token}" (use --${token.replace(/^-+/, '')} for flags)`);
-      continue;
+      die(`[error] Unexpected positional argument for ${command}: "${token}".`);
     }
 
     const key = token.slice(2);
-    if (args.length > 0 && !args[0].startsWith('--')) {
-      opts[key] = args.shift();
-    } else {
+    if (!valueOptions.has(key) && !flagOptions.has(key)) {
+      die(`[error] Unknown option for ${command}: --${key}.`);
+    }
+    if (Object.hasOwn(opts, key)) {
+      die(`[error] Option --${key} was provided more than once.`);
+    }
+
+    if (flagOptions.has(key)) {
       opts[key] = true;
+      continue;
+    }
+    if (args.length === 0 || args[0].startsWith('--')) {
+      die(`[error] Option --${key} requires a value.`);
+    }
+    opts[key] = args.shift();
+  }
+
+  for (const [left, right] of spec.conflicts || []) {
+    if (opts[left] && opts[right]) {
+      die(`[error] Options --${left} and --${right} cannot be used together.`);
     }
   }
 
   return { command, opts };
 }
 
-function parseBoundedPositiveInt(value, fallback, maximum) {
-  const parsed = Number.parseInt(String(value ?? fallback), 10);
-  const requested = Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+function parseBoundedPositiveInt(value, fallback, maximum, optionName) {
+  if (value === undefined) return { value: fallback, clamped: false };
+  const raw = String(value).trim();
+  if (!/^\d+$/.test(raw) || Number(raw) <= 0) {
+    die(`[error] Option --${optionName} requires a positive integer (got "${raw}").`);
+  }
+  const requested = Number(raw);
   return {
     value: Math.min(requested, maximum),
     clamped: requested > maximum,
@@ -579,7 +631,8 @@ function discoverDevDocsRoots(repoRoot) {
 function loadRegistry(repoRoot) {
   const registryPath = getRegistryPath(repoRoot);
   const raw = readText(registryPath);
-  if (!raw) return { path: registryPath, registry: null, error: null };
+  if (raw === null) return { path: registryPath, registry: null, error: null };
+  if (!raw.trim()) return { path: registryPath, registry: null, error: 'registry.json is empty.' };
 
   try {
     const parsed = JSON.parse(raw);
@@ -592,10 +645,62 @@ function loadRegistry(repoRoot) {
   }
 }
 
-function getConfiguredRootsFromRegistry(registry) {
-  const roots = registry?.task_doc_roots;
-  if (!Array.isArray(roots)) return [];
-  return roots.map((r) => String(r)).filter(Boolean);
+function isPathInside(parent, candidate) {
+  const relative = path.relative(parent, candidate);
+  return (
+    relative === '' ||
+    (relative !== '..' && !relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative))
+  );
+}
+
+function resolveConfiguredRoots(repoRoot, registry) {
+  const configured = registry?.task_doc_roots;
+  if (configured === undefined) return { configured: false, roots: [], errors: [] };
+  if (!Array.isArray(configured)) {
+    return { configured: true, roots: [], errors: ['Registry task_doc_roots must be a list.'] };
+  }
+  if (configured.length === 0) return { configured: false, roots: [], errors: [] };
+
+  const errors = [];
+  const roots = [];
+  let realRepoRoot = null;
+  try {
+    realRepoRoot = fs.realpathSync(repoRoot);
+  } catch {
+    // The lexical containment check below still protects a not-yet-realpathable root.
+  }
+
+  for (const entry of configured) {
+    if (typeof entry !== 'string' || !entry.trim()) {
+      errors.push('Registry task_doc_roots entries must be non-empty relative paths.');
+      continue;
+    }
+    const value = entry.trim();
+    if (path.isAbsolute(value)) {
+      errors.push(`Registry task_doc_root must be relative to the repository: "${value}".`);
+      continue;
+    }
+    const resolved = path.resolve(repoRoot, value);
+    if (!isPathInside(repoRoot, resolved)) {
+      errors.push(`Registry task_doc_root escapes the repository: "${value}".`);
+      continue;
+    }
+    if (realRepoRoot && exists(resolved)) {
+      try {
+        const realResolved = fs.realpathSync(resolved);
+        if (!isPathInside(realRepoRoot, realResolved)) {
+          errors.push(`Registry task_doc_root resolves outside the repository: "${value}".`);
+          continue;
+        }
+      } catch {
+        errors.push(`Registry task_doc_root cannot be resolved: "${value}".`);
+        continue;
+      }
+    }
+    roots.push(resolved);
+  }
+
+  return { configured: true, roots: [...new Set(roots)], errors };
 }
 
 function getFeatureMilestoneMap(registry) {
@@ -690,10 +795,9 @@ function validateRoadmap(roadmapRaw) {
 }
 
 function resolveDevDocsRoots(repoRoot, registry = null) {
-  const configured = getConfiguredRootsFromRegistry(registry);
-  return configured.length > 0
-    ? configured.map((p) => path.resolve(repoRoot, p))
-    : discoverDevDocsRoots(repoRoot);
+  const resolved = resolveConfiguredRoots(repoRoot, registry);
+  if (resolved.errors.length > 0) throw new Error(resolved.errors.join(' '));
+  return resolved.configured ? resolved.roots : discoverDevDocsRoots(repoRoot);
 }
 
 function resolveTaskStatusDoc(taskDir) {
@@ -1035,6 +1139,20 @@ function validateRegistryGraph(registry, errors) {
   }
 }
 
+function validateRegistryStatuses(items, label, allowed, errors, projection = false) {
+  if (!Array.isArray(items)) return;
+  const field = projection ? 'registry status' : 'status';
+  for (const item of items) {
+    if (!item || typeof item !== 'object') continue;
+    const id = String(item.id || '');
+    const status = String(item.status || '').trim();
+    if (!status) errors.push(`${label} ${id}: Missing ${field}.`);
+    else if (!allowed.has(status)) {
+      errors.push(`${label} ${id}: Invalid ${field} "${status}". Allowed: ${[...allowed].join(', ')}`);
+    }
+  }
+}
+
 function cmdLint({ repoRoot, strict }) {
   const errors = [];
   const warnings = [];
@@ -1051,12 +1169,12 @@ function cmdLint({ repoRoot, strict }) {
     errors.push(`Failed to parse registry.json: ${registryParseError}`);
   }
 
-  if (!registry) {
+  if (!registry && !registryParseError) {
     warnings.push(
       'Project hub is not initialized. Run: node .ai/scripts/ctl-project-governance.mjs init'
     );
     devDocsRoots = discoverDevDocsRoots(repoRoot);
-  } else {
+  } else if (registry) {
     const REQUIRED_REGISTRY_KEYS = [
       'version',
       'milestones',
@@ -1071,11 +1189,9 @@ function cmdLint({ repoRoot, strict }) {
     }
     validateRegistryGraph(registry, errors);
 
-    const configured = getConfiguredRootsFromRegistry(registry);
-    devDocsRoots =
-      configured.length > 0
-        ? configured.map((p) => path.resolve(repoRoot, p))
-        : discoverDevDocsRoots(repoRoot);
+    const configured = resolveConfiguredRoots(repoRoot, registry);
+    errors.push(...configured.errors);
+    devDocsRoots = configured.configured ? configured.roots : discoverDevDocsRoots(repoRoot);
   }
 
   if (devDocsRoots.length === 0) {
@@ -1139,14 +1255,14 @@ function cmdLint({ repoRoot, strict }) {
         );
       }
 
-      if (roadmapRaw) {
+      if (roadmapRaw !== null) {
         for (const roadmapError of validateRoadmap(roadmapRaw)) {
           errors.push(`${formatTaskRef(task)}: ${roadmapError}`);
         }
       }
     }
 
-    if (task.phase === 'active' && statusRaw) {
+    if (task.phase === 'active' && statusRaw !== null) {
       const { status, error: stateError } = getBundleStatusFromStatusDoc(
         statusRaw,
         path.basename(task.statusPath)
@@ -1160,7 +1276,7 @@ function cmdLint({ repoRoot, strict }) {
       errors.push(`${formatTaskRef(task)}: State is done but roadmap kickoff is not ready.`);
     }
 
-    if (!metaRaw) {
+    if (metaRaw === null) {
       errors.push(`${formatTaskRef(task)}: Missing .ai-task.json.`);
       continue;
     }
@@ -1215,7 +1331,7 @@ function cmdLint({ repoRoot, strict }) {
       }
     }
 
-    if (task.effectiveStatus === 'done' && statusRaw) {
+    if (task.effectiveStatus === 'done' && statusRaw !== null) {
       const ac = getCompletionCriteriaStats(statusRaw);
       if (ac.total === 0) {
         errors.push(`${formatTaskRef(task)}: State is done but no Done when checkboxes were found.`);
@@ -1273,36 +1389,10 @@ function cmdLint({ repoRoot, strict }) {
 
   // Validate Milestone/Feature/Requirement status enums.
   if (registry) {
-    if (Array.isArray(registry.milestones)) {
-      for (const m of registry.milestones) {
-        if (!m || typeof m !== 'object') continue;
-        const id = String(m.id || '');
-        const st = String(m.status || '').trim();
-        if (st && !MILESTONE_STATUS.has(st)) {
-          errors.push(`Milestone ${id}: Invalid status "${st}". Allowed: ${[...MILESTONE_STATUS].join(', ')}`);
-        }
-      }
-    }
-    if (Array.isArray(registry.features)) {
-      for (const f of registry.features) {
-        if (!f || typeof f !== 'object') continue;
-        const id = String(f.id || '');
-        const st = String(f.status || '').trim();
-        if (st && !FEATURE_STATUS.has(st)) {
-          errors.push(`Feature ${id}: Invalid status "${st}". Allowed: ${[...FEATURE_STATUS].join(', ')}`);
-        }
-      }
-    }
-    if (Array.isArray(registry.requirements)) {
-      for (const r of registry.requirements) {
-        if (!r || typeof r !== 'object') continue;
-        const id = String(r.id || '');
-        const st = String(r.status || '').trim();
-        if (st && !REQUIREMENT_STATUS.has(st)) {
-          errors.push(`Requirement ${id}: Invalid status "${st}". Allowed: ${[...REQUIREMENT_STATUS].join(', ')}`);
-        }
-      }
-    }
+    validateRegistryStatuses(registry.milestones, 'Milestone', MILESTONE_STATUS, errors);
+    validateRegistryStatuses(registry.features, 'Feature', FEATURE_STATUS, errors);
+    validateRegistryStatuses(registry.requirements, 'Requirement', REQUIREMENT_STATUS, errors);
+    validateRegistryStatuses(registry.tasks, 'Task', TASK_STATUS, errors, true);
 
     const features = Array.isArray(registry.features) ? registry.features : [];
     const tasks = Array.isArray(registry.tasks) ? registry.tasks : [];
@@ -1358,38 +1448,10 @@ function formatJsonLines(rows) {
   for (const r of rows) console.log(JSON.stringify(r));
 }
 
-function collectTaskRows({ repoRoot, quiet = false, fromBundles = false }) {
-  // Works even when the hub is not initialized (falls back to scanning dev-docs roots).
-  // `fromBundles` skips registry task projections but still honors configured roots: the bundle
-  // (01-status.md State) is the status SoT, while registry.status can lag until `sync`.
-  const loaded = loadRegistry(repoRoot);
-  const registry = loaded.registry;
-  if (!registry && loaded.error && !quiet) {
-    // Keep stdout clean (JSONL/JSON), but surface the issue for operators.
-    console.error(
-      `[warning] Failed to parse registry.json; falling back to dev-docs scan: ${loaded.error}`
-    );
-  }
-
-  if (!fromBundles && registry && Array.isArray(registry.tasks)) {
-    const featureMilestones = getFeatureMilestoneMap(registry);
-    return registry.tasks
-      .filter((t) => t && typeof t === 'object')
-      .map((t) => ({
-        id: String(t.id || ''),
-        status: String(t.status || ''),
-        slug: String(t.slug || ''),
-        dev_docs_path: String(t.dev_docs_path || ''),
-        feature_id: String(t.feature_id || ''),
-        milestone_id: featureMilestones.get(String(t.feature_id || '')) || '',
-        title: String(t.title || ''),
-        updated: String(t.updated || ''),
-        keywords: Array.isArray(t.keywords) ? t.keywords.map((k) => String(k)) : [],
-      }))
-      .sort((a, b) => String(a.id).localeCompare(String(b.id)));
-  }
-
-  const roots = resolveDevDocsRoots(repoRoot, registry);
+function collectBundleTaskRows({ repoRoot, registry = undefined }) {
+  // Bundle status is authoritative; registry data is used only for configured task roots.
+  const resolvedRegistry = registry === undefined ? loadRegistry(repoRoot).registry : registry;
+  const roots = resolveDevDocsRoots(repoRoot, resolvedRegistry);
   const tasks = scanTasks(repoRoot, roots);
   const rows = [];
 
@@ -1445,7 +1507,7 @@ function collectAllWorktreeTaskRows(repoRoot) {
         .filter((task) => task && typeof task === 'object' && TASK_ID_RE.test(String(task.id || '')))
         .map((task) => [String(task.id), task])
     );
-    for (const task of collectTaskRows({ repoRoot: worktree.path, quiet: true, fromBundles: true })) {
+    for (const task of collectBundleTaskRows({ repoRoot: worktree.path, registry })) {
       const projection = registryTasks.get(task.id) || {};
       rows.push({
         feature_id: String(projection.feature_id || ''),
@@ -1513,7 +1575,7 @@ const ACTIVE_TASK_STATUS = new Set(['in-progress', 'blocked']);
 function resolveTaskContext({ repoRoot, taskId }) {
   // Always read status from the bundles (SoT), never from the registry cache:
   // a commit typically happens before `sync` has refreshed registry.status.
-  const rows = collectTaskRows({ repoRoot, quiet: true, fromBundles: true }).filter((r) =>
+  const rows = collectBundleTaskRows({ repoRoot }).filter((r) =>
     TASK_ID_RE.test(String(r.id || ''))
   );
 
@@ -2022,21 +2084,46 @@ function cmdSync({ repoRoot, dryRun, apply }) {
   const errors = [];
   const warnings = [];
 
+  const finish = () => {
+    const succeeded = errors.length === 0;
+    if (!succeeded) {
+      header('Errors:');
+      for (const error of errors) console.log(`- ${error}`);
+    }
+    if (warnings.length > 0) {
+      header('Warnings:');
+      for (const warning of warnings) console.log(`- ${warning}`);
+    }
+    if (succeeded) ok('[ok] Sync complete.');
+    else console.log('[error] Sync failed.');
+
+    for (const action of actions) {
+      const mode = action.mode ? ` (${action.mode})` : '';
+      const note = action.note ? ` (${action.note})` : '';
+      console.log(`  ${action.op}: ${toPosix(path.relative(repoRoot, action.path))}${note}${mode}`);
+    }
+    return { ok: succeeded, errors, warnings, actions };
+  };
+
   const registryPath = getRegistryPath(repoRoot);
   if (!exists(registryPath)) {
     errors.push('Project hub missing. Run: node .ai/scripts/ctl-project-governance.mjs init');
-    return { ok: false, errors, warnings, actions };
+    return finish();
   }
 
   const loaded = loadRegistry(repoRoot);
   if (!loaded.registry) {
     errors.push(`Failed to parse registry.json: ${loaded.error || '(unknown error)'}`);
-    return { ok: false, errors, warnings, actions };
+    return finish();
   }
   const reg = loaded.registry;
 
-  let roots = getConfiguredRootsFromRegistry(reg).map((p) => path.resolve(repoRoot, p));
-  if (roots.length === 0) roots = discoverDevDocsRoots(repoRoot);
+  const configured = resolveConfiguredRoots(repoRoot, reg);
+  if (configured.errors.length > 0) {
+    errors.push(...configured.errors);
+    return finish();
+  }
+  const roots = configured.configured ? configured.roots : discoverDevDocsRoots(repoRoot);
 
   const tasks = scanTasks(repoRoot, roots);
 
@@ -2101,13 +2188,21 @@ function cmdSync({ repoRoot, dryRun, apply }) {
     const statusRaw = readText(task.statusPath);
     const metaRaw = readText(task.metaPath);
 
-    const effectiveStatus = task.phase === 'archive' ? 'archived' : (() => {
-      if (!statusRaw) return null;
-      const { status } = getBundleStatusFromStatusDoc(statusRaw, path.basename(task.statusPath));
-      return status;
-    })();
+    let effectiveStatus = 'archived';
+    if (task.phase === 'active') {
+      if (statusRaw === null) {
+        errors.push(`${toPosix(task.relPath)}: Missing 01-status.md.`);
+        continue;
+      }
+      const parsedStatus = getBundleStatusFromStatusDoc(statusRaw, path.basename(task.statusPath));
+      if (parsedStatus.error) {
+        errors.push(`${toPosix(task.relPath)}: ${parsedStatus.error}`);
+        continue;
+      }
+      effectiveStatus = parsedStatus.status;
+    }
 
-    if (!metaRaw) {
+    if (metaRaw === null) {
       const id = nextId();
       const meta = {
         task_id: id,
@@ -2309,27 +2404,7 @@ function cmdSync({ repoRoot, dryRun, apply }) {
   updateDerived(dashboardPath, 'dashboard', dashAuto);
   updateDerived(featureMapPath, 'feature-map', featureAuto);
 
-  // Summary
-  const okExit = errors.length === 0;
-  if (!okExit) {
-    header('Errors:');
-    for (const e of errors) console.log(`- ${e}`);
-  }
-  if (warnings.length > 0) {
-    header('Warnings:');
-    for (const w of warnings) console.log(`- ${w}`);
-  }
-
-  if (okExit) ok('[ok] Sync complete.');
-  else console.log('[error] Sync failed.');
-
-  for (const a of actions) {
-    const mode = a.mode ? ` (${a.mode})` : '';
-    const note = a.note ? ` (${a.note})` : '';
-    console.log(`  ${a.op}: ${toPosix(path.relative(repoRoot, a.path))}${note}${mode}`);
-  }
-
-  return { ok: okExit, errors, warnings, actions };
+  return finish();
 }
 
 function cmdMap({ repoRoot, taskId, featureId, requirementId, dryRun, apply }) {
@@ -2789,6 +2864,12 @@ function main() {
       const status = opts.status ? String(opts.status).trim() : '';
       const text = opts.text ? String(opts.text) : '';
       const json = !!opts.json;
+      if (id && !TASK_ID_RE.test(id)) {
+        die(`[error] Invalid --id (expected T-###, got "${id}").`);
+      }
+      if (status && !TASK_STATUS.has(status)) {
+        die(`[error] Invalid --status "${status}". Allowed: ${[...TASK_STATUS].join(', ')}.`);
+      }
       const res = cmdQuery({
         repoRoot,
         id: id || null,
@@ -2810,12 +2891,14 @@ function main() {
       const limit = parseBoundedPositiveInt(
         opts.limit,
         RESUME_DEFAULT_COMMIT_LIMIT,
-        RESUME_MAX_COMMIT_LIMIT
+        RESUME_MAX_COMMIT_LIMIT,
+        'limit'
       );
       const scan = parseBoundedPositiveInt(
         opts.scan,
         RESUME_DEFAULT_SCAN_LIMIT,
-        RESUME_MAX_SCAN_LIMIT
+        RESUME_MAX_SCAN_LIMIT,
+        'scan'
       );
       const res = cmdResume({
         repoRoot,
@@ -2932,4 +3015,9 @@ function main() {
   }
 }
 
-main();
+try {
+  main();
+} catch (error) {
+  console.error(`[error] Governance command aborted: ${error?.message || String(error)}`);
+  process.exit(1);
+}
