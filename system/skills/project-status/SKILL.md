@@ -2,8 +2,9 @@
 name: project-status
 description: >-
   Use for read-only questions spanning tracked tasks: what exists, what is in
-  flight or blocked, how far work has progressed, what should happen next,
-  which tasks appear archive-ready, or whether the project hub has drifted.
+  flight or blocked, how far task or Milestone work has progressed, what should
+  happen next, which tasks appear archive-ready, or whether the project hub has
+  drifted.
 ---
 
 Answer the question from what is written down, and make the answer actionable.
@@ -20,6 +21,7 @@ Pick by what was asked, then follow that reference's **Data Source** commands:
 | How far along are we? | [reference/progress-summary.md](reference/progress-summary.md) |
 | What should I do next? | [reference/next-action.md](reference/next-action.md) |
 | What is blocked? | [reference/blocked-items.md](reference/blocked-items.md) |
+| How is a stage goal or Milestone progressing? | [reference/milestone-progress.md](reference/milestone-progress.md) |
 | What is the current focus? | [reference/semantic-focus.md](reference/semantic-focus.md) |
 | Which tasks appear ready to archive? | [reference/archive-readiness.md](reference/archive-readiness.md) |
 | Is the project hub consistent? | [reference/hub-drift.md](reference/hub-drift.md) |

@@ -230,8 +230,28 @@ node .ai/scripts/ctl-project-governance.mjs query --id T-001 --json > milestone-
 node -e "const r=require('./.ai/project/registry.json');const q=require('./milestone-query.json');process.exit(!Object.hasOwn(r.tasks.find(x=>x.id==='T-001'),'milestone_id')&&q[0].milestone_id==='M-001'?0:1)" \
   || fail "task Milestone was not derived from its Feature"
 rm -f milestone-query.json
-node .ai/scripts/ctl-project-governance.mjs lint --check >/dev/null \
-  || fail "lint failed after sync removed task-owned milestone_id"
+
+# Declared project status remains manual, but lint must expose obvious contradictions.
+node -e "const fs=require('fs');const p='.ai/project/registry.json';const r=JSON.parse(fs.readFileSync(p,'utf8'));r.milestones.find(x=>x.id==='M-001').status='done';fs.writeFileSync(p,JSON.stringify(r,null,2)+'\n')"
+node .ai/scripts/ctl-project-governance.mjs lint --check > milestone-lint.txt \
+  || fail "Milestone contradiction was treated as a structural error"
+grep -q 'Milestone M-001 is done but has non-terminal Features: F-001' milestone-lint.txt \
+  || fail "lint did not report the Milestone/Feature status contradiction"
+if node .ai/scripts/ctl-project-governance.mjs lint --strict >/dev/null 2>&1; then
+  fail "lint --strict accepted the Milestone/Feature status contradiction"
+fi
+node -e "const fs=require('fs');const p='.ai/project/registry.json';const r=JSON.parse(fs.readFileSync(p,'utf8'));r.milestones.find(x=>x.id==='M-001').status='planned';fs.writeFileSync(p,JSON.stringify(r,null,2)+'\n')"
+rm -f milestone-lint.txt
+
+node -e "const fs=require('fs');const p='.ai/project/registry.json';const r=JSON.parse(fs.readFileSync(p,'utf8'));r.features.find(x=>x.id==='F-001').status='done';fs.writeFileSync(p,JSON.stringify(r,null,2)+'\n')"
+node .ai/scripts/ctl-project-governance.mjs lint --check > feature-lint.txt \
+  || fail "Feature contradiction was treated as a structural error"
+grep -q 'Feature F-001 is done but has active mapped Tasks: T-001' feature-lint.txt \
+  || fail "lint did not report the Feature/Task status contradiction"
+node -e "const fs=require('fs');const p='.ai/project/registry.json';const r=JSON.parse(fs.readFileSync(p,'utf8'));r.features.find(x=>x.id==='F-001').status='planned';fs.writeFileSync(p,JSON.stringify(r,null,2)+'\n')"
+rm -f feature-lint.txt
+node .ai/scripts/ctl-project-governance.mjs lint --strict >/dev/null \
+  || fail "lint failed after restoring consistent Milestone status"
 
 # Requirements use the same locked, monotonic allocation model as features. Mapping only accepts
 # an existing requirement; it must not silently invent a user-supplied ID.
@@ -340,4 +360,4 @@ node -e "const r=require('./.ai/project/registry.json');process.exit(r.tasks.som
   || fail "archive status not propagated"
 node .ai/scripts/ctl-project-governance.mjs lint --strict >/dev/null || fail "lint failed after archive"
 
-echo "install/guidance refresh, root discovery, pending seed example, kickoff/completion gates, roadmap and registry lint, resume, hook sync, derived milestone and feature/requirement mapping, lightweight Ideas, JSON round-trip, worktree allocation, archive"
+echo "install/guidance refresh, root discovery, pending seed example, kickoff/completion gates, roadmap and registry lint, resume, hook sync, Milestone progress and feature/requirement mapping, lightweight Ideas, JSON round-trip, worktree allocation, archive"

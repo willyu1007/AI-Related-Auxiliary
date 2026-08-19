@@ -28,6 +28,8 @@ The hub consumes these task facts:
 ## Project graph
 
 - Milestone IDs use `M-###`; `M-000` is the Inbox / Triage Milestone.
+- A real Milestone is a low-frequency project-stage outcome that groups the Features needed for
+  that outcome. Keep work in `M-000` when no explicit stage goal has been confirmed.
 - Feature IDs use `F-###`; `F-000` is the Inbox / Untriaged Feature and belongs to `M-000`.
 - Requirement IDs use `R-###`.
 - Milestone statuses are `planned | in-progress | blocked | done`.
@@ -37,6 +39,10 @@ The hub consumes these task facts:
 - Every task projection references an existing Feature. Its Milestone is derived only through
   that Feature; task entries never store an independent `milestone_id`. Any Requirement the task
   references belongs to the same Feature.
+- Milestone and Feature statuses are project-level claims, not task-count rollups. Task states are
+  progress evidence; they may reveal a contradiction or possible readiness, but never change a
+  Milestone or Feature status automatically. A real Milestone is `done` only after its outcome is
+  accepted and all in-scope Features are `done` or `cut`.
 - IDs are unique, stable, monotonically allocated, and never reused. `F-000` is only for an
   explicitly deferred triage decision.
 

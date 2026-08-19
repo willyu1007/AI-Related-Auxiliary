@@ -2,9 +2,9 @@
 name: project-hub-maintain
 description: >-
   Use when the user asks to archive or close a verified task, apply selected
-  archive transitions, or repair project-hub registry, mapping, or
-  derived-view drift. Not for read-only status, audit, or archive-readiness
-  questions.
+  archive transitions, apply a confirmed project-stage mapping, or repair
+  project-hub registry, mapping, or derived-view drift. Not for choosing a
+  stage goal or for read-only status, audit, or archive-readiness questions.
 ---
 
 ## Route
@@ -12,6 +12,7 @@ description: >-
 | Intent | Workflow |
 |---|---|
 | Close or archive a selected verified task | Archive task |
+| Record a confirmed Milestone or change which Features it owns | Maintain project stage |
 | Repair registry, mapping, or generated-view drift | Repair hub drift |
 
 The task bundle owns execution truth. The hub is a semantic map and derived projection; it does not replace checkpoint synchronization.
@@ -76,6 +77,28 @@ Archiving is an approved destructive transition from a working record to a compa
 - Bundle is stale or dirty: return it to checkpoint synchronization.
 - Approval is absent or differs from the proposed scope: leave the active bundle intact.
 - Hub refresh or lint fails: do not commit a partial transition.
+
+## Maintain project stage
+
+Use this only after the stage outcome and affected Features are confirmed. The hub records the
+decision; it does not decide product scope.
+
+1. Inspect `.ai/project/registry.json` in every linked worktree. Stop on an uncommitted semantic
+   edit or conflicting meaning for the same ID.
+2. For a new stage, allocate the next unused monotonic `M-###` across those registries; `M-000` is
+   reserved. Add only `id`, `title`, `status: planned`, and a concise outcome in `description`.
+3. Show the exact Milestone record and Feature `milestone_id` changes. Apply only the confirmed
+   scope. Do not add Milestone fields to task entries or create a separate Milestone document.
+4. For a status change to `done`, require the outcome to be accepted and every in-scope Feature to
+   be `done` or `cut`. Active or blocked mapped tasks are conflicting evidence to resolve first.
+5. Regenerate derived views and validate:
+
+   ```bash
+   node .ai/scripts/ctl-project-governance.mjs sync --apply
+   node .ai/scripts/ctl-project-governance.mjs lint --check
+   ```
+
+Report the stage outcome, affected Features, progress contradictions, and exact files changed.
 
 ## Repair hub drift
 

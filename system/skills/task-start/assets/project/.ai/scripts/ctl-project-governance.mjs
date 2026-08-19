@@ -1303,6 +1303,36 @@ function cmdLint({ repoRoot, strict }) {
         }
       }
     }
+
+    const features = Array.isArray(registry.features) ? registry.features : [];
+    const tasks = Array.isArray(registry.tasks) ? registry.tasks : [];
+    for (const milestone of Array.isArray(registry.milestones) ? registry.milestones : []) {
+      if (!milestone || typeof milestone !== 'object' || milestone.status !== 'done') continue;
+      const milestoneId = String(milestone.id || '');
+      const incomplete = features
+        .filter((feature) => feature && String(feature.milestone_id || '') === milestoneId)
+        .filter((feature) => !['done', 'cut'].includes(String(feature.status || '')))
+        .map((feature) => String(feature.id || '(missing ID)'));
+      if (incomplete.length > 0) {
+        warnings.push(
+          `Milestone ${milestoneId} is done but has non-terminal Features: ${incomplete.join(', ')}.`
+        );
+      }
+    }
+
+    for (const feature of features) {
+      if (!feature || typeof feature !== 'object' || !['done', 'cut'].includes(feature.status)) continue;
+      const featureId = String(feature.id || '');
+      const activeTasks = tasks
+        .filter((task) => task && String(task.feature_id || '') === featureId)
+        .filter((task) => ['planned', 'in-progress', 'blocked'].includes(String(task.status || '')))
+        .map((task) => String(task.id || '(missing ID)'));
+      if (activeTasks.length > 0) {
+        warnings.push(
+          `Feature ${featureId} is ${feature.status} but has active mapped Tasks: ${activeTasks.join(', ')}.`
+        );
+      }
+    }
   }
 
   if (strict && warnings.length > 0) {
