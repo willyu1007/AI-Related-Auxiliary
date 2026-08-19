@@ -16,14 +16,15 @@ Never copy the house layer into a project. A rulebook in a repository is a ruleb
 
 ## Look before designing
 
-Every run starts by finding what the project already has:
+Every run starts by finding what the project already has. Search for the **artifact**, not for a filename — a crystallized project may have recorded itself as `PARADIGMS.md`, `DESIGN.md`, a kit README, or a Storybook, and looking only for `docs/ui/STYLE.md` will miss the best documentation in the repository:
 
 ```bash
 ls src/**/tokens.* src/**/theme.* tailwind.config.* 2>/dev/null
-cat docs/ui/STYLE.md 2>/dev/null
+rg -l --iglob '*.md' 'design token|design system|scale|paradigm|typography contract|style guide' . 2>/dev/null | head
+ls docs/ui/ 2>/dev/null
 ```
 
-What turns up decides the mode — you do not ask for it:
+Read whatever turns up before concluding anything is missing. What is found decides the mode — you do not ask for it:
 
 | Found | Mode | Meaning |
 |-------|------|---------|
@@ -39,6 +40,8 @@ What turns up decides the mode — you do not ask for it:
 
 3. **Derive, do not invent.** In strict mode, new screens come from the nearest exemplar — copy its composition and swap the content. Only tokens and primitives supply values; a literal color, radius, or font-size in a feature file is the drift starting.
 
+   Copying is the fallback, not the ceiling. **The strongest project layer is components that make the wrong structure unreachable** — a hub that only renders rows cannot grow a card grid, and no discipline is required to keep it that way. When a project ships such components, compose with them rather than copying screens; when a composition is being copied for the third time, that is the signal to lock it into a component instead.
+
    **When the token layer does not cover the value you need** — a project with colors but no type scale is the common case — the exemplar's existing values are the implicit scale: match one of them exactly rather than inventing a neighbour, and say in the handback which scale is missing so it can be declared. Adding the missing token is a proposal, never a silent side effect, and it is never applied retroactively to files this task did not touch.
 
 4. **Constrain the vocabulary, not just the behavior.** Where the project styles with utility classes, configure the framework's theme to expose only its scale, so out-of-scale classes stop existing rather than relying on discipline not to type them — check how the *exemplar* is written, not what is installed; a framework present but unused by real code is not the project's styling approach, and constraining it is busywork. Take **behavior** from libraries (focus management, ARIA, keyboard navigation, portals, dismissal) — hand-written dialogs are how a codebase ends up with three modal implementations and four z-index values. Take **appearance** from tokens, always.
@@ -51,7 +54,7 @@ Run when a project has produced UI worth keeping and the project layer does not 
 
 1. Extract the tokens actually used into the project's real token file — the one the app consumes, not a document.
 2. Mark one to three screens as exemplars: a list, a form, a detail or overview. These are what later work copies.
-3. Write `docs/ui/STYLE.md` from `./templates/STYLE.md`: intent, axis positions, token decisions with reasons, exemplar pointers. Increment only — the house layer is not repeated here.
+3. Record it. `./templates/STYLE.md` is the shape when nothing exists yet — intent, axis positions, token decisions with reasons, exemplar pointers, increment only. **When the project already records itself under other names, extend those instead**: a repository holding a paradigm spec and a typography contract does not need a seventh document, and adding one is the duplication this skill exists to prevent. Crystallizing an already-crystallized project means finding what is genuinely missing — usually the pointer that says which file new work derives from — and adding only that.
 4. Say plainly that the project is now in strict mode, and what that changes.
 
 ## Workflow C — Audit
