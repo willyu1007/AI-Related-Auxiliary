@@ -63,8 +63,11 @@ The hub consumes these task facts:
 - Task allocation considers metadata in every linked worktree, the current registry, and task
   trailers across branch history. Feature and Requirement allocation considers every linked
   worktree registry.
-- Cross-worktree search surfaces possible duplicates for review. Confirmed duplicates, divergent
-  copies of one task, and lock failures are stop conditions.
+- Cross-worktree search returns one logical row per valid task ID and preserves its occurrences in
+  `worktrees`. Equal copies collapse into that row. `conflict: true` means one or more task facts
+  differ; the differing top-level facts are unset and `conflicts` preserves the evidence. Do not
+  select a source until the disagreement is resolved.
+- Confirmed duplicate goals under distinct task IDs and lock failures are stop conditions.
 - Mapping accepts existing project objects only; it never invents a caller-supplied ID.
 - Each valid task bundle has one registry projection with its actual path and effective status.
 - Report disagreements among bundles, registry projections, Git, and worktrees instead of

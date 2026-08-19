@@ -37,6 +37,8 @@ for task evidence across linked worktrees.
   `blocked` status; treat `M-000` as an untriaged queue, not a stage goal.
 - Group each task under its derived Milestone and Feature. Keep declared Feature/Milestone status
   separate from observed task state.
+- Do not use a conflicted logical task row as stage-progress evidence until its differing facts are
+  reconciled; list the conflict separately.
 - Counts are evidence, not weighted completion percentages. Do not infer effort or scope coverage
   from the number of tasks.
 - A Milestone marked `done` while any Feature is not `done` or `cut` is inconsistent.

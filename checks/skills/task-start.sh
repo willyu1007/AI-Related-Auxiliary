@@ -184,6 +184,31 @@ if node .ai/scripts/ctl-project-governance.mjs sync --apply >/dev/null 2>&1; the
 fi
 mv dev-docs/active/sample/01-status.tmp dev-docs/active/sample/01-status.md
 
+# Sync calculates and validates the complete change set before writing. A later invalid bundle
+# must not leave an earlier bundle allocated or any hub projection partially refreshed.
+mkdir -p dev-docs/active/atomic-valid dev-docs/active/zz-invalid
+for f in 00-roadmap.md 01-status.md 02-architecture.md verification.md; do
+  cp "dev-docs/active/sample/$f" "dev-docs/active/atomic-valid/$f"
+  cp "dev-docs/active/sample/$f" "dev-docs/active/zz-invalid/$f"
+done
+: > dev-docs/active/zz-invalid/01-status.md
+cp .ai/project/registry.json registry.atomic.tmp
+cp .ai/project/dashboard.md dashboard.atomic.tmp
+cp .ai/project/feature-map.md feature-map.atomic.tmp
+if node .ai/scripts/ctl-project-governance.mjs sync --apply >/dev/null 2>&1; then
+  fail "sync accepted an invalid bundle during its write-planning pass"
+fi
+[ ! -e dev-docs/active/atomic-valid/.ai-task.json ] \
+  || fail "failed sync partially allocated an earlier valid bundle"
+cmp -s registry.atomic.tmp .ai/project/registry.json \
+  || fail "failed sync partially updated the registry"
+cmp -s dashboard.atomic.tmp .ai/project/dashboard.md \
+  || fail "failed sync partially updated the dashboard"
+cmp -s feature-map.atomic.tmp .ai/project/feature-map.md \
+  || fail "failed sync partially updated the feature map"
+rm -rf dev-docs/active/atomic-valid dev-docs/active/zz-invalid
+rm -f registry.atomic.tmp dashboard.atomic.tmp feature-map.atomic.tmp
+
 cp dev-docs/active/sample/00-roadmap.md dev-docs/active/sample/00-roadmap.tmp
 : > dev-docs/active/sample/00-roadmap.md
 if node .ai/scripts/ctl-project-governance.mjs lint --check >/dev/null 2>&1; then
@@ -412,6 +437,25 @@ REQ_IDS=$(printf '%s\n%s\n' "$REQ_A" "$REQ_B" | sort | tr '\n' ' ')
 [ "$REQ_IDS" = "R-002 R-003 " ] \
   || fail "parallel worktrees allocated '$REQ_IDS', expected R-002 and R-003"
 
+# The committed T-001 bundle appears in all three worktrees. Equal occurrences are one logical
+# query row; a divergent occurrence is one conflicted row with no selected top-level fact source.
+cp .ai/project/registry.json registry.tmp
+node -e "const fs=require('fs');const p='.ai/project/registry.json';const r=JSON.parse(fs.readFileSync(p,'utf8'));r.tasks.find(x=>x.id==='T-001').feature_id='F-000';fs.writeFileSync(p,JSON.stringify(r,null,2)+'\n')"
+node .ai/scripts/ctl-project-governance.mjs query --id T-001 --json > shared-task.json
+node -e "const q=require('./shared-task.json');const t=q[0];process.exit(q.length===1&&!t.conflict&&t.occurrence_count===3&&t.worktrees.length===3?0:1)" \
+  || fail "query did not merge equal worktree occurrences"
+
+sed -i 's/State: in-progress/State: blocked/' "$WT_A/dev-docs/active/sample/01-status.md"
+node .ai/scripts/ctl-project-governance.mjs query --id T-001 --json > conflicted-task.json
+node -e "const q=require('./conflicted-task.json');const t=q[0];const c=t.conflicts.find(x=>x.field==='status');process.exit(q.length===1&&t.conflict&&t.status===null&&t.worktree_path===null&&t.occurrence_count===3&&c&&c.values.some(x=>x.value==='blocked')?0:1)" \
+  || fail "query selected a fact source for divergent worktree occurrences"
+node .ai/scripts/ctl-project-governance.mjs query --status blocked --json > conflicted-filter.json
+node -e "const q=require('./conflicted-filter.json');process.exit(q.some(x=>x.id==='T-001'&&x.conflict)?0:1)" \
+  || fail "status filter hid a matching conflicted occurrence"
+sed -i 's/State: blocked/State: in-progress/' "$WT_A/dev-docs/active/sample/01-status.md"
+mv registry.tmp .ai/project/registry.json
+rm -f shared-task.json conflicted-task.json conflicted-filter.json
+
 node .ai/scripts/ctl-project-governance.mjs query --text alpha --json > worktrees.json
 grep -q "\"id\":\"$ID_A\"" worktrees.json || fail "cross-worktree query missed uncommitted task metadata"
 grep -q 'alpha smoke test' worktrees.json || fail "cross-worktree query did not search or return the task goal"
@@ -433,4 +477,4 @@ node -e "const r=require('./.ai/project/registry.json');process.exit(r.tasks.som
   || fail "archive status not propagated"
 node .ai/scripts/ctl-project-governance.mjs lint --strict >/dev/null || fail "lint failed after archive"
 
-echo "install/guidance refresh, strict CLI/data guards, root discovery, pending seed example, kickoff/completion gates, roadmap and registry lint, resume, hook sync, Milestone progress and feature/requirement mapping, lightweight Ideas, JSON round-trip, worktree allocation, archive"
+echo "install/guidance refresh, strict CLI/data guards, root discovery, pending seed example, kickoff/completion gates, roadmap and registry lint, resume, validation-atomic sync, Milestone progress and feature/requirement mapping, lightweight Ideas, JSON round-trip, worktree allocation and query reconciliation, archive"

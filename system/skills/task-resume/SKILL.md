@@ -21,6 +21,7 @@ When the request names work but not an ID, search the goal, slug, keywords, and 
 node .ai/scripts/ctl-project-governance.mjs query --text "<request terms>" --json
 ```
 
+- A candidate with `conflict: true`: show its `worktrees` and differing facts from `conflicts`. Do not choose a worktree or resume the task until the disagreement is resolved.
 - One relevant candidate in the current worktree: pass its ID to `resume`.
 - One relevant candidate in another worktree: do not create a duplicate task. Read it there; continue there only when the execution environment can safely target that worktree and the request clearly refers to it. Otherwise report its path and ask before changing worktrees.
 - Multiple plausible candidates: show the compact candidates and ask which one.

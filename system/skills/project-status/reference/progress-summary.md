@@ -31,6 +31,7 @@ node .ai/scripts/ctl-project-governance.mjs query --json
 
 ## Rules
 - Calculate percentages from actual counts
+- Exclude conflicted logical rows from status percentages and report them separately as unresolved evidence
 - Only show "Blocked" section if blockers exist
 - Next step follows priority rules (see next-action.md)
 - Separate kickoff-pending alignment/replanning from kickoff-ready implementation

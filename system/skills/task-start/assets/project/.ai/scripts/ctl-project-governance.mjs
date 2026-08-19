@@ -1497,7 +1497,7 @@ function collectBundleTaskRows({ repoRoot, registry = undefined }) {
   return rows;
 }
 
-function collectAllWorktreeTaskRows(repoRoot) {
+function collectAllWorktreeTaskOccurrences(repoRoot) {
   const rows = [];
   for (const worktree of listGitWorktrees(repoRoot)) {
     const registry = loadRegistry(worktree.path).registry;
@@ -1525,6 +1525,100 @@ function collectAllWorktreeTaskRows(repoRoot) {
   });
 }
 
+const QUERY_FACT_FIELDS = [
+  'status',
+  'slug',
+  'dev_docs_path',
+  'feature_id',
+  'milestone_id',
+  'title',
+  'updated',
+  'goal',
+  'keywords',
+  'meta_missing',
+  'status_missing',
+  'status_doc_path',
+  'roadmap_path',
+  'kickoff_status',
+];
+
+function normalizeQueryFact(field, value) {
+  if (field === 'keywords') {
+    return [...new Set(Array.isArray(value) ? value.map((item) => String(item)) : [])].sort();
+  }
+  return value === undefined ? null : value;
+}
+
+function mergeTaskOccurrences(repoRoot, rows) {
+  const groups = new Map();
+  for (const row of rows) {
+    const id = String(row.id || '');
+    const key = TASK_ID_RE.test(id)
+      ? `task:${id}`
+      : `occurrence:${row.worktree_path}\u0000${row.dev_docs_path}`;
+    const group = groups.get(key) || [];
+    group.push(row);
+    groups.set(key, group);
+  }
+
+  const currentRoot = path.resolve(repoRoot);
+  const merged = [];
+  for (const group of groups.values()) {
+    const ordered = group.slice().sort((left, right) => {
+      const leftCurrent = path.resolve(left.worktree_path) === currentRoot ? 0 : 1;
+      const rightCurrent = path.resolve(right.worktree_path) === currentRoot ? 0 : 1;
+      return (
+        leftCurrent - rightCurrent ||
+        String(left.worktree_path).localeCompare(String(right.worktree_path)) ||
+        String(left.dev_docs_path).localeCompare(String(right.dev_docs_path))
+      );
+    });
+    const representative = ordered[0];
+    const result = { id: String(representative.id || '') };
+    const conflicts = [];
+
+    for (const field of QUERY_FACT_FIELDS) {
+      const values = new Map();
+      for (const occurrence of ordered) {
+        const value = normalizeQueryFact(field, occurrence[field]);
+        const key = JSON.stringify(value);
+        const entry = values.get(key) || { value, worktrees: [] };
+        entry.worktrees.push({
+          worktree_path: occurrence.worktree_path,
+          worktree_branch: occurrence.worktree_branch,
+          dev_docs_path: occurrence.dev_docs_path,
+        });
+        values.set(key, entry);
+      }
+
+      if (values.size === 1) {
+        const [shared] = values.values();
+        result[field] = shared.value;
+      } else {
+        result[field] = null;
+        conflicts.push({ field, values: [...values.values()] });
+      }
+    }
+
+    result.conflict = conflicts.length > 0;
+    result.conflicts = conflicts;
+    result.occurrence_count = ordered.length;
+    result.worktrees = ordered.map((occurrence) => ({
+      worktree_path: occurrence.worktree_path,
+      worktree_branch: occurrence.worktree_branch,
+      dev_docs_path: occurrence.dev_docs_path,
+    }));
+    result.worktree_path = result.conflict ? null : representative.worktree_path;
+    result.worktree_branch = result.conflict ? null : representative.worktree_branch;
+    merged.push(result);
+  }
+
+  return merged.sort((left, right) => {
+    const byId = String(left.id || '').localeCompare(String(right.id || ''));
+    return byId || String(left.dev_docs_path || '').localeCompare(String(right.dev_docs_path || ''));
+  });
+}
+
 function cmdQuery({ repoRoot, id, status, text, json }) {
   // Query is designed for LLM consumption: default is JSONL (one object per line).
   function includesText(value, needle) {
@@ -1536,7 +1630,10 @@ function cmdQuery({ repoRoot, id, status, text, json }) {
 
   function taskMatches(t) {
     if (id && String(t.id || '') !== id) return false;
-    if (status && String(t.status || '').trim() !== status) return false;
+    if (status && String(t.status || '').trim() !== status) {
+      const statusConflict = (t.conflicts || []).find((conflict) => conflict.field === 'status');
+      if (!statusConflict?.values.some((entry) => entry.value === status)) return false;
+    }
     if (text) {
       const blobParts = [];
       for (const k of [
@@ -1555,13 +1652,15 @@ function cmdQuery({ repoRoot, id, status, text, json }) {
         blobParts.push(String(t[k] || ''));
       }
       if (Array.isArray(t.keywords)) blobParts.push(t.keywords.join(' '));
+      if (t.conflict) blobParts.push(JSON.stringify(t.conflicts));
+      blobParts.push(JSON.stringify(t.worktrees || []));
       const blob = blobParts.join('\n');
       if (!includesText(blob, text)) return false;
     }
     return true;
   }
 
-  const rows = collectAllWorktreeTaskRows(repoRoot).filter(taskMatches);
+  const rows = mergeTaskOccurrences(repoRoot, collectAllWorktreeTaskOccurrences(repoRoot)).filter(taskMatches);
 
   if (json) console.log(JSON.stringify(rows));
   else formatJsonLines(rows);
@@ -2083,6 +2182,22 @@ function cmdSync({ repoRoot, dryRun, apply }) {
   const actions = [];
   const errors = [];
   const warnings = [];
+  const pendingWrites = new Map();
+
+  const planWrite = (filePath, content, { op, note }) => {
+    const resolved = path.resolve(filePath);
+    const previous = pendingWrites.get(resolved);
+    const current = previous ? previous.content : readText(filePath);
+    if (current === content) return false;
+
+    pendingWrites.set(resolved, {
+      path: filePath,
+      content,
+      op: op || (current === null ? 'write' : 'update'),
+      note,
+    });
+    return true;
+  };
 
   const finish = () => {
     const succeeded = errors.length === 0;
@@ -2212,12 +2327,7 @@ function cmdSync({ repoRoot, dryRun, apply }) {
         keywords: [],
       };
       const rendered = renderTaskMetaJson(meta);
-      if (dryRun || !apply) {
-        actions.push({ op: 'write', path: task.metaPath, note: `allocate ${id}`, mode: 'dry-run' });
-      } else {
-        writeText(task.metaPath, rendered);
-        actions.push({ op: 'write', path: task.metaPath, note: `allocate ${id}` });
-      }
+      planWrite(task.metaPath, rendered, { op: 'write', note: `allocate ${id}` });
       task.taskId = id;
     } else {
       const meta = parseTaskMeta(metaRaw);
@@ -2243,12 +2353,7 @@ function cmdSync({ repoRoot, dryRun, apply }) {
           keywords: meta.keywords || [],
         };
         const rendered = renderTaskMetaJson(nextMeta);
-        if (dryRun || !apply) {
-          actions.push({ op: 'update', path: task.metaPath, note: 'refresh derived fields', mode: 'dry-run' });
-        } else {
-          const changed = writeTextIfChanged(task.metaPath, rendered);
-          if (changed) actions.push({ op: 'update', path: task.metaPath, note: 'refresh derived fields' });
-        }
+        planWrite(task.metaPath, rendered, { op: 'update', note: 'refresh derived fields' });
       }
     }
 
@@ -2296,12 +2401,7 @@ function cmdSync({ repoRoot, dryRun, apply }) {
 
   // Write registry
   const registryOut = renderJson(reg);
-  if (dryRun || !apply) {
-    actions.push({ op: 'update', path: registryPath, note: 'update registry', mode: 'dry-run' });
-  } else {
-    const changed = writeTextIfChanged(registryPath, registryOut);
-    if (changed) actions.push({ op: 'update', path: registryPath, note: 'update registry' });
-  }
+  planWrite(registryPath, registryOut, { op: 'update', note: 'update registry' });
 
   // Derived views
   const hubDir = getHubDir(repoRoot);
@@ -2392,17 +2492,28 @@ function cmdSync({ repoRoot, dryRun, apply }) {
       return;
     }
 
-    if (dryRun || !apply) {
-      actions.push({ op: 'update', path: filePath, note: `regen ${blockId}`, mode: 'dry-run' });
-      return;
-    }
-
-    const changed = writeTextIfChanged(filePath, next);
-    if (changed) actions.push({ op: 'update', path: filePath, note: `regen ${blockId}` });
+    planWrite(filePath, next, { op: 'update', note: `regen ${blockId}` });
   }
 
   updateDerived(dashboardPath, 'dashboard', dashAuto);
   updateDerived(featureMapPath, 'feature-map', featureAuto);
+
+  // Do not mutate the worktree until every input and derived output has been calculated.
+  // This prevents a validation failure in a later bundle from leaving earlier metadata or hub
+  // projections partially refreshed. Filesystem failures during the final write pass are still
+  // ordinary I/O failures; this is validation atomicity, not a multi-file storage transaction.
+  if (errors.length === 0) {
+    for (const pending of pendingWrites.values()) {
+      const { content, ...action } = pending;
+      if (dryRun || !apply) {
+        actions.push({ ...action, mode: 'dry-run' });
+        continue;
+      }
+
+      const changed = writeTextIfChanged(pending.path, content);
+      if (changed) actions.push(action);
+    }
+  }
 
   return finish();
 }

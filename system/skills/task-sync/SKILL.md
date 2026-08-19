@@ -48,7 +48,7 @@ description: >-
    node .ai/scripts/ctl-project-governance.mjs lint --check
    ```
 
-   This allocates missing task IDs under a cross-worktree lock, refreshes `.ai-task.json`, registry entries, and derived views, then validates the result. Inspect the generated diff. If it exposes unrelated pre-existing hub drift that cannot be separated safely from this checkpoint, do not attach that drift to the task commit; report it for the hub-maintenance workflow.
+   Sync calculates and validates its complete governance change set before writing, then allocates missing task IDs under a cross-worktree lock and refreshes `.ai-task.json`, registry entries, and derived views. A validation error leaves that planned change set unapplied. Lint validates the resulting cross-document semantics. Inspect the generated diff. If it exposes unrelated pre-existing hub drift that cannot be separated safely from this checkpoint, do not attach that drift to the task commit; report it for the hub-maintenance workflow.
 
 5. **Commit the verified checkpoint.** Before staging implementation, verify that the roadmap kickoff gate is `ready`. When it is `pending`, commit only coherent planning, discovery evidence, or record synchronization and do not land decision-dependent implementation. Stage this task's allowed implementation and bundle paths plus the governance changes caused by this task. Stage by explicit path; never use a worktree-wide catch-all when foreign changes exist.
 
