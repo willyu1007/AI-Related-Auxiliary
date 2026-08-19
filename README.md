@@ -50,6 +50,7 @@ checks/          # 本仓库自己的校验，不是分发物
 | [debug-mode](system/skills/debug-mode/SKILL.md) | 证据驱动调试：可选审批门（默认无）、Agent 自行采证、验证后自动清理临时埋点与产物 |
 | [manage-ideas](system/skills/manage-ideas/SKILL.md) | 延迟想法台账："值得做但现在不做"的记录、复评与晋升；捕获永不打断当前任务 |
 | [manage-env](system/skills/manage-env/SKILL.md) | 环境变量一致性：`.env.example` 即契约，read/documented/present 三集合对差；改键同 commit 更新契约，doctor 修本地环境；值永不出现在对话或仓库 |
+| [manage-ui-style](system/skills/manage-ui-style/SKILL.md) | UI 风格：房子层（品味规约+反模式地板）随技能走并在生成前载入，项目层（tokens/exemplar/STYLE.md）留在仓库里；先查资产定模式，mock 先行，收尾跑机检；含结晶与审计 workflow |
 | [cleanup-project-residue](system/skills/cleanup-project-residue/SKILL.md) | 清理当前 session、任务、近期工作或全项目中的过时测试、冗余内容、语义漂移、双轨/legacy 残留和技术债；证据+批准后删除，校验门收尾 |
 
 `system/` 是全局 Agent 配置的版本化镜像。改动流程：
