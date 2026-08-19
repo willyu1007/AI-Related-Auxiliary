@@ -30,7 +30,7 @@ Archive location makes the effective state `archived`. `summary.md` preserves th
 ## Document responsibilities
 
 - **`.ai-task.yaml`** — Stable task identity and non-authoritative display metadata.
-- **`00-roadmap.md`** — Decision alignment and rationale, working assumptions, relationships touching this task, kickoff readiness, phased route, and recovery strategy.
+- **`00-roadmap.md`** — Decision alignment and rationale, working assumptions, relationships touching this task, the implementation kickoff gate, phased route, and recovery strategy.
 - **`01-status.md`** — Current goal, progress state, phase, next step, blocker, and high-level completion conditions.
 - **`02-architecture.md`** — Current settled technical design and contracts, without alternatives or decision history.
 - **`verification.md`** — Current completion-condition matrix, latest decisive evidence, outstanding checks, and material limitations.
