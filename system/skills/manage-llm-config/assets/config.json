@@ -1,0 +1,13 @@
+{
+  "calls": {
+    "call-id": {
+      "provider": "provider-id",
+      "model": "model-id",
+      "prompt": {
+        "system": "./prompts/system.md"
+      },
+      "parameters": {},
+      "tools": []
+    }
+  }
+}

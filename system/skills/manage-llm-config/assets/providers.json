@@ -1,0 +1,9 @@
+{
+  "providers": {
+    "provider-id": {
+      "protocol": "provider-protocol",
+      "base_url": "provider-base-url",
+      "api_key_env": "PROVIDER_API_KEY"
+    }
+  }
+}

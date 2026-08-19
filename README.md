@@ -46,9 +46,9 @@ checks/          # 本仓库自己的校验，不是分发物
 | `codex-*`（三个） / `html-communication` | 见各自 `SKILL.md` |
 | [review-code](system/skills/review-code/SKILL.md) | 当前 Agent 自审代码改动并出分级报告（Claude/Codex 通用）；第二意见仍走 `codex-review` |
 | [sync-db-from-prisma](system/skills/sync-db-from-prisma/SKILL.md) | Prisma repo→DB migration 闸门：预览、单独的 apply 批准、按环境应用、验证 |
-| [manage-llm-usage](system/skills/manage-llm-usage/SKILL.md) | 薄 LLM 能力台账（内部 capability）：登记、改完代码后对齐、共享调用准则；手工维护，无校验 |
+| [manage-llm-config](system/skills/manage-llm-config/SKILL.md) | 集中管理 agent/workflow 的模型、参数、Prompt 与 Provider 配置；通过共享加载器读取 `.ai/llm` |
 | [debug-mode](system/skills/debug-mode/SKILL.md) | 证据驱动调试：可选审批门（默认无）、Agent 自行采证、验证后自动清理临时埋点与产物 |
-| [manage-env](system/skills/manage-env/SKILL.md) | 环境变量一致性：`.env.example` 即契约，read/documented/present 三集合对差；改键同 commit 更新契约，doctor 修本地环境；值永不出现在对话或仓库 |
+| [get-sensitive-info](system/skills/get-sensitive-info/SKILL.md) | 获取并使用 `~/Documents/LLM/project-ops.md` 中的项目敏感信息；按项目标准机制落地配置，缺失内容用中文占位符反写并返回可点击文档链接 |
 | [manage-ui-style](system/skills/manage-ui-style/SKILL.md) | UI 风格：房子层（品味规约+反模式地板）随技能走并在生成前载入，项目层（tokens/exemplar/STYLE.md）留在仓库里；先查资产定模式，mock 先行，收尾跑机检；含结晶与审计 workflow |
 | [cleanup-project-residue](system/skills/cleanup-project-residue/SKILL.md) | 清理当前 session、任务、近期工作或全项目中的过时测试、冗余内容、语义漂移、双轨/legacy 残留和技术债；证据+批准后删除，校验门收尾 |
 
