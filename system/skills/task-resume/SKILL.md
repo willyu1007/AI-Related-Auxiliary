@@ -44,7 +44,7 @@ The packet is the bounded first read. Verify or reconstruct it manually in this 
 4. If `pitfalls.md` exists, read its current hazards.
 5. Rebuild the committed timeline from exact `Task: T-###` trailers. An empty timeline means unknown progress, not zero progress.
 6. Inspect `git status --short` and the relevant diff. Uncommitted changes may be newer than every record.
-7. Read further only to answer an unresolved question: `00-roadmap.md` for decision alignment, task relationships, and the remaining implementation route; optional `implementation.md` for the current realized implementation map; and `verification.md` for current decisive evidence.
+7. Read further only to answer an unresolved question: `00-roadmap.md` for decision alignment, task relationships, and the remaining implementation route; optional `implementation.md` for the current realized implementation map; `verification.md` for current decisive evidence; and any other task-local supporting document only for its stated distinct purpose.
 
 ## Reconciliation
 

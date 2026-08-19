@@ -14,15 +14,15 @@ Open and register a durable task bundle before implementation begins.
 
 ## Workflow
 
-1. **Provision the task system.** Run the idempotent installer from this skill before using task docs:
+1. **Apply the creation gate.** Open a tracked task when the user explicitly asks to track work or persist a repository roadmap, when the work introduces a product or system capability that belongs in the project hub, when the record must survive a pause or handoff, or when high-risk or cross-cutting work needs durable decisions, verification, or recovery context. Otherwise keep planning in the conversation and create no bundle. File count, step count, and estimated duration alone do not justify a tracked task.
+
+2. **Provision and read the task system.** When the gate passes, run the idempotent installer before using task docs:
 
    ```bash
    node <this-skill>/assets/project/.ai/scripts/ctl-project-governance.mjs install --repo-root .
    ```
 
-   `<this-skill>` is the directory containing this `SKILL.md`. The installer creates or refreshes `dev-docs/README.md`, `dev-docs/CLAUDE.md`, `dev-docs/AGENTS.md`, `dev-docs/active/`, `dev-docs/archive/`, and the project-governance assets. It preserves project-owned hub data.
-
-2. **Read and apply the repository contract.** Read `dev-docs/README.md` completely. Apply its Creation gate before creating a bundle. When the gate does not pass, keep planning in the conversation and create no task bundle.
+   `<this-skill>` is the directory containing this `SKILL.md`. The installer creates or refreshes `dev-docs/README.md`, `dev-docs/CLAUDE.md`, `dev-docs/AGENTS.md`, `dev-docs/active/`, `dev-docs/archive/`, and the project-governance assets. It preserves project-owned hub data. Read `dev-docs/README.md` completely before creating the bundle.
 
 3. **Search before creating.** Inspect active work in every linked worktree, including uncommitted bundles:
 
@@ -34,7 +34,7 @@ Open and register a durable task bundle before implementation begins.
 
    Read the goal of plausible matches. If one already covers the requested outcome, continue it instead of creating a duplicate. Multiple checkouts of the same task ID are one task; divergent uncommitted work on that task is a conflict to resolve before proceeding.
 
-4. **Define the task head.** Infer a one-sentence goal, high-level completion conditions, and a kebab-case slug. Ask only when an unresolved choice would materially change the goal, boundaries, or success conditions. Otherwise state the inferred values and proceed.
+4. **Define the task head.** Infer a one-sentence goal, high-level completion conditions, and a kebab-case slug. Ask only when an unresolved choice would materially change the goal, boundaries, or success conditions. Otherwise state the inferred values and proceed. Keep sequential work as phases when it serves the same goal and completion conditions. Split work only when it needs its own observable outcome, state, owner, handoff, verification, archive, separate worktree, or independently managed interface.
 
 5. **Align requirements when needed.** If the user requests requirements alignment or provides a requirements document, create `requirement.md` from `./templates/requirement.md` before the roadmap. Merge sources using this precedence:
 
@@ -45,7 +45,7 @@ Open and register a durable task bundle before implementation begins.
 
    Record unresolved conflicts in `00-roadmap.md`; never drop one silently.
 
-6. **Seed the bundle from the contract.** Create `dev-docs/active/<slug>/` from `./templates/` according to `dev-docs/README.md`. Populate the current goal and `State: planned`. Write a roadmap seed containing confirmed scope, known constraints and relationships, material open decisions, risks, and one concrete alignment or discovery phase. Set the kickoff gate to `pending`; do not invent downstream implementation phases or close decisions merely to make the task look ready. Do not leave required sections as unfilled template placeholders; express missing evidence as a discovery action. Create conditional files only when their documented condition applies.
+6. **Seed the bundle from the contract.** Create `dev-docs/active/<slug>/` from `./templates/` according to `dev-docs/README.md`. Populate the current goal and `State: planned`. Write a roadmap seed containing confirmed scope, known constraints and relationships, material open decisions, risks, and one concrete alignment or discovery phase. Set the kickoff gate to `pending`; do not invent downstream implementation phases or close decisions merely to make the task look ready. Do not leave required sections as unfilled template placeholders; express missing evidence as a discovery action. Create the common optional entries only when their documented condition applies. Other task-local supporting documents or directories are allowed when the actual work needs distinct durable context; state their purpose and never use them as a second goal, status, plan, decision, architecture, or verification authority.
 
 7. **Allocate and register atomically.** Let the control script create `.ai-task.yaml`, update the registry, and regenerate derived views:
 

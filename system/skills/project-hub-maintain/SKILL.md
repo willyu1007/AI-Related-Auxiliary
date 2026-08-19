@@ -32,7 +32,7 @@ Archiving is an approved destructive transition from a working record to a compa
 
 3. **Resolve proposed follow-ups.** Every unresolved `proposed:<slug>` must first become an opened task, be explicitly canceled or descoped in the roadmap, or receive a durable transfer destination in the Feature Brief. Opening a follow-up is a separate task-opening checkpoint; archive approval does not authorize it. If the disposition requires user judgment, stop and ask before drafting the archive transition.
 
-4. **Distillation proposal.** Draft `summary.md` containing only:
+4. **Distillation proposal.** Inspect every additional task-local supporting entry before deleting it; preserve its durable meaning in the authorities above or the archive summary, and omit only material that is intentionally ephemeral or superseded. Draft `summary.md` containing only:
 
    - task ID, slug, goal, and actual outcome, including descoped parts;
    - durable decisions and migration consequences;

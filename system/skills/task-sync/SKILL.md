@@ -37,6 +37,8 @@ description: >-
 
    Create `implementation.md` only when its durable map would help a fresh agent understand the realized design. Create `pitfalls.md` only after a recurring hazard has evidence. Update both as current snapshots: do not append routine history, ordinary TODOs, or repeated test logs. Remove obsolete pitfalls after prevention is encoded and the warning is no longer useful; Git history retains the old entry. Put bulky raw evidence in `artifacts/`.
 
+   Create or update any other task-local supporting document only when the actual work needs its stated, distinct purpose. Such documents may preserve useful domain-specific context, but must not become a second goal, status, plan, decision, architecture, or verification authority.
+
    The first alignment, discovery, or implementation checkpoint after opening changes `planned` to `in-progress`. Set `blocked` only when progress requires unresolved external input or a dependency; state the blocker and the first action after unblock. Set `done` only when kickoff is `ready`, every current `Done when` item is satisfied, and decisive evidence is recorded in `verification.md`.
 
 4. **Refresh governance before staging.**

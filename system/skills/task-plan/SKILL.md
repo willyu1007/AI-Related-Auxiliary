@@ -33,7 +33,7 @@ Converge one living roadmap without creating a second planning authority.
 
 4. **Propagate each conclusion once.** Keep unresolved alternatives and concise rationale in `00-roadmap.md`. Reflect settled design and interfaces in `02-architecture.md`. If the goal, completion conditions, current phase, next action, or blocker changed, update `01-status.md`. The first alignment or discovery checkpoint after opening changes `State: planned` to `State: in-progress`; kickoff readiness remains a separate dimension. Keep relationship rows directional and never copy another task's mutable state.
 
-5. **Build or revise the executable route.** While kickoff is `pending`, the first phase may be alignment or discovery and later implementation phases may remain absent rather than invented. Before changing the gate to `ready`, verify all of the following in the roadmap:
+5. **Build or revise the executable route.** While kickoff is `pending`, the first phase may be alignment or discovery and later implementation phases may remain absent rather than invented. Keep work as phases only while it shares this task's outcome, state, completion conditions, and lifecycle. If new evidence reveals work needing an independent outcome, owner, pause, verification, archive, worktree, or managed interface, record the relationship and creation trigger instead of expanding this roadmap to own it. Before changing the gate to `ready`, verify all of the following in the roadmap:
 
    - every user-owned choice that blocks implementation is `decided`;
    - current settled design and interfaces are reflected in `02-architecture.md`;
@@ -50,7 +50,7 @@ Converge one living roadmap without creating a second planning authority.
    git commit -m "docs(task): plan T-### <slug>" -m "Task: T-###"
    ```
 
-7. **Hand back or implement.** Report kickoff status, resolved and unresolved decisions, the changed route, affected task relationships, and the first executable action. Begin or resume implementation only when kickoff is `ready`. When the user asks for an HTML explanation, create it after the checkpoint from the current bundle and keep it outside the repository as a non-authoritative communication artifact.
+7. **Hand back or implement.** Report kickoff status, resolved and unresolved decisions, the changed route, affected task relationships, and the first executable action. If the request also authorizes implementation, begin or resume it only when kickoff is `ready`; a planning-only request stops after the checkpoint and handback. When the user asks for an HTML explanation, create it after the checkpoint from the current bundle and keep it outside the repository as a non-authoritative communication artifact.
 
 ## Rules
 

@@ -10,6 +10,7 @@ Task: `T-###` · slug: `<slug>`
 - [ ] Cheapest decisive verification command from `verification.md` re-run, when runnable
 - [ ] Uncommitted or unfinished work is not described as landed
 - [ ] Every unresolved `proposed:<slug>` is opened as a task, canceled/descoped, or transferred to the Feature Brief and summary
+- [ ] Every additional task-local supporting entry was reviewed; durable meaning is preserved before deletion
 - [ ] `summary.md` drafted: ID + goal + actual outcome, durable decisions, verification evidence, do-not-repeat pitfalls, related/follow-up task disposition, `git log --grep="^Task: T-###"` pointer
 - [ ] Deletion list drafted: every bundle entry except `.ai-task.yaml` and new `summary.md`
 

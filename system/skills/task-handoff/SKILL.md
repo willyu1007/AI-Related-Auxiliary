@@ -26,6 +26,7 @@ Read the final values from the repository after synchronization:
 - `git status --short` and relevant diffs: what remains uncommitted
 - `pitfalls.md`, when present: paths the next session must not repeat
 - the rest of `00-roadmap.md`: unresolved top-level choices, relevant task relationships, and the near-term implementation route, only as needed
+- other task-local supporting entries, only when their stated purpose materially affects the next session
 
 Render one pasteable block:
 
