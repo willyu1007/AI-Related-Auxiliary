@@ -75,10 +75,13 @@
 先定作用域：monorepo 要点名扫哪些包（通常是 web 应用 + 共享 UI 包），并在报告里写明排除了什么。
 
 ```bash
-# 项目怎么写样式？两个数字哪个大就是哪种
+# 样式值写在哪：字面 CSS 属性的数量
 rg -c 'border-radius:|font-size:' --glob '*.{css,scss}' . | wc -l
-rg -c 'className=|class=' --glob '*.{tsx,jsx,vue,svelte}' . | wc -l
+# 工具类原子的数量（不是 className= 的数量——语义类名同样写 className）
+rg -o '\b(rounded|text|bg|p|m|px|py|gap|flex)-(xs|sm|md|lg|xl|\d+|\[)' --glob '*.{tsx,jsx,vue,svelte}' . | wc -l
 ```
+
+**数完了还要读一个真实组件确认。** 常见的混合形态是：语义/BEM 类名（几乎每个组件都写 `className`）+ 集中在少数几个文件里的字面 CSS——按 `className=` 的文件数判断会一路指错方向。类名多不等于用工具类。
 
 ### 通用（与样式写法无关）
 
@@ -86,11 +89,15 @@ rg -c 'className=|class=' --glob '*.{tsx,jsx,vue,svelte}' . | wc -l
 rg -n 'backdrop-blur|filter:\s*blur' .                          # 3
 rg -n 'hover:scale-|:hover[^{]*\{[^}]*scale\(' .                # 9
 rg -n 'transition-all|transition:\s*all' .                      # 25
-rg -n 'infinite' .; rg -c 'prefers-reduced-motion' .            # 24 26 两个数要能对上
+rg -n 'infinite' .; rg -n 'prefers-reduced-motion' .            # 24 26
 rg -n 'outline:\s*none|outline-none|ring-0' .                   # 31 焦点指示器被清掉
 ```
 
-`outline: none` 那条尤其重要：它不在原始清单里是因为它不像 AI 味，但它是**最常见的可访问性地板违规**——清掉焦点环而不给替代，键盘用户就彻底失明。
+两条格外重要，因为它们最便宜也最致命：
+
+**`infinite` 与 `prefers-reduced-motion` 的数量必须对得上。** 这不是形式核对——它单条就能产出整次审计最重的发现。逐个动画确认它有没有被降级块覆盖，光看总数相等不够（一个降级块可能只覆盖了一个类名）。另外 `animation: none` 停不掉 `transition`：只清 animation 的降级块管不住用 `transition: transform` 移动的元素，**两种机制都要查**。
+
+**`outline: none`** 不像 AI 味，但它是最常见的可访问性地板违规——清掉焦点环而不给替代，键盘用户就彻底失明。
 
 ### 渐变与裸色值：必须区分派生和原生
 

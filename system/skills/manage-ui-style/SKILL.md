@@ -19,12 +19,12 @@ Never copy the house layer into a project. A rulebook in a repository is a ruleb
 Every run starts by finding what the project already has. Search for the **artifact**, not for a filename — a crystallized project may have recorded itself as `PARADIGMS.md`, `DESIGN.md`, a kit README, or a Storybook, and looking only for `docs/ui/STYLE.md` will miss the best documentation in the repository:
 
 ```bash
-fd -t f '(tokens|theme|design-tokens)\.(css|json|ts|js)$' . 2>/dev/null | head
-rg -l --iglob '*.md' 'design token|design system|scale|paradigm|typography|governance|style guide' . 2>/dev/null | head
-fd -t f 'tailwind.config' .; rg -l '@theme|@tailwind' --glob '*.css' . 2>/dev/null | head
+find . -type f \( -name 'tokens.*' -o -name 'theme.*' -o -name 'design-tokens.*' \) -not -path '*/node_modules/*'
+rg -l --iglob '*.md' 'design token|design system|scale|paradigm|typography|governance|style guide' .
+find . -name 'tailwind.config.*' -not -path '*/node_modules/*'; rg -l '@theme|@tailwind' --glob '*.css' .
 ```
 
-Search the whole repository, not `src/` — a monorepo keeps its tokens in a package or a top-level `ui/`, and Tailwind v4 configures itself inside CSS with no config file to find. **A command finding nothing means the probe missed, not that the project has nothing**; widen it before concluding.
+Search the whole repository, not `src/` — a monorepo keeps its tokens in a package or a top-level `ui/`, and Tailwind v4 configures itself inside CSS with no config file to find. Stay on `find`, `rg`, and `git`; a probe built on a tool that may not be installed reports "nothing here" and an exit code nobody reads. **Never silence stderr on a discovery probe**, and treat a command finding nothing as the probe missing rather than the project being empty — widen it before concluding.
 
 Read whatever turns up before deciding anything is missing. What is found decides the mode — you do not ask for it:
 
@@ -66,13 +66,21 @@ When the user asks to check drift, or before a release that cares how it looks.
 
 1. **Scope and calibrate.** Name which packages are in the audit and which are excluded. Then establish how the project actually writes style — literal CSS, utility classes, CSS-in-JS — because the probes differ and the wrong one fails silently. `./reference/anti-patterns.md` opens with the calibration commands.
 
-2. **Run the mechanical set**, using the variant that matches. **Treat a near-zero result as a probe failure until proven otherwise**: a mature application with no radius declarations is not a disciplined application, it is a probe pointed at the wrong syntax. Every count reported carries the command that produced it, so the reader can see what was actually measured.
+2. **Run the mechanical set**, using the variant that matches. **Treat a near-zero result as a probe failure until proven otherwise** — a mature application with no radius declarations is not a disciplined application, it is a probe pointed at the wrong syntax. The same suspicion applies to your own tooling: a batched shell block that truncates, or a missing binary, produces the identical silent zero. Confirm a zero against a positive control before believing it, and report every count with the command that produced it.
+
+   **When the project ships its own gate** — a lint preset, a governance script, a spec validator — read it before improvising. Its checks are calibrated to this codebase and will be sharper than anything grepped blind. Run it only after confirming from its source that it writes nothing; gates commonly regenerate baselines or evidence directories, and a "check" subcommand is not a promise. When it cannot be run safely, reimplement its checks from its source rather than guessing, and report the gate's existence — **a gate nobody wired into CI or a hook is the root cause underneath most of what the audit finds**, and saying so is worth more than any individual finding.
 
 3. **Measure the scales and compare against what the project declares.** A declared four-step radius scale showing thirty-one distinct forms in practice is the finding — the contract exists and adherence decayed.
 
 4. **Trace token consumption**, which is where the highest-value findings live and where no single command reaches. Follow the chain: source declaration → generated variables → remapping into the styling layer → real call sites. A break anywhere means the token layer governs nothing downstream of it, and that failure is invisible to every grep in the mechanical set — a declared type scale with one consumer looks identical to a healthy one from the outside. Also check the reverse: values synthesized outside the token source, and themes fully built with no code path that activates them.
 
-5. **Triage every finding by owner before ranking it** — the question that makes an audit usable is *who can fix this*. A value inside a consumed library or kit is upstream: report it there with evidence, never as a local override, because an override is how a project forks its design system by accident. A local usage of a shared token is local — the *use* is yours, the *value* is not. Where the project ships a deviation ledger or decision record, read it before calling anything drift: several will be decisions.
+5. **Triage every finding by owner before ranking it** — the question that makes an audit usable is *who can fix this*. A value inside a consumed library or kit is upstream: report it there with evidence, never as a local override, because an override is how a project forks its design system by accident. A local usage of a shared token is local — the *use* is yours, the *value* is not. The same split exists inside a single repository whenever a contract layer and a feature layer coexist: a literal in the feature layer is local drift, the same literal in the contract layer is a contract change.
+
+   When the design system arrives as a dependency, **read its contracts from the installed copy** under the package directory, never from memory or from the upstream repository — they travel with the installed version and describe the system this project actually has. If they are absent, say which version is installed and that the contract applied may not match it.
+
+   Ownership follows the project's **declared** scope, not the directory it sits in. A file inside the contract directory whose own header scopes it to features, or which the project's protection list deliberately excludes, is feature-owned — trust that self-classification, and report the boundary itself as a governance finding. Reading location alone turns ordinary feature accretion into a contract emergency and buries the narrow, fixable problem underneath it.
+
+   Where the project ships a deviation ledger or decision record, read it before calling anything drift: several will be decisions, and reporting a considered deviation as a defect is how an audit loses its credibility. A ledger of mechanical fingerprints carries no reasoning — the real decisions are then annotated at the value, so also search token and contract sources for status or rationale fields before concluding nothing was decided.
 
 6. **Report, do not fix.** Group by severity — floor violations (accessibility, continuous repaint, contrast) first, then scale drift, then cosmetics. Every finding gets a file, a line, and its owner. Fixes happen only on a separate instruction, because a sweep that rewrites while it reports is unreviewable.
 
