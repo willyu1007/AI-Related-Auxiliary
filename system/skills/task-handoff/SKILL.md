@@ -20,6 +20,12 @@ A handoff does not require finishing the whole task. It requires a truthful, rec
 
 Read the final values from the repository after synchronization:
 
+```bash
+node .ai/scripts/ctl-project-governance.mjs resume --task T-###
+```
+
+Use this JSON packet as the bounded starting point, then inspect the relevant diff for any uncommitted detail the packet cannot explain.
+
 - `01-status.md`: goal, state, current phase, next step, blocker, and completion conditions
 - `00-roadmap.md` kickoff gate: whether implementation may continue
 - linked commits: what landed

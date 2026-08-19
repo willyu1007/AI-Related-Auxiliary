@@ -5,13 +5,13 @@ Use when user asks what to do next, needs guidance on priorities, or is picking 
 ## Data Source
 
 ```bash
-node .ai/scripts/ctl-project-governance.mjs query --all-worktrees --json
+node .ai/scripts/ctl-project-governance.mjs query --json
 ```
 
 For the selected task, read its bounded recovery packet:
 
 ```bash
-node .ai/scripts/ctl-project-governance.mjs resume --repo-root <worktree_path> --task T-xxx --json
+node .ai/scripts/ctl-project-governance.mjs resume --repo-root <worktree_path> --task T-xxx
 ```
 
 ## Priority Rules

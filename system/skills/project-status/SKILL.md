@@ -29,14 +29,14 @@ Pick by what was asked, then follow that reference's **Data Source** commands:
 1. **Classify the question.** Read `dev-docs/README.md` for task semantics, then open the matching reference.
 
 2. **Gather from task bundles across linked worktrees.** Run the reference's data-source commands — usually
-   `ctl-project-governance.mjs query --all-worktrees` with a `--status` or `--text` filter. Never guess task details; open the returned `status_doc_path` when the query output is not enough.
+   `ctl-project-governance.mjs query` with a `--status` or `--text` filter. Query already includes every linked worktree. Never guess task details; open the returned `status_doc_path` when the query output is not enough.
 
 3. **Check consistency, do not fix it.** `lint --check` reveals drift between the registry and the task bundles. Report the drift and the appropriate maintenance action; do not run write-mode repair.
 
 4. **Ground claims about active work.** For any `in-progress` or `blocked` task, run:
 
    ```bash
-   node .ai/scripts/ctl-project-governance.mjs resume --repo-root <worktree_path> --task <T-###> --json
+   node .ai/scripts/ctl-project-governance.mjs resume --repo-root <worktree_path> --task <T-###>
    ```
 
    Report the commit timeline, worktree warnings, and any disagreement between the packet and the documented status. An empty timeline means progress is unknown, not zero; `git log --grep="^Task: T-###"` is the same evidence without the packet around it.

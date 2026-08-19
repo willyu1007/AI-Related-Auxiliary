@@ -41,7 +41,7 @@ Archiving is an approved destructive transition from a working record to a compa
    - related tasks and the disposition of every unresolved `proposed:<slug>` follow-up;
    - `git log --grep="^Task: T-###"` as the full-history pointer.
 
-   Show the exact move, the proposed summary, and the deletion list. The deletion list is every bundle entry except `.ai-task.yaml` and the new `summary.md`, including roadmap, status, architecture, verification, optional files, requirements, and artifacts.
+   Show the exact move, the proposed summary, and the deletion list. The deletion list is every bundle entry except `.ai-task.json` and the new `summary.md`, including roadmap, status, architecture, verification, optional files, requirements, and artifacts.
 
    Roadmap deletion must not erase future work.
 
@@ -49,7 +49,7 @@ Archiving is an approved destructive transition from a working record to a compa
 
 ### Execute as one recoverable change
 
-6. Write `summary.md`, remove the approved source files, and move the bundle. The archived bundle must contain exactly `.ai-task.yaml` and `summary.md`; its location makes its effective state `archived`.
+6. Write `summary.md`, remove the approved source files, and move the bundle. The archived bundle must contain exactly `.ai-task.json` and `summary.md`; its location makes its effective state `archived`.
 
 7. If the task changed feature intent, scope, constraints, or risk posture, update the manual Semantic Feature Brief in `.ai/project/feature-map.md` now. Never edit its AUTO block.
 
@@ -62,7 +62,7 @@ Archiving is an approved destructive transition from a working record to a compa
 
    A failure stops the commit. Restore the clean active layout from the pre-archive checkpoint or correct the approved transition; never leave a half-archived bundle.
 
-9. Stage the archive move, `.ai-task.yaml` status refresh, affected feature brief, registry, and derived views. Commit one task per archive so its transition remains on its own timeline:
+9. Stage the archive move, `.ai-task.json` status refresh, affected feature brief, registry, and derived views. Commit one task per archive so its transition remains on its own timeline:
 
    ```bash
    git commit -m "chore(archive): archive T-### <slug>" -m "Task: T-###"
@@ -84,12 +84,21 @@ Inspect first, apply second:
 ```bash
 node .ai/scripts/ctl-project-governance.mjs lint --check
 node .ai/scripts/ctl-project-governance.mjs sync --dry-run
-node .ai/scripts/ctl-project-governance.mjs query --all-worktrees --json
+node .ai/scripts/ctl-project-governance.mjs query --json
 node .ai/scripts/ctl-project-governance.mjs sync --apply
 node .ai/scripts/ctl-project-governance.mjs lint --check
 ```
 
 - Active `in-progress` or `blocked` work remains on `F-000` only when the triage choice is explicit in the Semantic Feature Brief.
+- For a confirmed task-to-Feature or task-to-Requirement correction, preview and then apply the supported mapping instead of expecting sync to choose semantic ownership:
+
+  ```bash
+  node .ai/scripts/ctl-project-governance.mjs map --task T-### --feature F-### --requirement R-### --dry-run
+  node .ai/scripts/ctl-project-governance.mjs map --task T-### --feature F-### --requirement R-### --apply
+  ```
+
+  Omit `--requirement` when only the Feature mapping changes. When a repair must remove or reparent an existing relationship, show the exact targeted registry edit and obtain confirmation before applying it; sync preserves existing semantic mappings.
+- To change a task's Milestone, change its Feature mapping or the owning Feature's confirmed `milestone_id`; never add `milestone_id` to a task entry.
 - Regenerate AUTO sections; never hand-edit them.
 - Do not alter an active task's goal or `State:` as part of hub repair.
 - If drift originates from another worktree's uncommitted bundle, report its worktree and coordinate there instead of overwriting it here.
@@ -104,4 +113,4 @@ node .ai/scripts/ctl-project-governance.mjs lint --check
 
 ## Authority
 
-For active tasks, `01-status.md` owns progress. For archived tasks, path owns effective state and the bundle contains exactly `.ai-task.yaml` plus `summary.md`. Hub semantics follow `.ai/project/AGENTS.md`.
+For active tasks, `01-status.md` owns progress. For archived tasks, path owns effective state and the bundle contains exactly `.ai-task.json` plus `summary.md`. Hub semantics follow `.ai/project/AGENTS.md`.

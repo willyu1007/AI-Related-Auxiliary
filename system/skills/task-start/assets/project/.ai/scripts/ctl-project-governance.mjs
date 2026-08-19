@@ -12,7 +12,7 @@
  *   because the Git hooks call it by repository path and cannot reach the skill's own location.
  * - Task progress SoT remains in the dev-docs task bundle (`01-status.md`).
  * - Task bundles follow the semantics in `dev-docs/README.md`.
- * - Task identity SoT is anchored by `.ai-task.yaml` (`task_id`).
+ * - Task identity SoT is anchored by `.ai-task.json` (`task_id`).
  */
 
 import { execFileSync } from 'node:child_process';
@@ -20,8 +20,16 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { colors, die, header, info, ok, warn } from './lib/colors.mjs';
-import { parseYaml } from './lib/yaml-lite.mjs';
+
+function die(message, exitCode = 1) {
+  console.error(message);
+  process.exit(exitCode);
+}
+
+const warn = (message) => console.warn(message);
+const ok = (message) => console.log(message);
+const info = (message) => console.log(message);
+const header = (message) => console.log(message);
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -92,8 +100,7 @@ Commands:
   init
     --repo-root <path>        Repo root (default: auto-detect; fallback: cwd)
     --dry-run                 Show what would be created
-    --force                   Overwrite existing hub files (dangerous)
-    Initialize the project hub at .ai/project/ (idempotent by default).
+    Initialize missing project hub files at .ai/project/ without overwriting project data.
 
   lint
     --repo-root <path>        Repo root (default: auto-detect; fallback: cwd)
@@ -105,8 +112,6 @@ Commands:
     --repo-root <path>        Repo root (default: auto-detect; fallback: cwd)
     --dry-run                 Print planned changes without writing
     --apply                   Apply changes (writes files)
-    --init-if-missing         Create missing hub files from templates before syncing
-    --changelog               Append sync-detected events to hub changelog (apply-mode only)
     Generate missing task meta IDs, upsert registry tasks, and regenerate derived views.
 
   query
@@ -114,46 +119,32 @@ Commands:
     --id <T-###>              Filter by a specific task id
     --status <status>         Filter by status (planned|in-progress|blocked|done|archived)
     --text <substring>        Substring match against common task fields
-    --all-worktrees           Scan task bundles in every linked worktree, including uncommitted files
     --json                    Output a single JSON array instead of JSON lines
-    Locate tasks quickly for dedupe/triage (LLM-friendly output).
+    Locate tasks across every linked worktree for dedupe/triage (LLM-friendly output).
 
-  current-task
+  task-exists
     --repo-root <path>        Repo root (default: auto-detect; fallback: cwd)
-    --task <T-###>            Resolve a specific task instead of the active one
-    --format <fmt>            trailers (default) | id | json
-    Resolve the active task (single in-progress, else single blocked) for hooks/automation.
-    Status is read from task bundles (01-status.md State), never from the registry cache.
-    Exit codes: 0 resolved, 2 ambiguous, 3 none, 4 not found.
+    --task <T-###>            Task ID to validate (required)
+    Verify that a task ID is anchored by a task bundle; print the ID when found.
+    Exit codes: 0 found, 4 invalid or not found.
 
   resume
     --repo-root <path>        Repo root (default: auto-detect; fallback: cwd)
     --task <T-###>            Task ID (default: branch task, then the active task)
     --limit <n>               Recent linked commits (default: ${RESUME_DEFAULT_COMMIT_LIMIT}; max: ${RESUME_MAX_COMMIT_LIMIT})
     --scan <n>                History scan limit (default: ${RESUME_DEFAULT_SCAN_LIMIT}; max: ${RESUME_MAX_SCAN_LIMIT})
-    --json                    Output one stable JSON context packet
-    Build a bounded context-recovery packet from dev-docs, linked commits, and the worktree.
+    Output one bounded JSON context packet from dev-docs, linked commits, and the worktree.
     Resolution order: --task, branch T-###, single in-progress, then single blocked task.
     Exit codes: 0 resolved, 2 ambiguous, 3 none, 4 not found.
-
-  commits
-    --repo-root <path>        Repo root (default: auto-detect; fallback: cwd)
-    --task <T-###>            Task ID (default: the active task)
-    --limit <n>               Keep the most recent <n> commits (default: 20)
-    --scan <n>                Commits of history to scan (default: 500)
-    --json                    Output a single JSON array instead of JSON lines
-    Derive a task's commit timeline from "Task:" trailers in git log (read-only, non-SoT).
-    Output is oldest -> newest: the last line is the latest progress.
 
   map
     --repo-root <path>        Repo root (default: auto-detect; fallback: cwd)
     --task <T-###>            Task ID to map (required)
     --feature <F-###>         Feature ID to map the task to
-    --milestone <M-###>       Milestone ID to map the task to
     --requirement <R-###>     Existing Requirement ID to map the task to
     --dry-run                 Show what would change without writing
     --apply                   Apply the mapping change
-    Map a task to Feature/Milestone/Requirement in the registry.
+    Map a task to a Feature or Requirement. Its Milestone is derived from the Feature.
 
   feature
     --repo-root <path>        Repo root (default: auto-detect; fallback: cwd)
@@ -182,8 +173,7 @@ Examples:
   node .ai/scripts/ctl-project-governance.mjs feature --title "OAuth providers" --apply --json
   node .ai/scripts/ctl-project-governance.mjs requirement --title "Google sign-in" --feature F-002 --apply --json
   node .ai/scripts/ctl-project-governance.mjs map --task T-001 --feature F-002 --apply
-  node .ai/scripts/ctl-project-governance.mjs resume --json
-  node .ai/scripts/ctl-project-governance.mjs commits --task T-001
+  node .ai/scripts/ctl-project-governance.mjs resume
 `.trim();
 
   console.log(msg);
@@ -291,7 +281,7 @@ function getHubDir(repoRoot) {
 }
 
 function getRegistryPath(repoRoot) {
-  return path.join(getHubDir(repoRoot), 'registry.yaml');
+  return path.join(getHubDir(repoRoot), 'registry.json');
 }
 
 function getTemplatesDir(repoRoot) {
@@ -317,7 +307,7 @@ function replaceAutoBlock(raw, blockId, content, filePath, allowFullReplace = tr
     const label = filePath ? toPosix(filePath) : '(unknown file)';
     if (!allowFullReplace) {
       // Existing file with missing markers: refuse to overwrite to prevent data loss.
-      warn(`[warning] Missing AUTO-GENERATED markers for "${blockId}" in ${label}; skipping update to preserve manual content. Restore markers or run init --force to recreate.`);
+      warn(`[warning] Missing AUTO-GENERATED markers for "${blockId}" in ${label}; skipping update to preserve manual content. Restore the markers before retrying sync.`);
       return null;
     }
     // Safe fallback for freshly created templates.
@@ -336,178 +326,8 @@ function normalizeEol(s) {
   return String(s || '').replace(/\r\n/g, '\n');
 }
 
-function needsQuote(s) {
-  const t = String(s);
-  if (t === '') return true;
-  if (/[\s:#\[\]{}]/.test(t)) return true;
-  if (t.startsWith('-')) return true;
-  return false;
-}
-
-function dumpScalar(v) {
-  if (v === null) return 'null';
-  if (typeof v === 'boolean') return v ? 'true' : 'false';
-  if (typeof v === 'number') return String(v);
-  const s = String(v);
-  if (!needsQuote(s)) return s;
-  return `"${s.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
-}
-
-function dumpYamlDoc(doc) {
-  // Stable YAML serializer for the subset produced by this tool.
-  const out = [];
-
-  function pushLine(indent, text) {
-    out.push(`${' '.repeat(indent)}${text}`.trimEnd());
-  }
-
-  function dumpAny(value, indent, keyHint = '') {
-    if (Array.isArray(value)) {
-      if (value.length === 0) {
-        pushLine(indent, `${keyHint}: []`);
-        return;
-      }
-      pushLine(indent, `${keyHint}:`);
-      for (const item of value) {
-        if (item && typeof item === 'object' && !Array.isArray(item)) {
-          const keys = Object.keys(item);
-          if (keys.length === 0) {
-            pushLine(indent + 2, '- {}');
-            continue;
-          }
-          const orderedKeys = orderKeysForObject(item);
-          const firstKey = orderedKeys[0];
-          const firstVal = item[firstKey];
-          if (firstVal && typeof firstVal === 'object') {
-            pushLine(indent + 2, `- ${firstKey}:`);
-            dumpObject(firstVal, indent + 6);
-          } else {
-            pushLine(indent + 2, `- ${firstKey}: ${dumpScalar(firstVal)}`);
-          }
-          for (const k of orderedKeys.slice(1)) {
-            const v = item[k];
-            if (Array.isArray(v)) {
-              if (v.length === 0) {
-                pushLine(indent + 4, `${k}: []`);
-              } else {
-                pushLine(indent + 4, `${k}:`);
-                for (const li of v) {
-                  pushLine(indent + 6, `- ${dumpScalar(li)}`);
-                }
-              }
-            } else if (v && typeof v === 'object') {
-              pushLine(indent + 4, `${k}:`);
-              dumpObject(v, indent + 6);
-            } else {
-              pushLine(indent + 4, `${k}: ${dumpScalar(v)}`);
-            }
-          }
-          continue;
-        }
-        pushLine(indent + 2, `- ${dumpScalar(item)}`);
-      }
-      return;
-    }
-
-    if (value && typeof value === 'object') {
-      pushLine(indent, `${keyHint}:`);
-      dumpObject(value, indent + 2);
-      return;
-    }
-
-    pushLine(indent, `${keyHint}: ${dumpScalar(value)}`);
-  }
-
-  function orderKeysForObject(obj) {
-    const keys = Object.keys(obj);
-
-    const preferred = [
-      'id',
-      'slug',
-      'title',
-      'name',
-      'status',
-      'description',
-      'milestone_id',
-      'feature_id',
-      'requirement_id',
-      'requirement_ids',
-      'dev_docs_path',
-      'task_doc_roots',
-      'updated',
-      'keywords',
-    ];
-
-    const set = new Set(keys);
-    const ordered = [];
-    for (const k of preferred) if (set.has(k)) ordered.push(k);
-    const rest = keys.filter((k) => !ordered.includes(k)).sort((a, b) => a.localeCompare(b));
-    return [...ordered, ...rest];
-  }
-
-  function dumpObject(obj, indent) {
-    const keys = orderKeysForObject(obj);
-    for (const k of keys) {
-      const v = obj[k];
-      if (Array.isArray(v)) {
-        if (v.length === 0) {
-          pushLine(indent, `${k}: []`);
-        } else if (v.every((x) => typeof x !== 'object' || x === null)) {
-          pushLine(indent, `${k}:`);
-          for (const li of v) pushLine(indent + 2, `- ${dumpScalar(li)}`);
-        } else {
-          // list of objects
-          dumpAny(v, indent, k);
-        }
-      } else if (v && typeof v === 'object') {
-        pushLine(indent, `${k}:`);
-        dumpObject(v, indent + 2);
-      } else {
-        pushLine(indent, `${k}: ${dumpScalar(v)}`);
-      }
-    }
-  }
-
-  // Root ordering
-  const rootOrder = ['version', 'task_doc_roots', 'milestones', 'features', 'requirements', 'tasks'];
-  for (const k of rootOrder) {
-    if (!(k in doc)) continue;
-    const v = doc[k];
-    if (k === 'version') {
-      pushLine(0, `version: ${dumpScalar(v)}`);
-      pushLine(0, '');
-      continue;
-    }
-    if (Array.isArray(v)) {
-      if (v.length === 0) {
-        pushLine(0, `${k}: []`);
-        pushLine(0, '');
-        continue;
-      }
-      dumpAny(v, 0, k);
-      pushLine(0, '');
-      continue;
-    }
-    if (v && typeof v === 'object') {
-      pushLine(0, `${k}:`);
-      dumpObject(v, 2);
-      pushLine(0, '');
-      continue;
-    }
-    pushLine(0, `${k}: ${dumpScalar(v)}`);
-    pushLine(0, '');
-  }
-
-  // Any extra keys
-  const extra = Object.keys(doc)
-    .filter((k) => !rootOrder.includes(k))
-    .sort((a, b) => a.localeCompare(b));
-  for (const k of extra) {
-    dumpAny(doc[k], 0, k);
-    pushLine(0, '');
-  }
-
-  return out.join('\n').replace(/\n{3,}/g, '\n\n').trimEnd() + '\n';
+function renderJson(value) {
+  return `${JSON.stringify(value, null, 2)}\n`;
 }
 
 function getBundleStatusFromStatusDoc(statusRaw, statusPath = '01-status.md') {
@@ -762,7 +582,10 @@ function loadRegistry(repoRoot) {
   if (!raw) return { path: registryPath, registry: null, error: null };
 
   try {
-    const parsed = parseYaml(raw);
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+      throw new Error('Registry root must be a JSON object.');
+    }
     return { path: registryPath, registry: parsed, error: null };
   } catch (e) {
     return { path: registryPath, registry: null, error: e.message || String(e) };
@@ -773,6 +596,14 @@ function getConfiguredRootsFromRegistry(registry) {
   const roots = registry?.task_doc_roots;
   if (!Array.isArray(roots)) return [];
   return roots.map((r) => String(r)).filter(Boolean);
+}
+
+function getFeatureMilestoneMap(registry) {
+  return new Map(
+    (Array.isArray(registry?.features) ? registry.features : [])
+      .filter((feature) => feature && typeof feature === 'object')
+      .map((feature) => [String(feature.id || ''), String(feature.milestone_id || '')])
+  );
 }
 
 function validateRoadmap(roadmapRaw) {
@@ -888,7 +719,7 @@ function scanTasks(repoRoot, devDocsRoots) {
         const taskDir = path.join(phaseDir, slug);
         const statusPath = resolveTaskStatusDoc(taskDir);
         const roadmapPath = resolveTaskRoadmapDoc(taskDir);
-        const metaPath = path.join(taskDir, '.ai-task.yaml');
+        const metaPath = path.join(taskDir, '.ai-task.json');
         tasks.push({
           root,
           phase,
@@ -907,7 +738,20 @@ function scanTasks(repoRoot, devDocsRoots) {
 }
 
 function parseTaskMeta(metaRaw) {
-  const parsed = parseYaml(normalizeEol(metaRaw));
+  let parsed;
+  try {
+    parsed = JSON.parse(metaRaw);
+  } catch (error) {
+    return {
+      version: null,
+      task_id: '',
+      slug: '',
+      status: '',
+      updated: '',
+      keywords: [],
+      parse_error: error?.message || String(error),
+    };
+  }
   const map = parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
 
   return {
@@ -917,22 +761,19 @@ function parseTaskMeta(metaRaw) {
     status: String(map.status || ''),
     updated: String(map.updated || ''),
     keywords: Array.isArray(map.keywords) ? map.keywords.map((value) => String(value)) : [],
+    parse_error: null,
   };
 }
 
-function renderTaskMetaYaml(meta) {
-  const lines = [];
-  lines.push('version: 1');
-  lines.push(`task_id: ${meta.task_id}`);
-  lines.push(`slug: ${meta.slug}`);
-  if (meta.status) lines.push(`status: ${meta.status}`);
-  lines.push(`updated: "${meta.updated}"`);
-  if (Array.isArray(meta.keywords) && meta.keywords.length > 0) {
-    lines.push('keywords:');
-    for (const k of meta.keywords) lines.push(`  - ${k}`);
-  }
-  lines.push('');
-  return lines.join('\n');
+function renderTaskMetaJson(meta) {
+  return renderJson({
+    version: 1,
+    task_id: meta.task_id,
+    slug: meta.slug,
+    status: meta.status,
+    updated: meta.updated,
+    keywords: Array.isArray(meta.keywords) ? meta.keywords : [],
+  });
 }
 
 // The shipped tree sits two levels above this script's own directory, so for a skill shipping
@@ -941,7 +782,14 @@ function renderTaskMetaYaml(meta) {
 // the repository root once the script has been installed, which is what makes install a no-op copy
 // when it is run from inside a repository that already has it.
 const SHIPPED_ROOT = path.resolve(__dirname, '..', '..');
-const RETIRED_SHIPPED_FILES = ['.ai/project/CONTRACT.md'];
+const RETIRED_SHIPPED_FILES = [
+  '.ai/project/CONTRACT.md',
+  '.ai/project/task-index.md',
+  '.ai/project/changelog.md',
+  '.ai/project/templates/task-index.md',
+  '.ai/project/templates/changelog.md',
+  '.ai/project/templates/registry.yaml',
+];
 
 /** Every file under dir, as paths relative to dir. */
 function collectFiles(dir, base = dir) {
@@ -955,10 +803,34 @@ function collectFiles(dir, base = dir) {
 }
 
 // Install is the entry point for a repository that has nothing yet: the shipped tree is the control
-// script, its lib, the governance guidance, the templates init reads, and the empty task
+// script, the governance guidance, the templates init reads, and the empty task
 // directories. Shipped material is overwritten on every run so a re-install upgrades it in place;
 // the hub files init creates are project data and are never touched here.
+function assertJsonGovernanceLayout(repoRoot) {
+  const retired = [];
+  const registryYaml = path.join(repoRoot, '.ai', 'project', 'registry.yaml');
+  if (exists(registryYaml)) retired.push(registryYaml);
+
+  for (const root of discoverDevDocsRoots(repoRoot)) {
+    for (const phase of ['active', 'archive']) {
+      for (const slug of listImmediateChildDirs(path.join(root, phase))) {
+        const metaYaml = path.join(root, phase, slug, '.ai-task.yaml');
+        if (exists(metaYaml)) retired.push(metaYaml);
+      }
+    }
+  }
+
+  if (retired.length === 0) return;
+  const paths = retired.map((file) => `  - ${toPosix(path.relative(repoRoot, file))}`).join('\n');
+  die(
+    '[error] YAML task-governance data is not supported by this JSON-only version. ' +
+      'Convert or remove these files before continuing:\n' +
+      paths
+  );
+}
+
 function cmdInstall({ repoRoot, dryRun }) {
+  assertJsonGovernanceLayout(repoRoot);
   const srcRoot = SHIPPED_ROOT;
   const dstRoot = repoRoot;
   const actions = [];
@@ -1003,10 +875,11 @@ function cmdInstall({ repoRoot, dryRun }) {
     }
   }
 
-  cmdInit({ repoRoot, dryRun, force: false });
+  cmdInit({ repoRoot, dryRun });
 }
 
-function cmdInit({ repoRoot, dryRun, force }) {
+function cmdInit({ repoRoot, dryRun }) {
+  assertJsonGovernanceLayout(repoRoot);
   const hubDir = getHubDir(repoRoot);
   const templatesDir = getTemplatesDir(repoRoot);
   const vars = templateVars();
@@ -1015,7 +888,7 @@ function cmdInit({ repoRoot, dryRun, force }) {
     die(`[error] Missing templates directory: ${toPosix(path.relative(repoRoot, templatesDir))}`);
   }
 
-  const templateFiles = ['registry.yaml', 'dashboard.md', 'feature-map.md', 'task-index.md', 'changelog.md'];
+  const templateFiles = ['registry.json', 'dashboard.md', 'feature-map.md'];
   const actions = [];
 
   if (dryRun) {
@@ -1035,7 +908,7 @@ function cmdInit({ repoRoot, dryRun, force }) {
       continue;
     }
 
-    if (existed && !force) {
+    if (existed) {
       actions.push({ op: 'skip', path: dst, reason: 'exists' });
       continue;
     }
@@ -1044,17 +917,10 @@ function cmdInit({ repoRoot, dryRun, force }) {
     const rendered = renderTemplate(raw, vars);
 
     if (dryRun) {
-      actions.push({ op: existed ? 'overwrite' : 'write', path: dst, from: src, mode: 'dry-run' });
+      actions.push({ op: 'write', path: dst, from: src, mode: 'dry-run' });
       continue;
     }
 
-    if (force) {
-      writeText(dst, rendered);
-      actions.push({ op: existed ? 'overwrite' : 'write', path: dst, from: src });
-      continue;
-    }
-
-    // Non-force path already filtered existed files above.
     writeText(dst, rendered);
     actions.push({ op: 'write', path: dst, from: src });
   }
@@ -1120,6 +986,9 @@ function validateRegistryGraph(registry, errors) {
     errors
   );
   const tasks = collectRegistryIds(registry, 'tasks', 'Task', TASK_ID_RE, errors);
+  if (registry.ideas !== undefined && !Array.isArray(registry.ideas)) {
+    errors.push('Registry "ideas" must be a list when present.');
+  }
 
   if (!milestones.has('M-000')) errors.push('Registry is missing reserved Milestone M-000.');
   if (!features.has('F-000')) errors.push('Registry is missing reserved Feature F-000.');
@@ -1145,12 +1014,10 @@ function validateRegistryGraph(registry, errors) {
 
   for (const [id, task] of tasks) {
     const featureId = String(task.feature_id || '').trim();
-    const milestoneId = String(task.milestone_id || '').trim();
     if (!featureId) errors.push(`Task ${id} is missing feature_id.`);
     else if (!features.has(featureId)) errors.push(`Task ${id} references missing Feature ${featureId}.`);
-    if (!milestoneId) errors.push(`Task ${id} is missing milestone_id.`);
-    else if (!milestones.has(milestoneId)) {
-      errors.push(`Task ${id} references missing Milestone ${milestoneId}.`);
+    if (Object.hasOwn(task, 'milestone_id')) {
+      errors.push(`Task ${id} must not store milestone_id; its Milestone is derived from Feature ${featureId || '(missing)'}.`);
     }
 
     if (task.requirement_ids !== undefined && !Array.isArray(task.requirement_ids)) {
@@ -1181,7 +1048,7 @@ function cmdLint({ repoRoot, strict }) {
 
   let devDocsRoots = [];
   if (registryParseError) {
-    errors.push(`Failed to parse registry.yaml: ${registryParseError}`);
+    errors.push(`Failed to parse registry.json: ${registryParseError}`);
   }
 
   if (!registry) {
@@ -1190,7 +1057,13 @@ function cmdLint({ repoRoot, strict }) {
     );
     devDocsRoots = discoverDevDocsRoots(repoRoot);
   } else {
-    const REQUIRED_REGISTRY_KEYS = ['version', 'milestones', 'features', 'requirements', 'tasks'];
+    const REQUIRED_REGISTRY_KEYS = [
+      'version',
+      'milestones',
+      'features',
+      'requirements',
+      'tasks',
+    ];
     for (const key of REQUIRED_REGISTRY_KEYS) {
       if (!(key in registry) || registry[key] === undefined) {
         errors.push(`Registry missing required top-level key: "${key}".`);
@@ -1237,16 +1110,16 @@ function cmdLint({ repoRoot, strict }) {
     if (task.phase === 'archive') {
       const names = fs.readdirSync(task.absPath).sort();
       const hasSummary = names.includes('summary.md');
-      const hasMeta = names.includes('.ai-task.yaml');
-      const allowed = new Set(['.ai-task.yaml', 'summary.md']);
+      const hasMeta = names.includes('.ai-task.json');
+      const allowed = new Set(['.ai-task.json', 'summary.md']);
       const extras = names.filter((name) => !allowed.has(name));
       if (!hasSummary || !hasMeta || extras.length > 0 || names.length !== 2) {
         const details = [];
-        if (!hasMeta) details.push('missing .ai-task.yaml');
+        if (!hasMeta) details.push('missing .ai-task.json');
         if (!hasSummary) details.push('missing summary.md');
         if (extras.length > 0) details.push(`extra entries: ${extras.join(', ')}`);
         errors.push(
-          `${formatTaskRef(task)}: Archived bundle must contain exactly .ai-task.yaml and summary.md` +
+          `${formatTaskRef(task)}: Archived bundle must contain exactly .ai-task.json and summary.md` +
             `${details.length > 0 ? `; ${details.join('; ')}` : ''}.`
         );
       }
@@ -1288,11 +1161,16 @@ function cmdLint({ repoRoot, strict }) {
     }
 
     if (!metaRaw) {
-      errors.push(`${formatTaskRef(task)}: Missing .ai-task.yaml.`);
+      errors.push(`${formatTaskRef(task)}: Missing .ai-task.json.`);
       continue;
     }
 
     const meta = parseTaskMeta(metaRaw);
+
+    if (meta.parse_error) {
+      errors.push(`${formatTaskRef(task)}: Failed to parse .ai-task.json: ${meta.parse_error}`);
+      continue;
+    }
 
     if (meta.version !== 1) {
       errors.push(`${formatTaskRef(task)}: Invalid meta version (expected 1).`);
@@ -1433,16 +1311,16 @@ function cmdLint({ repoRoot, strict }) {
 
   if (errors.length > 0) {
     header('Errors:');
-    for (const e of errors) console.log(colors.red(`- ${e}`));
+    for (const e of errors) console.log(`- ${e}`);
   }
 
   if (warnings.length > 0) {
     header('Warnings:');
-    for (const w of warnings) console.log(colors.yellow(`- ${w}`));
+    for (const w of warnings) console.log(`- ${w}`);
   }
 
   const okExit = errors.length === 0;
-  console.log(okExit ? colors.green('[ok] Lint passed.') : colors.red('[error] Lint failed.'));
+  console.log(okExit ? '[ok] Lint passed.' : '[error] Lint failed.');
   return { ok: okExit, errors, warnings };
 }
 
@@ -1458,10 +1336,13 @@ function collectTaskRows({ repoRoot, quiet = false, fromBundles = false }) {
   const registry = loaded.registry;
   if (!registry && loaded.error && !quiet) {
     // Keep stdout clean (JSONL/JSON), but surface the issue for operators.
-    console.error(colors.yellow(`[warning] Failed to parse registry.yaml; falling back to dev-docs scan: ${loaded.error}`));
+    console.error(
+      `[warning] Failed to parse registry.json; falling back to dev-docs scan: ${loaded.error}`
+    );
   }
 
   if (!fromBundles && registry && Array.isArray(registry.tasks)) {
+    const featureMilestones = getFeatureMilestoneMap(registry);
     return registry.tasks
       .filter((t) => t && typeof t === 'object')
       .map((t) => ({
@@ -1470,7 +1351,7 @@ function collectTaskRows({ repoRoot, quiet = false, fromBundles = false }) {
         slug: String(t.slug || ''),
         dev_docs_path: String(t.dev_docs_path || ''),
         feature_id: String(t.feature_id || ''),
-        milestone_id: String(t.milestone_id || ''),
+        milestone_id: featureMilestones.get(String(t.feature_id || '')) || '',
         title: String(t.title || ''),
         updated: String(t.updated || ''),
         keywords: Array.isArray(t.keywords) ? t.keywords.map((k) => String(k)) : [],
@@ -1528,6 +1409,7 @@ function collectAllWorktreeTaskRows(repoRoot) {
   const rows = [];
   for (const worktree of listGitWorktrees(repoRoot)) {
     const registry = loadRegistry(worktree.path).registry;
+    const featureMilestones = getFeatureMilestoneMap(registry);
     const registryTasks = new Map(
       (Array.isArray(registry?.tasks) ? registry.tasks : [])
         .filter((task) => task && typeof task === 'object' && TASK_ID_RE.test(String(task.id || '')))
@@ -1537,7 +1419,7 @@ function collectAllWorktreeTaskRows(repoRoot) {
       const projection = registryTasks.get(task.id) || {};
       rows.push({
         feature_id: String(projection.feature_id || ''),
-        milestone_id: String(projection.milestone_id || ''),
+        milestone_id: featureMilestones.get(String(projection.feature_id || '')) || '',
         title: String(projection.title || ''),
         ...task,
         worktree_path: toPosix(worktree.path),
@@ -1551,7 +1433,7 @@ function collectAllWorktreeTaskRows(repoRoot) {
   });
 }
 
-function cmdQuery({ repoRoot, id, status, text, json, allWorktrees = false }) {
+function cmdQuery({ repoRoot, id, status, text, json }) {
   // Query is designed for LLM consumption: default is JSONL (one object per line).
   function includesText(value, needle) {
     if (!needle) return true;
@@ -1587,8 +1469,7 @@ function cmdQuery({ repoRoot, id, status, text, json, allWorktrees = false }) {
     return true;
   }
 
-  const sourceRows = allWorktrees ? collectAllWorktreeTaskRows(repoRoot) : collectTaskRows({ repoRoot });
-  const rows = sourceRows.filter(taskMatches);
+  const rows = collectAllWorktreeTaskRows(repoRoot).filter(taskMatches);
 
   if (json) console.log(JSON.stringify(rows));
   else formatJsonLines(rows);
@@ -1822,11 +1703,6 @@ function readCommitTimeline({ repoRoot, scan }) {
   return records;
 }
 
-function countWorktreeChanges(repoRoot) {
-  const status = readWorktreeStatus(repoRoot);
-  return status === null ? null : status.count;
-}
-
 function readWorktreeStatus(repoRoot, limit = 10) {
   const raw = runGit(repoRoot, ['status', '--porcelain=v1', '--untracked-files=all']);
   if (raw === null) return null;
@@ -1842,47 +1718,18 @@ function readWorktreeStatus(repoRoot, limit = 10) {
   };
 }
 
-function countCommitsTouchingPath(repoRoot, relPath) {
-  // Counter-evidence for an empty timeline: commits may exist without a `Task:`
-  // trailer (hooks are opt-in), and "no linked commits" must not be read as "no work".
-  if (!relPath) return null;
-  const raw = runGit(repoRoot, ['rev-list', '--count', 'HEAD', '--', relPath]);
-  if (raw === null) return null;
-  const n = Number.parseInt(raw.trim(), 10);
-  return Number.isFinite(n) ? n : null;
-}
-
-function cmdCurrentTask({ repoRoot, taskId, format }) {
+function cmdTaskExists({ repoRoot, taskId }) {
+  if (!TASK_ID_RE.test(taskId || '')) {
+    console.error(`[error] Invalid task ID: ${taskId || '(missing)'}`);
+    return { exitCode: 4 };
+  }
   const res = resolveTaskContext({ repoRoot, taskId });
-
   if (!res.ok) {
-    if (res.reason === 'not-found') {
-      console.error(colors.red(`[error] Task not found: ${taskId}`));
-      return { exitCode: 4 };
-    }
-    if (res.reason === 'ambiguous') {
-      console.error(colors.yellow('[warning] Multiple active tasks; pass --task <T-###> to disambiguate:'));
-      for (const c of res.candidates) console.error(`  - ${c.id} ${c.slug} (${c.status})`);
-      return { exitCode: 2 };
-    }
-    console.error(colors.dim('[info] No active task (no in-progress or blocked task bundle found).'));
-    return { exitCode: 3 };
+    console.error(`[error] Task not found: ${taskId}`);
+    return { exitCode: 4 };
   }
-
-  const task = res.task;
-
-  if (format === 'json') {
-    console.log(JSON.stringify(task));
-  } else if (format === 'id') {
-    console.log(task.id);
-  } else {
-    // `trailers` is the hook-facing format: ready to append verbatim.
-    console.log(`Task: ${task.id}`);
-    const docs = docsTrailerValue(task.dev_docs_path);
-    if (docs) console.log(`Docs: ${docs}`);
-  }
-
-  return { exitCode: 0, task };
+  console.log(res.task.id);
+  return { exitCode: 0, task: res.task };
 }
 
 function resumeFailureExitCode(reason) {
@@ -1908,7 +1755,7 @@ function resumeFailureMessage(res) {
   return 'Unable to resolve a task for context recovery.';
 }
 
-function renderResumeFailure(res, json) {
+function renderResumeFailure(res) {
   const limiter = createResumeTextLimiter();
   const allCandidates = Array.isArray(res.candidates) ? res.candidates : [];
   const branchTaskIds = Array.isArray(res.branchTaskIds) ? res.branchTaskIds.slice(0, RESUME_MAX_CANDIDATES) : [];
@@ -1937,13 +1784,7 @@ function renderResumeFailure(res, json) {
     truncated_fields: limiter.fields,
   };
 
-  if (json) console.log(JSON.stringify({ version: 3, error }));
-  else {
-    console.error(colors.yellow(`[warning] ${error.message}`));
-    for (const candidate of error.candidates) {
-      console.error(`  - ${candidate.id} ${candidate.slug} (${candidate.state})`);
-    }
-  }
+  console.log(JSON.stringify({ version: 3, error }));
 
   return resumeFailureExitCode(res.reason);
 }
@@ -2006,74 +1847,11 @@ function buildResumeSuggestions({ task, commits, worktree, pitfalls }) {
   return { reads, commands };
 }
 
-function renderResumeText(packet) {
-  console.log(`Task: ${packet.task.id} ${packet.task.slug}`);
-  console.log(`State: ${packet.task.state}`);
-  console.log(`Goal: ${packet.status.goal || 'unknown'}`);
-  console.log(`Docs: ${packet.task.docs_path}`);
-  console.log(`Next step: ${packet.status.next_step || 'unknown'}`);
-  console.log(`Kickoff: ${packet.roadmap.kickoff_status}`);
-  console.log(`Resolution: ${packet.task.resolution}`);
-  console.log(`Branch: ${packet.repository.branch || 'unknown'}`);
-  console.log(`HEAD: ${packet.repository.head || 'unknown'}`);
-  console.log('');
-  console.log('Recent checkpoints:');
-
-  if (packet.timeline.commits.length === 0) {
-    console.log('- unknown (no linked commits found)');
-  } else {
-    for (const commit of packet.timeline.commits) {
-      console.log(`- ${commit.commit} ${commit.subject}`);
-      if (commit.phase) console.log(`  Phase hint: ${commit.phase}`);
-      if (commit.verify) console.log(`  Verify: ${commit.verify}`);
-    }
-  }
-
-  console.log('');
-  if (packet.worktree === null) {
-    console.log('Worktree: unknown');
-  } else if (packet.worktree.clean) {
-    console.log('Worktree: clean');
-  } else {
-    console.log(`Worktree: dirty (${packet.worktree.count} repo-wide change(s))`);
-    for (const entry of packet.worktree.entries) console.log(`- ${entry}`);
-    if (packet.worktree.truncated) console.log('- ...');
-  }
-
-  if (packet.do_not_repeat.length > 0) {
-    console.log('');
-    console.log('Do not repeat:');
-    for (const item of packet.do_not_repeat) console.log(`- ${item}`);
-  }
-
-  if (packet.warnings.length > 0) {
-    console.log('');
-    console.log('Warnings:');
-    for (const warning of packet.warnings) console.log(`- ${warning}`);
-  }
-
-  if (packet.truncated_fields.length > 0) {
-    console.log('');
-    console.log('Truncated fields:');
-    for (const field of packet.truncated_fields) console.log(`- ${field}`);
-  }
-
-  console.log('');
-  console.log('Suggested reads:');
-  for (const read of packet.suggested_reads) console.log(`- ${read}`);
-
-  if (packet.suggested_commands.length > 0) {
-    console.log('');
-    console.log('Suggested commands:');
-    for (const command of packet.suggested_commands) console.log(`- ${command}`);
-  }
-}
-
-function cmdResume({ repoRoot, taskId, limit, scan, limitClamped, scanClamped, json }) {
+function cmdResume({ repoRoot, taskId, limit, scan, limitClamped, scanClamped }) {
   const branch = readCurrentBranch(repoRoot);
   const resolved = resolveResumeTaskContext({ repoRoot, taskId, branch });
   if (!resolved.ok) {
-    return { exitCode: renderResumeFailure(resolved, json) };
+    return { exitCode: renderResumeFailure(resolved) };
   }
 
   const task = resolved.task;
@@ -2089,7 +1867,7 @@ function cmdResume({ repoRoot, taskId, limit, scan, limitClamped, scanClamped, j
       branchTaskIds: taskIdsFromBranch(branch),
       candidates: [],
     };
-    return { exitCode: renderResumeFailure(failure, json) };
+    return { exitCode: renderResumeFailure(failure) };
   }
 
   const linked = records.filter((record) => record.tasks.includes(task.id));
@@ -2205,205 +1983,27 @@ function cmdResume({ repoRoot, taskId, limit, scan, limitClamped, scanClamped, j
   };
   packet.truncated_fields = [...limiter.fields];
 
-  if (json) console.log(JSON.stringify(packet));
-  else renderResumeText(packet);
+  console.log(JSON.stringify(packet));
   return { exitCode: 0, packet };
 }
 
-function cmdCommits({ repoRoot, taskId, limit, scan, json }) {
-  const res = resolveTaskContext({ repoRoot, taskId });
-  if (!res.ok) {
-    if (res.reason === 'not-found') console.error(colors.red(`[error] Task not found: ${taskId}`));
-    else if (res.reason === 'ambiguous') {
-      console.error(colors.yellow('[warning] Multiple active tasks; pass --task <T-###>:'));
-      for (const c of res.candidates) console.error(`  - ${c.id} ${c.slug} (${c.status})`);
-    } else {
-      console.error(colors.yellow('[warning] No active task found; pass --task <T-###>.'));
-    }
-    return { ok: false };
-  }
-
-  const task = res.task;
-  const records = readCommitTimeline({ repoRoot, scan });
-  if (records === null) {
-    console.error(colors.red('[error] Unable to read git history (not a git repository, or git is unavailable).'));
-    return { ok: false };
-  }
-
-  const matched = records.filter((r) => r.tasks.includes(task.id));
-  // Output oldest -> newest so "the last line" is unambiguously the latest commit.
-  // The limit still keeps the *most recent* N commits.
-  const rows = matched.slice(0, limit).reverse();
-
-  if (json) console.log(JSON.stringify(rows));
-  else formatJsonLines(rows);
-
-  // Progress calibration hints go to stderr so stdout stays machine-readable.
-  console.error(
-    colors.dim(
-      `[info] ${task.id} ${task.slug} (${task.status}): ${matched.length} linked commit(s), showing ${rows.length} (scanned ${scan}).`
-    )
-  );
-
-  if (records.length >= scan) {
-    console.error(colors.dim(`[info] Scan limit reached (${scan}); older commits were not examined. Raise --scan for full history.`));
-  }
-
-  if (matched.length === 0) {
-    console.error(colors.yellow(`[warning] No commit carries "Task: ${task.id}". Treat the timeline as UNKNOWN, not as zero progress.`));
-    const touched = countCommitsTouchingPath(repoRoot, task.dev_docs_path);
-    if (touched) {
-      console.error(
-        colors.yellow(
-          `[warning] ${touched} commit(s) touched ${task.dev_docs_path} without the trailer; the work is likely committed but unlinked.`
-        )
-      );
-      console.error(colors.dim(`[info] Inspect manually: git log --oneline -- ${task.dev_docs_path}`));
-    }
-  }
-
-  const dirty = countWorktreeChanges(repoRoot);
-  if (dirty) {
-    console.error(
-      colors.yellow(
-        `[warning] ${dirty} uncommitted change(s) in the worktree (repo-wide count, possibly unrelated to this task); the timeline may be behind the actual state.`
-      )
-    );
-  }
-
-  return { ok: true, rows };
-}
-
-function computeChangelogEntries({ prevById, nextById, todayStr }) {
-  const lines = [];
-
-  for (const [id, next] of nextById.entries()) {
-    const prev = prevById.get(id);
-    if (!prev) {
-      lines.push(
-        `- ${todayStr} task_id=${id} slug=${next.slug || ''} event=registered dev_docs_path=${next.dev_docs_path || ''}`.trimEnd()
-      );
-      continue;
-    }
-    const prevStatus = String(prev.status || '');
-    const nextStatus = String(next.status || '');
-    if (prevStatus && nextStatus && prevStatus !== nextStatus) {
-      lines.push(
-        `- ${todayStr} task_id=${id} slug=${next.slug || ''} event=status from=${prevStatus} to=${nextStatus}`.trimEnd()
-      );
-    }
-  }
-
-  return lines;
-}
-
-function appendChangelog({ repoRoot, changelogPath, entries, dryRun, apply, initIfMissing }) {
-  if (!entries || entries.length === 0) return;
-
-  let base = readText(changelogPath);
-  if (!base && initIfMissing) {
-    const templatesDir = getTemplatesDir(repoRoot);
-    const tpl = path.join(templatesDir, 'changelog.md');
-    const tplRaw = readText(tpl);
-    if (tplRaw) base = renderTemplate(tplRaw, templateVars());
-  }
-
-  if (!base) {
-    // Do not fail sync for changelog issues.
-    return { ok: false, error: `Missing changelog file: ${toPosix(path.relative(repoRoot, changelogPath))}` };
-  }
-
-  const normalized = normalizeEol(base).trimEnd() + '\n';
-  const hasEntries = /(^|\n)## Entries\s*\n/.test(normalized);
-  const toAppend = entries.join('\n') + '\n';
-  const next = hasEntries ? normalized + toAppend : normalized + '\n## Entries\n' + toAppend;
-
-  if (dryRun || !apply) {
-    return { ok: true, planned: true, next };
-  }
-
-  const changed = writeTextIfChanged(changelogPath, next);
-  return { ok: true, changed };
-}
-
-function cmdSync({ repoRoot, dryRun, apply, initIfMissing, changelog }) {
+function cmdSync({ repoRoot, dryRun, apply }) {
   const actions = [];
   const errors = [];
   const warnings = [];
 
   const registryPath = getRegistryPath(repoRoot);
-  let reg = null;
-  let hubMissing = !exists(registryPath);
-
-  if (!hubMissing) {
-    const loaded = loadRegistry(repoRoot);
-    if (!loaded.registry) {
-      errors.push(`Failed to parse registry.yaml: ${loaded.error || '(unknown error)'}`);
-      return { ok: false, errors, warnings, actions };
-    }
-    reg = loaded.registry;
-  } else {
-    if (!initIfMissing) {
-      errors.push(
-        'Project hub missing. Run: node .ai/scripts/ctl-project-governance.mjs init'
-      );
-      return { ok: false, errors, warnings, actions };
-    }
-
-    const templatesDir = getTemplatesDir(repoRoot);
-    const tplRegistryPath = path.join(templatesDir, 'registry.yaml');
-    const tplRaw = readText(tplRegistryPath);
-    if (!tplRaw) {
-      errors.push(`Missing registry template: ${toPosix(path.relative(repoRoot, tplRegistryPath))}`);
-      return { ok: false, errors, warnings, actions };
-    }
-
-    try {
-      reg = parseYaml(renderTemplate(tplRaw, templateVars()));
-    } catch (e) {
-      errors.push(`Failed to parse registry template: ${e.message || String(e)}`);
-      return { ok: false, errors, warnings, actions };
-    }
-
-    // Plan/init hub files if missing
-    const hubDir = getHubDir(repoRoot);
-    const templateFiles = ['registry.yaml', 'dashboard.md', 'feature-map.md', 'task-index.md', 'changelog.md'];
-    if (dryRun || !apply) {
-      actions.push({ op: 'mkdir', path: hubDir, note: 'init hub', mode: 'dry-run' });
-      for (const file of templateFiles) {
-        actions.push({
-          op: 'write',
-          path: path.join(hubDir, file),
-          note: 'init hub',
-          mode: 'dry-run',
-        });
-      }
-    } else {
-      cmdInit({ repoRoot, dryRun: false, force: false });
-      hubMissing = false;
-      const loaded = loadRegistry(repoRoot);
-      if (!loaded.registry) {
-        errors.push(`Cannot load registry after init: ${toPosix(path.relative(repoRoot, registryPath))}`);
-        return { ok: false, errors, warnings, actions };
-      }
-      reg = loaded.registry;
-    }
+  if (!exists(registryPath)) {
+    errors.push('Project hub missing. Run: node .ai/scripts/ctl-project-governance.mjs init');
+    return { ok: false, errors, warnings, actions };
   }
 
-  // Snapshot previous registry tasks for optional changelog append.
-  const prevById = new Map();
-  if (reg && Array.isArray(reg.tasks)) {
-    for (const t of reg.tasks) {
-      if (!t || typeof t !== 'object') continue;
-      const id = String(t.id || '').trim();
-      if (!id) continue;
-      prevById.set(id, {
-        status: String(t.status || ''),
-        slug: String(t.slug || ''),
-        dev_docs_path: String(t.dev_docs_path || ''),
-      });
-    }
+  const loaded = loadRegistry(repoRoot);
+  if (!loaded.registry) {
+    errors.push(`Failed to parse registry.json: ${loaded.error || '(unknown error)'}`);
+    return { ok: false, errors, warnings, actions };
   }
+  const reg = loaded.registry;
 
   let roots = getConfiguredRootsFromRegistry(reg).map((p) => path.resolve(repoRoot, p));
   if (roots.length === 0) roots = discoverDevDocsRoots(repoRoot);
@@ -2486,7 +2086,7 @@ function cmdSync({ repoRoot, dryRun, apply, initIfMissing, changelog }) {
         updated: todayStr,
         keywords: [],
       };
-      const rendered = renderTaskMetaYaml(meta);
+      const rendered = renderTaskMetaJson(meta);
       if (dryRun || !apply) {
         actions.push({ op: 'write', path: task.metaPath, note: `allocate ${id}`, mode: 'dry-run' });
       } else {
@@ -2496,6 +2096,10 @@ function cmdSync({ repoRoot, dryRun, apply, initIfMissing, changelog }) {
       task.taskId = id;
     } else {
       const meta = parseTaskMeta(metaRaw);
+      if (meta.parse_error) {
+        errors.push(`${toPosix(task.relPath)}: Failed to parse .ai-task.json: ${meta.parse_error}`);
+        continue;
+      }
       if (!TASK_ID_RE.test(meta.task_id)) {
         warnings.push(`${toPosix(task.relPath)}: Invalid task_id; sync will not auto-repair without manual fix.`);
         continue;
@@ -2513,7 +2117,7 @@ function cmdSync({ repoRoot, dryRun, apply, initIfMissing, changelog }) {
           updated: todayStr,
           keywords: meta.keywords || [],
         };
-        const rendered = renderTaskMetaYaml(nextMeta);
+        const rendered = renderTaskMetaJson(nextMeta);
         if (dryRun || !apply) {
           actions.push({ op: 'update', path: task.metaPath, note: 'refresh derived fields', mode: 'dry-run' });
         } else {
@@ -2532,25 +2136,12 @@ function cmdSync({ repoRoot, dryRun, apply, initIfMissing, changelog }) {
     entry.dev_docs_path = toPosix(task.relPath);
     if (!entry.updated || entry.status !== prevStatus) entry.updated = todayStr;
     if (!entry.feature_id) entry.feature_id = 'F-000';
-    if (!entry.milestone_id) entry.milestone_id = 'M-000';
+    delete entry.milestone_id;
 
     tasksById.set(task.taskId, entry);
   }
 
   reg.tasks = [...tasksById.values()].sort((a, b) => String(a.id).localeCompare(String(b.id)));
-
-  // Optional changelog entries are derived from prev->next registry drift.
-  const nextById = new Map();
-  for (const t of reg.tasks) {
-    if (!t || typeof t !== 'object') continue;
-    const id = String(t.id || '').trim();
-    if (!id) continue;
-    nextById.set(id, {
-      status: String(t.status || ''),
-      slug: String(t.slug || ''),
-      dev_docs_path: String(t.dev_docs_path || ''),
-    });
-  }
 
   // Ensure system nodes exist
   if (!Array.isArray(reg.milestones)) reg.milestones = [];
@@ -2573,12 +2164,13 @@ function cmdSync({ repoRoot, dryRun, apply, initIfMissing, changelog }) {
     });
   }
   if (!Array.isArray(reg.requirements)) reg.requirements = [];
+  if (reg.ideas === undefined) reg.ideas = [];
   if (!Array.isArray(reg.task_doc_roots) || reg.task_doc_roots.length === 0) {
     reg.task_doc_roots = roots.map((r) => toPosix(path.relative(repoRoot, r)));
   }
 
   // Write registry
-  const registryOut = dumpYamlDoc(reg);
+  const registryOut = renderJson(reg);
   if (dryRun || !apply) {
     actions.push({ op: 'update', path: registryPath, note: 'update registry', mode: 'dry-run' });
   } else {
@@ -2586,39 +2178,10 @@ function cmdSync({ repoRoot, dryRun, apply, initIfMissing, changelog }) {
     if (changed) actions.push({ op: 'update', path: registryPath, note: 'update registry' });
   }
 
-  // Optional: append changelog events (apply-mode only; append-only).
-  if (changelog) {
-    const hubDir = getHubDir(repoRoot);
-    const changelogPath = path.join(hubDir, 'changelog.md');
-    const entries = computeChangelogEntries({ prevById, nextById, todayStr });
-    const res = appendChangelog({
-      repoRoot,
-      changelogPath,
-      entries,
-      dryRun,
-      apply,
-      initIfMissing,
-    });
-    if (res?.ok === false) {
-      warnings.push(String(res.error || 'Failed to append changelog.'));
-    } else if (entries.length > 0) {
-      actions.push({
-        op: 'append',
-        path: changelogPath,
-        note: `changelog (${entries.length} entries)`,
-        mode: dryRun || !apply ? 'dry-run' : undefined,
-      });
-    }
-  }
-
   // Derived views
-  const templatesDir = getTemplatesDir(repoRoot);
-  const vars = templateVars();
-
   const hubDir = getHubDir(repoRoot);
   const dashboardPath = path.join(hubDir, 'dashboard.md');
   const featureMapPath = path.join(hubDir, 'feature-map.md');
-  const taskIndexPath = path.join(hubDir, 'task-index.md');
 
   const regTasks = Array.isArray(reg.tasks) ? reg.tasks : [];
   const counts = { total: regTasks.length, planned: 0, inProgress: 0, blocked: 0, done: 0, archived: 0 };
@@ -2630,13 +2193,13 @@ function cmdSync({ repoRoot, dryRun, apply, initIfMissing, changelog }) {
     else if (st === 'done') counts.done++;
     else if (st === 'archived') counts.archived++;
   }
-
-  const dashAuto = [
+  const cell = (value) => String(value || '').replace(/\r?\n/g, ' ').replace(/\|/g, '\\|');
+  const dashAutoLines = [
     '## Summary',
     '',
     `- Tasks: ${counts.total} (planned: ${counts.planned}, in-progress: ${counts.inProgress}, blocked: ${counts.blocked}, done: ${counts.done}, archived: ${counts.archived})`,
     '',
-    '## Recent tasks',
+    '## Recently registered or status-changed tasks',
     '',
     '| Task | Status | Feature | Dev Docs |',
     '| --- | --- | --- | --- |',
@@ -2646,12 +2209,11 @@ function cmdSync({ repoRoot, dryRun, apply, initIfMissing, changelog }) {
       .slice(0, 20)
       .map((t) => {
         const taskLabel = `${t.id} ${t.slug || ''}`.trim();
-        const feature = String(t.feature_id || '');
-        const dev = String(t.dev_docs_path || '');
-        return `| ${taskLabel} | ${t.status || ''} | ${feature} | ${dev} |`;
+        return `| ${cell(taskLabel)} | ${cell(t.status)} | ${cell(t.feature_id)} | ${cell(t.dev_docs_path)} |`;
       }),
     '',
-  ].join('\n');
+  ];
+  const dashAuto = dashAutoLines.join('\n');
 
   const featureAutoLines = [];
   featureAutoLines.push('## Features');
@@ -2686,29 +2248,9 @@ function cmdSync({ repoRoot, dryRun, apply, initIfMissing, changelog }) {
   }
   const featureAuto = featureAutoLines.join('\n').trimEnd() + '\n';
 
-  const taskIndexAutoLines = [];
-  taskIndexAutoLines.push('## Tasks');
-  taskIndexAutoLines.push('');
-  taskIndexAutoLines.push('| Task | Status | Feature | Dev Docs |');
-  taskIndexAutoLines.push('| --- | --- | --- | --- |');
-  for (const t of regTasks.slice().sort((a, b) => String(a.id).localeCompare(String(b.id)))) {
-    const label = `${t.id} ${t.slug || ''}`.trim();
-    taskIndexAutoLines.push(`| ${label} | ${t.status || ''} | ${t.feature_id || ''} | ${t.dev_docs_path || ''} |`);
-  }
-  taskIndexAutoLines.push('');
-  const taskIndexAuto = taskIndexAutoLines.join('\n');
-
   function updateDerived(filePath, blockId, content) {
-    let base = readText(filePath);
+    const base = readText(filePath);
     const existedOnDisk = base !== null;
-    if (!base && initIfMissing) {
-      // In init-if-missing mode, use the rendered template as the base for dry-run planning.
-      const tplName = path.basename(filePath);
-      const tplPath = path.join(templatesDir, tplName);
-      const tplRaw = readText(tplPath);
-      if (tplRaw) base = renderTemplate(tplRaw, vars);
-    }
-
     if (!base) {
       warnings.push(`Missing derived view file: ${toPosix(path.relative(repoRoot, filePath))} (run init).`);
       return;
@@ -2720,7 +2262,7 @@ function cmdSync({ repoRoot, dryRun, apply, initIfMissing, changelog }) {
     if (next === null) {
       // Markers missing in existing file; skipped to prevent data loss.
       warnings.push(
-        `Skipped update of ${toPosix(path.relative(repoRoot, filePath))}: missing AUTO-GENERATED markers for "${blockId}". Restore markers or run init --force to recreate.`
+        `Skipped update of ${toPosix(path.relative(repoRoot, filePath))}: missing AUTO-GENERATED markers for "${blockId}". Restore the markers before retrying sync.`
       );
       return;
     }
@@ -2736,21 +2278,20 @@ function cmdSync({ repoRoot, dryRun, apply, initIfMissing, changelog }) {
 
   updateDerived(dashboardPath, 'dashboard', dashAuto);
   updateDerived(featureMapPath, 'feature-map', featureAuto);
-  updateDerived(taskIndexPath, 'task-index', taskIndexAuto);
 
   // Summary
   const okExit = errors.length === 0;
   if (!okExit) {
     header('Errors:');
-    for (const e of errors) console.log(colors.red(`- ${e}`));
+    for (const e of errors) console.log(`- ${e}`);
   }
   if (warnings.length > 0) {
     header('Warnings:');
-    for (const w of warnings) console.log(colors.yellow(`- ${w}`));
+    for (const w of warnings) console.log(`- ${w}`);
   }
 
   if (okExit) ok('[ok] Sync complete.');
-  else console.log(colors.red('[error] Sync failed.'));
+  else console.log('[error] Sync failed.');
 
   for (const a of actions) {
     const mode = a.mode ? ` (${a.mode})` : '';
@@ -2761,7 +2302,7 @@ function cmdSync({ repoRoot, dryRun, apply, initIfMissing, changelog }) {
   return { ok: okExit, errors, warnings, actions };
 }
 
-function cmdMap({ repoRoot, taskId, featureId, milestoneId, requirementId, dryRun, apply }) {
+function cmdMap({ repoRoot, taskId, featureId, requirementId, dryRun, apply }) {
   const errors = [];
   const actions = [];
 
@@ -2770,18 +2311,14 @@ function cmdMap({ repoRoot, taskId, featureId, milestoneId, requirementId, dryRu
     return { ok: false, errors, actions };
   }
 
-  if (!featureId && !milestoneId && !requirementId) {
-    errors.push('At least one of --feature, --milestone, or --requirement is required.');
+  if (!featureId && !requirementId) {
+    errors.push('At least one of --feature or --requirement is required.');
     return { ok: false, errors, actions };
   }
 
   // Validate ID formats.
   if (featureId && !FEATURE_ID_RE.test(featureId)) {
     errors.push(`Invalid --feature ID format (expected F-###, got "${featureId}").`);
-    return { ok: false, errors, actions };
-  }
-  if (milestoneId && !MILESTONE_ID_RE.test(milestoneId)) {
-    errors.push(`Invalid --milestone ID format (expected M-###, got "${milestoneId}").`);
     return { ok: false, errors, actions };
   }
   if (requirementId && !REQUIREMENT_ID_RE.test(requirementId)) {
@@ -2815,15 +2352,6 @@ function cmdMap({ repoRoot, taskId, featureId, milestoneId, requirementId, dryRu
     }
   }
 
-  // Validate milestone exists
-  if (milestoneId) {
-    const milestoneExists = Array.isArray(reg.milestones) && reg.milestones.some((m) => m && m.id === milestoneId);
-    if (!milestoneExists) {
-      errors.push(`Milestone "${milestoneId}" not found in registry.`);
-      return { ok: false, errors, actions };
-    }
-  }
-
   // Validate requirement and its Feature relationship.
   if (requirementId) {
     const requirement = Array.isArray(reg.requirements)
@@ -2849,10 +2377,6 @@ function cmdMap({ repoRoot, taskId, featureId, milestoneId, requirementId, dryRu
   if (featureId && taskEntry.feature_id !== featureId) {
     changes.push(`feature_id: ${taskEntry.feature_id || '(none)'} -> ${featureId}`);
     taskEntry.feature_id = featureId;
-  }
-  if (milestoneId && taskEntry.milestone_id !== milestoneId) {
-    changes.push(`milestone_id: ${taskEntry.milestone_id || '(none)'} -> ${milestoneId}`);
-    taskEntry.milestone_id = milestoneId;
   }
   if (requirementId) {
     const reqIds = Array.isArray(taskEntry.requirement_ids) ? taskEntry.requirement_ids : [];
@@ -2883,7 +2407,7 @@ function cmdMap({ repoRoot, taskId, featureId, milestoneId, requirementId, dryRu
   }
 
   // Write registry
-  const registryOut = dumpYamlDoc(reg);
+  const registryOut = renderJson(reg);
   const changed = writeTextIfChanged(registryPath, registryOut);
   if (changed) {
     actions.push({ op: 'write', path: registryPath });
@@ -3009,7 +2533,7 @@ function cmdFeature({ repoRoot, title, description, dryRun, apply, json }) {
   registry.features.sort((a, b) => String(a?.id || '').localeCompare(String(b?.id || '')));
 
   if (apply && !dryRun && actions.length > 0) {
-    writeTextIfChanged(loaded.path, dumpYamlDoc(registry));
+    writeTextIfChanged(loaded.path, renderJson(registry));
   }
 
   const result = {
@@ -3160,7 +2684,7 @@ function cmdRequirement({ repoRoot, title, featureId, description, dryRun, apply
   registry.requirements.sort((a, b) => String(a?.id || '').localeCompare(String(b?.id || '')));
 
   if (apply && !dryRun && actions.length > 0) {
-    writeTextIfChanged(loaded.path, dumpYamlDoc(registry));
+    writeTextIfChanged(loaded.path, renderJson(registry));
   }
 
   const result = {
@@ -3195,7 +2719,7 @@ function main() {
       cmdInstall({ repoRoot, dryRun: !!opts['dry-run'] });
       break;
     case 'init':
-      cmdInit({ repoRoot, dryRun: !!opts['dry-run'], force: !!opts.force });
+      cmdInit({ repoRoot, dryRun: !!opts['dry-run'] });
       break;
     case 'lint': {
       const strict = !!opts.strict;
@@ -3221,12 +2745,10 @@ function main() {
             repoRoot,
             dryRun: dryRun || !apply,
             apply: apply && !dryRun,
-            initIfMissing: !!opts['init-if-missing'],
-            changelog: !!opts.changelog,
           });
         res = apply && !dryRun ? withGovernanceWriteLock(repoRoot, runSync) : runSync();
       } catch (error) {
-        console.error(colors.red(`[error] Sync aborted: ${error?.message || String(error)}`));
+        console.error(`[error] Sync aborted: ${error?.message || String(error)}`);
         process.exit(1);
       }
       process.exit(res.ok ? 0 : 1);
@@ -3243,19 +2765,13 @@ function main() {
         status: status || null,
         text: text || null,
         json,
-        allWorktrees: !!opts['all-worktrees'],
       });
       process.exit(res.ok ? 0 : 1);
       break;
     }
-    case 'current-task': {
+    case 'task-exists': {
       const taskId = opts.task ? String(opts.task).trim() : '';
-      const format = String(opts.format || 'trailers').trim();
-      if (!['trailers', 'id', 'json'].includes(format)) {
-        console.error(colors.red(`[error] Unknown --format: ${format} (expected trailers|id|json)`));
-        process.exit(1);
-      }
-      const res = cmdCurrentTask({ repoRoot, taskId: taskId || null, format });
+      const res = cmdTaskExists({ repoRoot, taskId });
       process.exit(res.exitCode);
       break;
     }
@@ -3278,29 +2794,13 @@ function main() {
         scan: scan.value,
         limitClamped: limit.clamped,
         scanClamped: scan.clamped,
-        json: !!opts.json,
       });
       process.exit(res.exitCode);
-      break;
-    }
-    case 'commits': {
-      const taskId = opts.task ? String(opts.task).trim() : '';
-      const limit = Number.parseInt(String(opts.limit || '20'), 10);
-      const scan = Number.parseInt(String(opts.scan || '500'), 10);
-      const res = cmdCommits({
-        repoRoot,
-        taskId: taskId || null,
-        limit: Number.isFinite(limit) && limit > 0 ? limit : 20,
-        scan: Number.isFinite(scan) && scan > 0 ? scan : 500,
-        json: !!opts.json,
-      });
-      process.exit(res.ok ? 0 : 1);
       break;
     }
     case 'map': {
       const taskId = opts.task ? String(opts.task).trim() : '';
       const featureId = opts.feature ? String(opts.feature).trim() : '';
-      const milestoneId = opts.milestone ? String(opts.milestone).trim() : '';
       const requirementId = opts.requirement ? String(opts.requirement).trim() : '';
       const dryRun = !!opts['dry-run'];
       const apply = !!opts.apply;
@@ -3314,19 +2814,18 @@ function main() {
             repoRoot,
             taskId,
             featureId: featureId || null,
-            milestoneId: milestoneId || null,
             requirementId: requirementId || null,
             dryRun: dryRun || !apply,
             apply: apply && !dryRun,
           });
         res = apply && !dryRun ? withGovernanceWriteLock(repoRoot, runMap) : runMap();
       } catch (error) {
-        console.error(colors.red(`[error] Mapping aborted: ${error?.message || String(error)}`));
+        console.error(`[error] Mapping aborted: ${error?.message || String(error)}`);
         process.exit(1);
       }
       if (!res.ok) {
         header('Errors:');
-        for (const e of res.errors) console.log(colors.red(`- ${e}`));
+        for (const e of res.errors) console.log(`- ${e}`);
       }
       process.exit(res.ok ? 0 : 1);
       break;
@@ -3354,14 +2853,14 @@ function main() {
         res = apply && !dryRun ? withGovernanceWriteLock(repoRoot, runRequirement) : runRequirement();
       } catch (error) {
         console.error(
-          colors.red(`[error] Requirement resolution aborted: ${error?.message || String(error)}`)
+          `[error] Requirement resolution aborted: ${error?.message || String(error)}`
         );
         process.exit(1);
       }
 
       if (!res.ok) {
         header('Errors:');
-        for (const error of res.errors) console.log(colors.red(`- ${error}`));
+        for (const error of res.errors) console.log(`- ${error}`);
       }
       process.exit(res.ok ? 0 : 1);
       break;
@@ -3386,19 +2885,19 @@ function main() {
           });
         res = apply && !dryRun ? withGovernanceWriteLock(repoRoot, runFeature) : runFeature();
       } catch (error) {
-        console.error(colors.red(`[error] Feature resolution aborted: ${error?.message || String(error)}`));
+        console.error(`[error] Feature resolution aborted: ${error?.message || String(error)}`);
         process.exit(1);
       }
 
       if (!res.ok) {
         header('Errors:');
-        for (const error of res.errors) console.log(colors.red(`- ${error}`));
+        for (const error of res.errors) console.log(`- ${error}`);
       }
       process.exit(res.ok ? 0 : 1);
       break;
     }
     default:
-      console.error(colors.red(`[error] Unknown command: ${command}`));
+      console.error(`[error] Unknown command: ${command}`);
       usage(1);
   }
 }

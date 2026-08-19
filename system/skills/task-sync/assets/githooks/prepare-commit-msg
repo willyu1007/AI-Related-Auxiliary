@@ -6,7 +6,7 @@
 # It never infers commit ownership from the repository's active-task count.
 #
 # Task validation uses the project-hub control script when present, and falls back to
-# scanning `.ai-task.yaml` files directly, so the hook works with dev-docs alone.
+# scanning `.ai-task.json` files directly, so the hook works with dev-docs alone.
 #
 # Skip once: SKIP_TASK_TRAILER=1 git commit -m "..."
 #
@@ -26,15 +26,15 @@ if [ "$SKIP_TASK_TRAILER" = "1" ]; then
   exit 0
 fi
 
-# task_exists <T-###> -- succeeds when the ID is anchored by an .ai-task.yaml in this repo.
+# task_exists <T-###> -- succeeds when the ID is anchored by an .ai-task.json in this repo.
 task_exists() {
   if command -v node >/dev/null 2>&1 && [ -f .ai/scripts/ctl-project-governance.mjs ]; then
-    node .ai/scripts/ctl-project-governance.mjs current-task --task "$1" --format id >/dev/null 2>&1
+    node .ai/scripts/ctl-project-governance.mjs task-exists --task "$1" >/dev/null 2>&1
     return $?
   fi
 
-  find . -name '.ai-task.yaml' -not -path './.git/*' -not -path '*/node_modules/*' \
-    -exec grep -lE "^task_id:[[:space:]]*${1}[[:space:]]*\$" {} + 2>/dev/null | grep -q .
+  find . -name '.ai-task.json' -not -path './.git/*' -not -path '*/node_modules/*' \
+    -exec grep -lE "\"task_id\"[[:space:]]*:[[:space:]]*\"${1}\"" {} + 2>/dev/null | grep -q .
 }
 
 # Already linked (explicit trailer, or `git commit --amend`).

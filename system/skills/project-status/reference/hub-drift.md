@@ -7,7 +7,7 @@ Use this response when the user asks whether task bundles, registry mappings, or
 ```bash
 node .ai/scripts/ctl-project-governance.mjs lint --check
 node .ai/scripts/ctl-project-governance.mjs sync --dry-run
-node .ai/scripts/ctl-project-governance.mjs query --all-worktrees --json
+node .ai/scripts/ctl-project-governance.mjs query --json
 ```
 
 ## Output

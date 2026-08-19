@@ -12,7 +12,7 @@ Task: `T-###` · slug: `<slug>`
 - [ ] Every unresolved `proposed:<slug>` is opened as a task, canceled/descoped, or transferred to the Feature Brief and summary
 - [ ] Every additional task-local supporting entry was reviewed; durable meaning is preserved before deletion
 - [ ] `summary.md` drafted: ID + goal + actual outcome, durable decisions, verification evidence, do-not-repeat pitfalls, related/follow-up task disposition, `git log --grep="^Task: T-###"` pointer
-- [ ] Deletion list drafted: every bundle entry except `.ai-task.yaml` and new `summary.md`
+- [ ] Deletion list drafted: every bundle entry except `.ai-task.json` and new `summary.md`
 
 ## Approval
 
@@ -21,7 +21,7 @@ Task: `T-###` · slug: `<slug>`
 
 ## After execution
 
-- [ ] Archived bundle is exactly `.ai-task.yaml` + `summary.md`
+- [ ] Archived bundle is exactly `.ai-task.json` + `summary.md`
 - [ ] Semantic Feature Brief refreshed before hub generation if intent, scope, constraints, or risk changed
 - [ ] Hub `sync --apply` run after the move; `lint --check` passed
 - [ ] Registry shows `archived`

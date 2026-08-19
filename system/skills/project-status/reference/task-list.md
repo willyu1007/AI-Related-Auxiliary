@@ -5,7 +5,7 @@ Use when user asks about current tasks, task inventory, or what's being tracked.
 ## Data Source
 
 ```bash
-node .ai/scripts/ctl-project-governance.mjs query --all-worktrees --json
+node .ai/scripts/ctl-project-governance.mjs query --json
 ```
 
 ## Output Template
@@ -19,7 +19,7 @@ node .ai/scripts/ctl-project-governance.mjs query --all-worktrees --json
 
 **Quick actions**:
 - View details: open the row's `status_doc_path` under its `worktree_path`
-- Filter by status: `node .ai/scripts/ctl-project-governance.mjs query --all-worktrees --status in-progress`
+- Filter by status: `node .ai/scripts/ctl-project-governance.mjs query --status in-progress`
 ```
 
 ## Rules

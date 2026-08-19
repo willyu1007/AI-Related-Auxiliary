@@ -8,7 +8,7 @@ Each immediate child of `dev-docs/active/` is one active task:
 
 ```text
 dev-docs/active/<slug>/
-├── .ai-task.yaml
+├── .ai-task.json
 ├── 00-roadmap.md
 ├── 01-status.md
 ├── 02-architecture.md
@@ -21,7 +21,7 @@ Each immediate child of `dev-docs/archive/` is one archived task and contains ex
 
 ```text
 dev-docs/archive/<slug>/
-├── .ai-task.yaml
+├── .ai-task.json
 └── summary.md
 ```
 
@@ -29,7 +29,7 @@ Archive location makes the effective state `archived`. `summary.md` preserves th
 
 ## Document responsibilities
 
-- **`.ai-task.yaml`** — Stable task identity and non-authoritative display metadata.
+- **`.ai-task.json`** — Stable task identity and non-authoritative display metadata.
 - **`00-roadmap.md`** — Decision alignment and rationale, working assumptions, relationships touching this task, the implementation kickoff gate, phased route, phase closeout, and recovery strategy.
 - **`01-status.md`** — Current goal, progress state, phase, next step, blocker, and high-level completion conditions.
 - **`02-architecture.md`** — Current settled technical design and contracts, without alternatives or decision history.
@@ -65,7 +65,7 @@ A completed task remains active with `State: done` until its separately approved
 Use each source only for what it proves:
 
 - The task bundle owns its task-level identity, intent, progress, design, verification, and lifecycle according to the document responsibilities above.
-- The project hub provides the cross-task semantic map. `.ai/project/registry.yaml` owns Milestones, Features, Requirements, and their mappings; its task entries are projections of task bundles.
+- The project hub provides the cross-task semantic map. `.ai/project/registry.json` owns Milestones, Features, Requirements, and their mappings; its task entries are projections of task bundles.
 - Generated hub views are derived and may be rebuilt. Neither registry task entries nor generated views override a task bundle.
 - Git history proves committed work; a task commit carries exactly one `Task: T-###` trailer.
 - The worktree proves current uncommitted work.

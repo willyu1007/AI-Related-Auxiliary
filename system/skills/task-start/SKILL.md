@@ -27,9 +27,9 @@ Open and register a durable task bundle before implementation begins.
 3. **Search before creating.** Inspect active work in every linked worktree, including uncommitted bundles:
 
    ```bash
-   node .ai/scripts/ctl-project-governance.mjs query --all-worktrees --text "<goal keywords>"
-   node .ai/scripts/ctl-project-governance.mjs query --all-worktrees --status in-progress
-   node .ai/scripts/ctl-project-governance.mjs query --all-worktrees --status blocked
+   node .ai/scripts/ctl-project-governance.mjs query --text "<goal keywords>"
+   node .ai/scripts/ctl-project-governance.mjs query --status in-progress
+   node .ai/scripts/ctl-project-governance.mjs query --status blocked
    ```
 
    Read the goal of plausible matches. If one already covers the requested outcome, continue it instead of creating a duplicate. Multiple checkouts of the same task ID are one task; divergent uncommitted work on that task is a conflict to resolve before proceeding.
@@ -47,13 +47,13 @@ Open and register a durable task bundle before implementation begins.
 
 6. **Seed the bundle from its defined semantics.** Create `dev-docs/active/<slug>/` from `./templates/` according to `dev-docs/README.md`. Populate the current goal and `State: planned`. Write a roadmap seed containing confirmed scope, known constraints and relationships, material open decisions, risks, and one concrete alignment or discovery phase. Set the kickoff gate to `pending`; do not invent downstream implementation phases or close decisions merely to make the task look ready. Do not leave required sections as unfilled template placeholders; express missing evidence as a discovery action. Apart from a `requirement.md` justified in Step 5, do not create optional entries speculatively; actual work may add them later when each has a distinct durable purpose. Never use an optional entry as a second goal, status, plan, decision, architecture, or verification authority.
 
-7. **Allocate and register atomically.** Let the control script create `.ai-task.yaml`, update the registry, and regenerate derived views:
+7. **Allocate and register atomically.** Let the control script create `.ai-task.json`, update the registry, and regenerate derived views:
 
    ```bash
    node .ai/scripts/ctl-project-governance.mjs sync --apply
    ```
 
-   Read the allocated ID from `.ai-task.yaml`; never choose one manually. For a new project capability, inspect the registry and Semantic Feature Briefs for the same intent. Reuse the existing Feature when appropriate; otherwise allocate one under the shared cross-worktree lock:
+   Read the allocated ID from `.ai-task.json`; never choose one manually. For a new project capability, inspect the registry and Semantic Feature Briefs for the same intent. Reuse the existing Feature when appropriate; otherwise allocate one under the shared cross-worktree lock:
 
    ```bash
    node .ai/scripts/ctl-project-governance.mjs feature --title "<feature title>" --description "<intent>" --apply --json
@@ -80,7 +80,7 @@ Open and register a durable task bundle before implementation begins.
 8. **Verify uniqueness and validity.** Re-query the exact slug across worktrees, then lint:
 
    ```bash
-   node .ai/scripts/ctl-project-governance.mjs query --all-worktrees --text "<slug>"
+   node .ai/scripts/ctl-project-governance.mjs query --text "<slug>"
    node .ai/scripts/ctl-project-governance.mjs lint --check
    ```
 

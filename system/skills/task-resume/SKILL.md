@@ -12,13 +12,13 @@ Read `dev-docs/README.md` before interpreting a task bundle.
 Resolve a named task ID directly:
 
 ```bash
-node .ai/scripts/ctl-project-governance.mjs resume --task T-### --json
+node .ai/scripts/ctl-project-governance.mjs resume --task T-###
 ```
 
 When the request names work but not an ID, search the goal, slug, keywords, and linked worktrees first:
 
 ```bash
-node .ai/scripts/ctl-project-governance.mjs query --all-worktrees --text "<request terms>" --json
+node .ai/scripts/ctl-project-governance.mjs query --text "<request terms>" --json
 ```
 
 - One relevant candidate in the current worktree: pass its ID to `resume`.
@@ -29,7 +29,7 @@ node .ai/scripts/ctl-project-governance.mjs query --all-worktrees --text "<reque
 When neither the request nor the branch identifies a task, this command may resolve the sole `in-progress` task, then the sole `blocked` task:
 
 ```bash
-node .ai/scripts/ctl-project-governance.mjs resume --json
+node .ai/scripts/ctl-project-governance.mjs resume
 ```
 
 A non-zero exit means absent or ambiguous. Do not guess.

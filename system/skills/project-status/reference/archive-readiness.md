@@ -5,14 +5,14 @@ Use this response when the user asks which tasks can be closed or archived. This
 ## Data source
 
 ```bash
-node .ai/scripts/ctl-project-governance.mjs query --all-worktrees --json
+node .ai/scripts/ctl-project-governance.mjs query --json
 node .ai/scripts/ctl-project-governance.mjs lint --check
 ```
 
 For each plausible candidate, open its returned `status_doc_path` and run:
 
 ```bash
-node .ai/scripts/ctl-project-governance.mjs resume --repo-root <worktree_path> --task <T-###> --json
+node .ai/scripts/ctl-project-governance.mjs resume --repo-root <worktree_path> --task <T-###>
 ```
 
 Read the goal and every `Done when` condition from `01-status.md`. Inspect delivered code and the exact task-trailer commit timeline. Read `verification.md` for the latest decisive evidence. Check that roadmap kickoff is `ready`, then inspect unresolved decisions and `proposed:<slug>` follow-ups whose disposition would be lost on archive.

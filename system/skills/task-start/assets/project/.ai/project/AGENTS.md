@@ -6,8 +6,8 @@ Milestones, Features, and Requirements without replacing task records or reposit
 ## Authority boundaries
 
 - Task bundles own task identity, goal, progress, decisions, design, verification, and lifecycle.
-- `.ai/project/registry.yaml` owns Milestones, Features, Requirements, their relationships,
-  task mappings, and task-root configuration.
+- `.ai/project/registry.json` owns Milestones, Features, Requirements, their relationships, task
+  mappings, task-root configuration, and a lightweight deferred-idea list.
 - Registry task entries are projections. They never override task identity, progress, kickoff
   readiness, or completion evidence.
 - Git history proves committed work; each linked worktree proves its current uncommitted state.
@@ -16,13 +16,13 @@ Milestones, Features, and Requirements without replacing task records or reposit
 
 The hub consumes these task facts:
 
-- `.ai-task.yaml` supplies stable `T-###` identity and optional display metadata.
+- `.ai-task.json` supplies stable `T-###` identity and optional display metadata.
 - An active bundle's `01-status.md` supplies `planned | in-progress | blocked | done`, goal,
   current phase, next step, blocker, and completion conditions.
 - `00-roadmap.md` supplies independent `pending | ready` kickoff readiness for queries and
   recovery context.
 - Archive location supplies effective `archived` state; an archived bundle contains exactly
-  `.ai-task.yaml` and `summary.md`.
+  `.ai-task.json` and `summary.md`.
 - `done` requires kickoff `ready` and a non-empty, fully checked completion checklist.
 
 ## Project graph
@@ -34,10 +34,20 @@ The hub consumes these task facts:
 - Feature and Requirement statuses are `planned | in-progress | blocked | done | cut`.
 - Every Feature references an existing Milestone.
 - Every Requirement references an existing Feature.
-- Every task projection references existing Feature and Milestone objects. Any Requirement it
+- Every task projection references an existing Feature. Its Milestone is derived only through
+  that Feature; task entries never store an independent `milestone_id`. Any Requirement the task
   references belongs to the same Feature.
 - IDs are unique, stable, monotonically allocated, and never reused. `F-000` is only for an
   explicitly deferred triage decision.
+
+## Deferred ideas
+
+- `registry.json` `ideas` is a low-frequency parking place for “worth remembering, not now” notes.
+- Each item contains only `idea`, with enough context to understand it later.
+- Ideas have no ID, registration, status, dashboard projection, or separate document. When one is
+  selected, implement it directly if the work is bounded and low risk; create a normal dev-docs
+  task bundle only when durable tracking is otherwise justified. Delete the Idea after direct
+  implementation succeeds or the task bundle takes over.
 
 ## Consistency and worktrees
 
@@ -56,11 +66,10 @@ The hub consumes these task facts:
 
 ## Derived views
 
-- `dashboard.md`, `feature-map.md`, and `task-index.md` are derived views.
+- `dashboard.md` and `feature-map.md` are derived views with bounded manual sections.
 - AUTO-GENERATED sections are replaceable projections and must not be hand-edited.
 - Manual Feature Briefs may summarize Feature-level intent, boundaries, dependencies, and success
   signals. They link tasks without copying mutable task facts.
-- `changelog.md` is an append-only project event log, not a source of current task state.
 
 ## Change control
 

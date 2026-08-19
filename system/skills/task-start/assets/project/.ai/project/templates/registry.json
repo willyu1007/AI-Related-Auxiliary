@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "task_doc_roots": [],
+  "milestones": [
+    {
+      "id": "M-000",
+      "title": "Inbox / Triage",
+      "status": "in-progress",
+      "description": "Triage queue for new or unplanned work."
+    }
+  ],
+  "features": [
+    {
+      "id": "F-000",
+      "title": "Inbox / Untriaged",
+      "milestone_id": "M-000",
+      "status": "in-progress",
+      "description": "Untriaged tasks live here until mapped to a real feature."
+    }
+  ],
+  "requirements": [],
+  "ideas": [],
+  "tasks": []
+}

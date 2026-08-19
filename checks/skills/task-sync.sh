@@ -29,7 +29,8 @@ printf '# Status\n\n## Goal\nSmoke test.\n\n## Progress\n- State: in-progress\n-
 
 # The standalone hooks do not allocate IDs. The bundle starts with governance-allocated metadata;
 # this test covers downstream trailer behavior when no control script is installed.
-printf 'version: 1\ntask_id: T-001\nslug: sample\n' > dev-docs/active/sample/.ai-task.yaml
+printf '{\n  "version": 1,\n  "task_id": "T-001",\n  "slug": "sample"\n}\n' \
+  > dev-docs/active/sample/.ai-task.json
 
 git checkout -q -b feat/T-001-sample
 git add -A
@@ -38,7 +39,7 @@ git -c user.email=ci@local -c user.name=ci commit -qm "feat(sample): add task bu
 git log -1 --format='%B' | git interpret-trailers --parse | grep -q '^Task: T-001$' \
   || fail "prepare-commit-msg did not inject the trailer using the shell fallback"
 
-# A branch task ID with no matching .ai-task.yaml must never be injected.
+# A branch task ID with no matching .ai-task.json must never be injected.
 git checkout -q -b feat/T-999-ghost
 echo unrelated > unrelated.txt
 git add unrelated.txt

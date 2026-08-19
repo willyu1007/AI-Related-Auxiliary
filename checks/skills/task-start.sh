@@ -17,10 +17,11 @@ CTL="$AUX_ROOT/system/skills/task-start/assets/project/.ai/scripts/ctl-project-g
 if [ -d .ai ] || [ -d dev-docs ]; then fail "target repo is not empty before install"; fi
 node "$CTL" install --repo-root . >/dev/null
 
-for f in .ai/scripts/ctl-project-governance.mjs .ai/scripts/lib/yaml-lite.mjs \
-         .ai/project/AGENTS.md .ai/project/CLAUDE.md .ai/project/templates/registry.yaml; do
+for f in .ai/scripts/ctl-project-governance.mjs \
+         .ai/project/AGENTS.md .ai/project/CLAUDE.md .ai/project/templates/registry.json; do
   [ -f "$f" ] || fail "install did not place $f"
 done
+[ ! -e .ai/scripts/lib/yaml-lite.mjs ] || fail "install retained the retired YAML parser"
 [ ! -e .ai/project/CONTRACT.md ] || fail "install retained the superseded hub contract"
 grep -q 'Follow `AGENTS.md`' .ai/project/CLAUDE.md \
   || fail "hub Claude entry does not route to AGENTS.md"
@@ -34,22 +35,37 @@ cmp -s dev-docs/CLAUDE.md dev-docs/AGENTS.md \
   || fail "Claude and Agent task-doc pointers drifted"
 grep -q 'README.md.*sole authority' dev-docs/CLAUDE.md \
   || fail "task-doc pointer does not route to README.md"
-for f in registry.yaml dashboard.md feature-map.md task-index.md changelog.md; do
+for f in registry.json dashboard.md feature-map.md; do
   [ -f ".ai/project/$f" ] || fail "install did not initialize .ai/project/$f"
 done
+for f in task-index.md changelog.md; do
+  [ ! -e ".ai/project/$f" ] || fail "install retained redundant view $f"
+  [ ! -e ".ai/project/templates/$f" ] || fail "install retained redundant template $f"
+done
+node -e "const r=require('./.ai/project/registry.json');process.exit(Array.isArray(r.task_doc_roots)&&r.task_doc_roots.length===0?0:1)" \
+  || fail "registry template disabled task-root discovery"
 
 # Installing again must not disturb what the first run created: shipped assets refresh in place,
 # hub files are project data and stay. A second install that resets the registry would silently
 # discard every task the repository has.
-printf '\n# smoke-marker\n' >> .ai/project/registry.yaml
+node -e "const fs=require('fs');const p='.ai/project/registry.json';const r=JSON.parse(fs.readFileSync(p,'utf8'));r.smoke_marker=true;fs.writeFileSync(p,JSON.stringify(r,null,2)+'\n')"
 printf '\nshipped-doc-drift\n' >> dev-docs/README.md
 printf '# Superseded contract\n' > .ai/project/CONTRACT.md
+printf '# Redundant task index\n' > .ai/project/task-index.md
+printf '# Redundant changelog\n' > .ai/project/changelog.md
+printf '# Redundant task index template\n' > .ai/project/templates/task-index.md
+printf '# Redundant changelog template\n' > .ai/project/templates/changelog.md
 node "$CTL" install --repo-root . >/dev/null
-grep -q 'smoke-marker' .ai/project/registry.yaml || fail "re-install overwrote hub data"
+node -e "const r=require('./.ai/project/registry.json');process.exit(r.smoke_marker===true?0:1)" \
+  || fail "re-install overwrote hub data"
 if grep -q 'shipped-doc-drift' dev-docs/README.md; then
   fail "re-install did not refresh the task-document guidance"
 fi
 [ ! -e .ai/project/CONTRACT.md ] || fail "re-install did not remove the superseded hub contract"
+for f in task-index.md changelog.md; do
+  [ ! -e ".ai/project/$f" ] || fail "re-install did not remove redundant view $f"
+  [ ! -e ".ai/project/templates/$f" ] || fail "re-install did not remove redundant template $f"
+done
 
 # Hooks ship with the skill that installs them. AUX_ROOT is set by checks/run.mjs.
 mkdir -p .githooks
@@ -58,11 +74,21 @@ cp -R "$AUX_ROOT/system/skills/task-sync/assets/githooks/." .githooks/
 
 node .githooks/install.mjs >/dev/null
 
+mkdir -p modules/foo/dev-docs/active modules/foo/dev-docs/archive
 node .ai/scripts/ctl-project-governance.mjs sync --apply >/dev/null
+node -e "const r=require('./.ai/project/registry.json');process.exit(r.task_doc_roots.includes('modules/foo/dev-docs')?0:1)" \
+  || fail "sync did not discover the additional task-document root"
 
 # Single-project layout: no per-project subdirectory, no project key in the registry.
 if [ -d .ai/project/main ]; then fail "init created a per-project subdirectory"; fi
-if grep -qE '^project:' .ai/project/registry.yaml; then fail "registry still has a project block"; fi
+node -e "const r=require('./.ai/project/registry.json');process.exit(Object.hasOwn(r,'project')?1:0)" \
+  || fail "registry still has a project block"
+
+# Ideas are lightweight project notes. Sync preserves them but gives them no metadata lifecycle.
+node -e "const fs=require('fs');const p='.ai/project/registry.json';const r=JSON.parse(fs.readFileSync(p,'utf8'));r.ideas=[{idea:'Remember export'}];fs.writeFileSync(p,JSON.stringify(r,null,2)+'\n')"
+node .ai/scripts/ctl-project-governance.mjs sync --apply >/dev/null
+node -e "const r=require('./.ai/project/registry.json');process.exit(r.ideas.some(x=>x.idea==='Remember export')?0:1)" \
+  || fail "sync discarded a lightweight Idea"
 
 mkdir -p dev-docs/active/sample
 printf '# Roadmap\n\n## Scope and constraints\n- Scope: smoke test\n\n## Decision alignment\nNone.\n\n## Task relationships\nNone.\n\n## Implementation plan\n\n### Phase 1 — verify\n- Outcome: smoke test passes\n- Approach: exercise governance end to end\n- Planned changes:\n  1. Run the smoke workflow\n- Affected boundaries / entry points: governance script\n- Dependencies: none\n- Exit criteria: smoke test passes\n- Verification: run lint\n- Recovery: restore the fixture\n\n## Kickoff gate\n- Status: ready\n- [x] Every user-owned choice that blocks implementation is decided.\n- [x] Settled design and interfaces are reflected in `02-architecture.md`.\n- [x] The first implementation phase is executable with exit, verification, and recovery criteria.\n- [x] Every current completion condition has a decisive planned check in `verification.md`.\n\n## Risks and recovery\nNone.\n\n## Phase closeout\nCommit the verified fixture.\n' \
@@ -78,16 +104,26 @@ git add -A
 git -c user.email=ci@local -c user.name=ci commit -qm "feat(sample): add task bundle" >/dev/null
 
 # pre-commit should have allocated the ID and synced the hub before the commit landed.
-[ -f dev-docs/active/sample/.ai-task.yaml ] || fail "pre-commit did not allocate .ai-task.yaml"
-grep -q 'task_id: T-001' dev-docs/active/sample/.ai-task.yaml || fail "unexpected task id"
-grep -q 'id: T-001' .ai/project/registry.yaml || fail "registry was not synced"
-if grep -qE '^project:' dev-docs/active/sample/.ai-task.yaml; then
-  fail "task meta still carries a project field"
-fi
+[ -f dev-docs/active/sample/.ai-task.json ] || fail "pre-commit did not allocate .ai-task.json"
+node -e "const m=require('./dev-docs/active/sample/.ai-task.json');process.exit(m.task_id==='T-001'&&!Object.hasOwn(m,'project')?0:1)" \
+  || fail "unexpected task metadata"
+node -e "const r=require('./.ai/project/registry.json');process.exit(r.tasks.some(x=>x.id==='T-001'&&!Object.hasOwn(x,'milestone_id'))?0:1)" \
+  || fail "registry was not synced"
 git log -1 --format='%B' | git interpret-trailers --parse | grep -q '^Task: T-001$' \
   || fail "trailer missing on the task branch"
 
 node .ai/scripts/ctl-project-governance.mjs lint --strict >/dev/null || fail "lint --strict failed"
+
+# Malformed JSON is reported as task data corruption; lint and sync must fail cleanly.
+cp dev-docs/active/sample/.ai-task.json dev-docs/active/sample/.ai-task.tmp
+printf '{ invalid json\n' > dev-docs/active/sample/.ai-task.json
+if node .ai/scripts/ctl-project-governance.mjs lint --check >/dev/null 2>&1; then
+  fail "lint accepted malformed task metadata"
+fi
+if node .ai/scripts/ctl-project-governance.mjs sync --apply >/dev/null 2>&1; then
+  fail "sync accepted malformed task metadata"
+fi
+mv dev-docs/active/sample/.ai-task.tmp dev-docs/active/sample/.ai-task.json
 
 # A task cannot claim completion while its completion conditions remain unchecked.
 cp dev-docs/active/sample/01-status.md dev-docs/active/sample/01-status.tmp
@@ -110,7 +146,7 @@ cp "$AUX_ROOT/system/skills/task-start/examples/sample-roadmap-seed.md" \
   dev-docs/active/sample/00-roadmap.md
 node .ai/scripts/ctl-project-governance.mjs lint --check >/dev/null \
   || fail "lint rejected the worked pending roadmap seed"
-node .ai/scripts/ctl-project-governance.mjs resume --json > seed-resume.json
+node .ai/scripts/ctl-project-governance.mjs resume > seed-resume.json
 grep -q '"kickoff_status":"pending"' seed-resume.json \
   || fail "worked roadmap seed did not recover as kickoff pending"
 rm -f seed-resume.json
@@ -132,7 +168,7 @@ fi
 mv dev-docs/active/sample/00-roadmap.tmp dev-docs/active/sample/00-roadmap.md
 
 # resume must resolve the active task and carry the current status head.
-node .ai/scripts/ctl-project-governance.mjs resume --json > resume.json
+node .ai/scripts/ctl-project-governance.mjs resume > resume.json
 grep -q '"id":"T-001"' resume.json || fail "resume did not resolve the task"
 grep -q '"status"' resume.json || fail "resume packet did not expose the status head"
 grep -q 'wire verification' resume.json || fail "resume packet lost the status next step"
@@ -140,7 +176,7 @@ grep -q '"kickoff_status":"ready"' resume.json || fail "resume packet lost kicko
 grep -q 'Repeating a stale path.*use the supported path' resume.json \
   || fail "resume packet did not parse current pitfalls"
 rm -f resume.json
-node .ai/scripts/ctl-project-governance.mjs query --all-worktrees --id T-001 --json > query.json
+node .ai/scripts/ctl-project-governance.mjs query --id T-001 --json > query.json
 grep -q '"kickoff_status":"ready"' query.json || fail "query did not expose kickoff readiness"
 rm -f query.json
 
@@ -169,19 +205,33 @@ grep -q '"id":"F-001"' feature.json || fail "feature command was not idempotent"
 grep -q '"created":false' feature.json || fail "feature command recreated an existing title"
 rm -f feature.json
 
-# Quoted YAML scalars must survive a write/read cycle without changing identity.
+# Quoted JSON strings must survive a write/read cycle without changing identity.
 node .ai/scripts/ctl-project-governance.mjs feature --title "Quoted \"feature\"\\path" \
   --description "Description with \"quotes\" and a \\path" --apply --json > feature.json
 grep -q '"id":"F-002"' feature.json || fail "quoted feature did not allocate F-002"
 node .ai/scripts/ctl-project-governance.mjs feature --title "Quoted \"feature\"\\path" \
   --apply --json > feature.json
-grep -q '"id":"F-002"' feature.json || fail "quoted feature changed identity after YAML round-trip"
-grep -q '"created":false' feature.json || fail "quoted feature was recreated after YAML round-trip"
+grep -q '"id":"F-002"' feature.json || fail "quoted feature changed identity after JSON round-trip"
+grep -q '"created":false' feature.json || fail "quoted feature was recreated after JSON round-trip"
 rm -f feature.json
 
 node .ai/scripts/ctl-project-governance.mjs map --task T-001 --feature F-001 --apply >/dev/null
 node .ai/scripts/ctl-project-governance.mjs sync --apply >/dev/null
-grep -q 'feature_id: F-001' .ai/project/registry.yaml || fail "map did not retain the feature mapping"
+node -e "const r=require('./.ai/project/registry.json');process.exit(r.tasks.some(x=>x.id==='T-001'&&x.feature_id==='F-001')?0:1)" \
+  || fail "map did not retain the feature mapping"
+
+# A task derives its Milestone through its Feature; task projections never own milestone_id.
+node -e "const fs=require('fs');const p='.ai/project/registry.json';const r=JSON.parse(fs.readFileSync(p,'utf8'));r.milestones.push({id:'M-001',title:'Smoke milestone',status:'planned',description:'Exercise derived milestone mapping.'});r.features.find(x=>x.id==='F-001').milestone_id='M-001';r.tasks.find(x=>x.id==='T-001').milestone_id='M-999';fs.writeFileSync(p,JSON.stringify(r,null,2)+'\n')"
+if node .ai/scripts/ctl-project-governance.mjs lint --check >/dev/null 2>&1; then
+  fail "lint accepted task-owned milestone_id"
+fi
+node .ai/scripts/ctl-project-governance.mjs sync --apply >/dev/null
+node .ai/scripts/ctl-project-governance.mjs query --id T-001 --json > milestone-query.json
+node -e "const r=require('./.ai/project/registry.json');const q=require('./milestone-query.json');process.exit(!Object.hasOwn(r.tasks.find(x=>x.id==='T-001'),'milestone_id')&&q[0].milestone_id==='M-001'?0:1)" \
+  || fail "task Milestone was not derived from its Feature"
+rm -f milestone-query.json
+node .ai/scripts/ctl-project-governance.mjs lint --check >/dev/null \
+  || fail "lint failed after sync removed task-owned milestone_id"
 
 # Requirements use the same locked, monotonic allocation model as features. Mapping only accepts
 # an existing requirement; it must not silently invent a user-supplied ID.
@@ -195,24 +245,25 @@ grep -q '"id":"R-001"' requirement.json || fail "requirement command was not ide
 grep -q '"created":false' requirement.json || fail "requirement command recreated an existing title"
 rm -f requirement.json
 node .ai/scripts/ctl-project-governance.mjs map --task T-001 --requirement R-001 --apply >/dev/null
-grep -q 'R-001' .ai/project/registry.yaml || fail "map did not record the requirement"
+node -e "const r=require('./.ai/project/registry.json');process.exit(r.tasks.some(x=>x.id==='T-001'&&x.requirement_ids.includes('R-001'))?0:1)" \
+  || fail "map did not record the requirement"
 if node .ai/scripts/ctl-project-governance.mjs map --task T-001 --requirement R-999 --apply >/dev/null 2>&1; then
   fail "map silently created a missing requirement"
 fi
 
 # Registry IDs and references are integrity constraints, not advisory metadata.
-cp .ai/project/registry.yaml registry.tmp
-sed -i '0,/id: F-002/{s/id: F-002/id: F-001/}' .ai/project/registry.yaml
+cp .ai/project/registry.json registry.tmp
+node -e "const fs=require('fs');const p='.ai/project/registry.json';const r=JSON.parse(fs.readFileSync(p,'utf8'));r.features.find(x=>x.id==='F-002').id='F-001';fs.writeFileSync(p,JSON.stringify(r,null,2)+'\n')"
 if node .ai/scripts/ctl-project-governance.mjs lint --check >/dev/null 2>&1; then
   fail "lint accepted duplicate feature IDs"
 fi
-mv registry.tmp .ai/project/registry.yaml
-cp .ai/project/registry.yaml registry.tmp
-sed -i '/^tasks:/,$ s/feature_id: F-001/feature_id: F-999/' .ai/project/registry.yaml
+mv registry.tmp .ai/project/registry.json
+cp .ai/project/registry.json registry.tmp
+node -e "const fs=require('fs');const p='.ai/project/registry.json';const r=JSON.parse(fs.readFileSync(p,'utf8'));r.tasks.find(x=>x.id==='T-001').feature_id='F-999';fs.writeFileSync(p,JSON.stringify(r,null,2)+'\n')"
 if node .ai/scripts/ctl-project-governance.mjs lint --check >/dev/null 2>&1; then
   fail "lint accepted a dangling task feature mapping"
 fi
-mv registry.tmp .ai/project/registry.yaml
+mv registry.tmp .ai/project/registry.json
 
 # Two linked worktrees branched from the same base must not allocate the same id,
 # even while the first task metadata is still uncommitted.
@@ -246,8 +297,8 @@ PID_B=$!
 wait "$PID_A"
 wait "$PID_B"
 
-ID_A=$(grep -oE 'T-[0-9]{3}' "$WT_A/dev-docs/active/alpha/.ai-task.yaml")
-ID_B=$(grep -oE 'T-[0-9]{3}' "$WT_B/dev-docs/active/beta/.ai-task.yaml")
+ID_A=$(grep -oE 'T-[0-9]{3}' "$WT_A/dev-docs/active/alpha/.ai-task.json")
+ID_B=$(grep -oE 'T-[0-9]{3}' "$WT_B/dev-docs/active/beta/.ai-task.json")
 [ "$ID_A" != "$ID_B" ] || fail "parallel worktrees both allocated $ID_A"
 IDS=$(printf '%s\n%s\n' "$ID_A" "$ID_B" | sort | tr '\n' ' ')
 [ "$IDS" = "T-002 T-003 " ] || fail "parallel worktrees allocated '$IDS', expected T-002 and T-003"
@@ -268,7 +319,7 @@ REQ_IDS=$(printf '%s\n%s\n' "$REQ_A" "$REQ_B" | sort | tr '\n' ' ')
 [ "$REQ_IDS" = "R-002 R-003 " ] \
   || fail "parallel worktrees allocated '$REQ_IDS', expected R-002 and R-003"
 
-node .ai/scripts/ctl-project-governance.mjs query --all-worktrees --text alpha --json > worktrees.json
+node .ai/scripts/ctl-project-governance.mjs query --text alpha --json > worktrees.json
 grep -q "\"id\":\"$ID_A\"" worktrees.json || fail "cross-worktree query missed uncommitted task metadata"
 grep -q 'alpha smoke test' worktrees.json || fail "cross-worktree query did not search or return the task goal"
 rm -f worktrees.json
@@ -285,7 +336,8 @@ rm dev-docs/active/sample/00-roadmap.md dev-docs/active/sample/01-status.md \
   dev-docs/active/sample/pitfalls.md
 mv dev-docs/active/sample dev-docs/archive/
 node .ai/scripts/ctl-project-governance.mjs sync --apply >/dev/null
-grep -q 'status: archived' .ai/project/registry.yaml || fail "archive status not propagated"
+node -e "const r=require('./.ai/project/registry.json');process.exit(r.tasks.some(x=>x.id==='T-001'&&x.status==='archived')?0:1)" \
+  || fail "archive status not propagated"
 node .ai/scripts/ctl-project-governance.mjs lint --strict >/dev/null || fail "lint failed after archive"
 
-echo "install/guidance refresh, pending seed example, kickoff/completion gates, roadmap and registry lint, resume, hook sync, feature/requirement mapping, YAML round-trip, worktree allocation, archive"
+echo "install/guidance refresh, root discovery, pending seed example, kickoff/completion gates, roadmap and registry lint, resume, hook sync, derived milestone and feature/requirement mapping, lightweight Ideas, JSON round-trip, worktree allocation, archive"

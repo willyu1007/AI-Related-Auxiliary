@@ -3,7 +3,7 @@
 # Git pre-commit hook for project governance sync.
 #
 # Runs `ctl-project-governance sync` when dev-docs files are staged, keeping the hub
-# (registry, dashboard, feature-map, task-index) consistent with the task bundles.
+# (registry, dashboard, and feature-map) consistent with the task bundles.
 #
 # Install: node .githooks/install.mjs
 # Uninstall: node .githooks/install.mjs --uninstall
@@ -12,7 +12,7 @@
 set -e
 
 if git diff --cached --name-only | grep -qE '(^|/)dev-docs/'; then
-  if [ ! -f .ai/project/registry.yaml ]; then
+  if [ ! -f .ai/project/registry.json ]; then
     echo "[hook] Project hub not initialized. Run 'node .ai/scripts/ctl-project-governance.mjs init' to initialize."
     exit 0
   fi
@@ -22,7 +22,7 @@ if git diff --cached --name-only | grep -qE '(^|/)dev-docs/'; then
 
   # Stage any generated/updated files
   git add .ai/project/ 2>/dev/null || true
-  git add ':(glob)**/.ai-task.yaml' 2>/dev/null || true
+  git add ':(glob)**/.ai-task.json' 2>/dev/null || true
 
   echo "[hook] Project hub synchronized."
 fi

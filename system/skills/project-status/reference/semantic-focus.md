@@ -5,7 +5,7 @@ Use when the user asks for feature-level semantic summary, decision context, or 
 ## Data Source
 
 ```bash
-node .ai/scripts/ctl-project-governance.mjs query --all-worktrees --json
+node .ai/scripts/ctl-project-governance.mjs query --json
 cat .ai/project/feature-map.md
 cat .ai/project/dashboard.md
 ```
