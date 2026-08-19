@@ -1,6 +1,6 @@
 # <Task Title> — Requirements
 
-Use this optional file to align requirement detail before planning. After the task starts, `01-status.md` owns the current goal and completion head, while `00-roadmap.md` owns unresolved questions and decisions.
+Use this optional file to align requirement detail before planning. After the task starts, `01-status.md` owns the current goal and completion head, while `00-roadmap.md` owns top-level decision alignment and the implementation route.
 
 ## Baseline
 

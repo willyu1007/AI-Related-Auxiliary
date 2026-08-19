@@ -21,7 +21,7 @@ node .ai/scripts/ctl-project-governance.mjs query --all-worktrees --json
 | planned | N | X% |
 
 **In Progress**:
-- T-xxx <slug> - <brief description or current phase>
+- T-xxx <slug> - <kickoff status> - <brief description or current phase>
 
 **Blocked** (if any):
 - T-xxx <slug> - <blocking reason if known>
@@ -33,3 +33,4 @@ node .ai/scripts/ctl-project-governance.mjs query --all-worktrees --json
 - Calculate percentages from actual counts
 - Only show "Blocked" section if blockers exist
 - Next step follows priority rules (see next-action.md)
+- Separate kickoff-pending alignment/replanning from kickoff-ready implementation

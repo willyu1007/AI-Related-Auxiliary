@@ -1,24 +1,18 @@
-# Project Contract
+# Project governance contract
 
-This contract is the source of truth for repository project governance. Task skills own task-record semantics; the control script validates and projects those records into the project hub.
+This contract governs the project hub and the control script that validates and projects task records. `dev-docs/README.md` is the sole authority for task-bundle semantics and lifecycle rules.
 
 ## 1. Layers and sources of truth
 
-### Task layer
+### Task interface
 
-Each new active task is one immediate child of a configured `dev-docs/active/` directory and contains:
+The hub consumes task bundles defined by `dev-docs/README.md`.
 
-- `00-roadmap.md`: decision and planning record
-- `01-status.md`: current task head and progress source of truth
-- `02-architecture.md`: current settled design and interfaces
-- `verification.md`: current completion-condition matrix and decisive evidence
-- `.ai-task.yaml`: stable identity
-
-`implementation.md` is optional when non-obvious implementation, integration, migration, or operational context needs a durable current map. `pitfalls.md` is optional after an evidence-backed recurring hazard is found. Requirements and artifacts are also optional. Optional files are current snapshots, not append-only logs.
-
-For an active task, `01-status.md` `## Progress` bullet `- State: <status>` is authoritative. During migration, tooling may read legacy `00-overview.md` when `01-status.md` is absent. New writes never recreate the legacy path.
-
-An archived task is an immediate child of a configured `dev-docs/archive/` directory. Its effective status is `archived` regardless of any former state file. A newly archived bundle contains `.ai-task.yaml` and `summary.md`.
+- An active task is an immediate child of a configured `dev-docs/active/` directory.
+- `01-status.md` `## Progress` bullet `- State: <status>` is the active progress source.
+- `.ai-task.yaml` is the stable identity source.
+- An archived task is an immediate child of a configured `dev-docs/archive/` directory and contains exactly `.ai-task.yaml` and `summary.md`.
+- Archive location makes the effective status `archived`.
 
 ### Project semantic graph
 
@@ -32,20 +26,15 @@ An archived task is an immediate child of a configured `dev-docs/archive/` direc
 
 Git history and the worktree determine what actually landed. A task record describes intent and progress but cannot make an uncommitted or missing implementation real.
 
-## 2. Task model
+## 2. Task fields consumed by the hub
 
 ### Progress
 
-Active task states are:
+Active states are `planned | in-progress | blocked | done`. The hub also exposes derived `archived`. `blocked` is not ahead of `in-progress` for drift checks.
 
-- `planned`
-- `in-progress`
-- `blocked`
-- `done`
+`01-status.md` also supplies the current Goal, phase, next step, blocker, and high-level completion checklist.
 
-The hub also exposes derived `archived`. `blocked` is not ahead of `in-progress` for drift checks.
-
-`01-status.md` also carries the current one-sentence Goal, phase, next step, blocker, and high-level completion checklist. When a roadmap decision changes the goal or completion conditions, the status file must be updated; the current status file wins over older roadmap wording.
+`00-roadmap.md` supplies kickoff readiness for bundle-backed queries and recovery packets. Readiness is `pending | ready`, is independent from progress, and is never projected into registry status.
 
 ### Identity
 
@@ -83,13 +72,7 @@ Only `sync --apply` allocates missing task IDs. Write-mode sync must hold the sh
 - the current registry
 - `Task:` trailers across all branch history
 
-Cross-worktree queries are read-only and report the source worktree. They are used to detect duplicate goals before a new bundle is created. A lock failure or duplicate is a stop condition; callers must not invent an ID. The `feature --apply` command uses the same lock to resolve an exact existing Feature title or allocate a new Feature ID across linked worktree registries.
-
-### Granularity
-
-Tasks are flat. A task has one bundle, one state, and one commit stream. Sequential work is represented as phases in `00-roadmap.md`; independently advancing work is represented as sibling tasks mapped to the same Feature.
-
-`00-roadmap.md` also records cross-task edges that touch the current task: dependencies, blockers, siblings, follow-ups, derivation, and supersession. Relationships are read from the current task toward the listed work, so direction is explicit. A relationship records the owned boundary and coordination condition, never another task's mutable state. Existing work uses its `T-###`; not-yet-opened work may use `proposed:<slug>`. Before archive, every unresolved proposal is opened as a task, canceled or descoped explicitly, or transferred to the Feature Brief and archive summary. Registry mappings and Feature Briefs own the global task grouping.
+Cross-worktree queries are read-only and report the source worktree. They detect duplicate goals before a bundle is created. A lock failure or duplicate is a stop condition; callers must not invent an ID. `feature --apply` uses the same lock to resolve an exact existing Feature title or allocate a Feature ID across linked worktree registries.
 
 ## 3. Project object model
 
@@ -104,17 +87,13 @@ Reserved:
 - `M-000`: Inbox / Triage milestone
 - `F-000`: Inbox / Untriaged feature
 
-Feature and Requirement statuses: `planned | in-progress | blocked | done | cut`.
-
-Milestone statuses: `planned | in-progress | blocked | done`.
-
-IDs are stable and never reused.
+Feature and Requirement statuses are `planned | in-progress | blocked | done | cut`. Milestone statuses are `planned | in-progress | blocked | done`. IDs are stable and never reused.
 
 ## 4. Registry consistency
 
 `registry.yaml` contains top-level `version`, `milestones`, `features`, `requirements`, and `tasks`; it may contain `task_doc_roots`.
 
-For each task with valid metadata:
+For each valid task bundle:
 
 - a matching registry task entry exists
 - `dev_docs_path` points to the actual bundle
@@ -122,7 +101,7 @@ For each task with valid metadata:
 
 `lint` reports inconsistencies. `sync --apply` repairs task entry paths and statuses and regenerates derived views.
 
-A new product or system capability is mapped to a real Feature. `F-000` is allowed only for explicitly deferred triage.
+A new product or system capability maps to a real Feature. `F-000` is allowed only for explicitly deferred triage.
 
 ## 5. Task discovery
 
@@ -144,31 +123,22 @@ Within each root, only immediate children of `active/` and `archive/` are task b
 
 `query --all-worktrees` repeats discovery for every linked worktree and includes uncommitted bundles.
 
-## 6. Lint and migration
+## 6. Lint
 
-Errors include invalid metadata, incomplete canonical bundles, duplicate IDs or authorities, conflicting slugs, invalid enums, and registry path or status drift.
+Errors include:
 
-Warnings include:
+- incomplete active or archived bundle structure
+- missing roadmap responsibilities, incomplete phase fields, unfilled template placeholders, or inconsistent kickoff status/checks
+- missing or invalid `.ai-task.yaml`
+- invalid progress state
+- duplicate task IDs or conflicting slugs
+- registry path or status drift
+- malformed project object IDs, mappings, or enums
 
-- missing `.ai-task.yaml` during migration
-- an active legacy bundle that has `00-overview.md` but no `01-status.md`
-- an active bundle using a legacy roadmap or detail filename without its canonical replacement
-- display metadata ahead of task status
-- `State: done` without a complete `## Done when` checklist, or legacy acceptance checklist
-
-Warnings do not fail `lint --check`; `lint --strict` promotes non-human-verification warnings.
-
-Compatibility is read-only:
-
-- prefer `01-status.md`, fall back to `00-overview.md`
-- prefer `00-roadmap.md`, fall back to `roadmap.md`, then `01-plan.md`
-- prefer `implementation.md`, `verification.md`, and `pitfalls.md`; fall back respectively to `03-implementation-notes.md`, `04-verification.md`, and `05-pitfalls.md`
-- never create or update a legacy path for a new task
-
-When a legacy and canonical file for the same responsibility coexist, lint reports a duplicate authority. A full task synchronization keeps only useful current content in the canonical file and removes the legacy path.
+Warnings include display metadata ahead of task status and `State: done` without a complete `## Done when` checklist. Warnings do not fail `lint --check`; `lint --strict` promotes non-human-verification warnings.
 
 ## 7. Change control
 
-This contract is read-only during ordinary project work. Change it only when the governance system itself is explicitly being revised, and keep the task skills, control script, templates, tests, and project changelog aligned.
+This contract and `dev-docs/README.md` are read-only during ordinary project work. Change them only when the governance system itself is explicitly being revised, and keep task skills, control script, templates, tests, and project changelog aligned.
 
 Skill routing belongs in each skill's frontmatter description, not in this contract.

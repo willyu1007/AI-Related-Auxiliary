@@ -4,9 +4,8 @@ Entry point for AI agents working with **project-level** governance in the repos
 
 ## Prerequisite
 
-The hub aggregates dev-docs task bundles; it does not create them. `dev-docs/active/` and
-`dev-docs/archive/` arrive with the same install that placed this file, and the task skills are what
-write bundles into them.
+The hub aggregates dev-docs task bundles; it does not define their semantics. Read
+`dev-docs/README.md` before interpreting or changing a task bundle.
 
 ## Quick start
 
@@ -84,16 +83,10 @@ node .githooks/install.mjs --uninstall
 ```
 
 ## Key principles
-- Task execution progress is maintained in `dev-docs/**/01-status.md` (task bundle is the SoT for status).
-- Task decisions, phased planning, and relationships touching the current task are maintained in `dev-docs/**/00-roadmap.md`; another task's own status file owns its state.
-- Current completion evidence is maintained in `dev-docs/**/verification.md`; replace superseded runs and keep bulky logs in `artifacts/`.
-- `implementation.md` and `pitfalls.md` are optional current-context files, never mandatory append-only journals.
-- Task identity is anchored by `.ai-task.yaml` (`task_id`); see `CONTRACT.md` section 4 for the schema.
+- Task-bundle semantics and lifecycle rules live only in `dev-docs/README.md`.
+- Task progress and identity are consumed as defined by `CONTRACT.md`.
 - Project semantic mapping lives in `.ai/project/registry.yaml`.
 - Derived views are not authoritative; regenerate them instead of editing AUTO sections.
-
-## Migration note
-Missing `.ai-task.yaml` is allowed (warning) during migration, but any existing meta file must be valid, unique, and consistent with the registry. Legacy `00-overview.md`, `roadmap.md`, `01-plan.md`, `03-implementation-notes.md`, `04-verification.md`, and `05-pitfalls.md` may be read only when their canonical replacements are absent. A full synchronization migrates useful current content and removes obsolete paths; new writes use canonical names only.
 
 ## Contract
 All behavior MUST follow `.ai/project/CONTRACT.md`.

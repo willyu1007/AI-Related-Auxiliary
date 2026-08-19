@@ -18,10 +18,11 @@ node .ai/scripts/ctl-project-governance.mjs resume --repo-root <worktree_path> -
 
 | Priority | Condition |
 |----------|-----------|
-| 1 | Has `in-progress` task → continue that task |
-| 2 | Has `blocked` task → attempt to unblock |
-| 3 | Has `planned` task → start next planned task |
-| 4 | All `done` → report completion or suggest new work |
+| 1 | Has `in-progress` task with kickoff `pending` → continue alignment or replanning, not implementation |
+| 2 | Has `in-progress` task with kickoff `ready` → continue that task's implementation |
+| 3 | Has `blocked` task → attempt to unblock |
+| 4 | Has `planned` task → continue planning toward kickoff |
+| 5 | All `done` → report completion or suggest new work |
 
 ## Output Template
 
@@ -44,9 +45,11 @@ node .ai/scripts/ctl-project-governance.mjs resume --repo-root <worktree_path> -
 
 ## Rules
 - Always provide at least one actionable command
-- If continuing an in-progress task, suggest reading its canonical status head first
+- If continuing an in-progress task, suggest reading its current status head first
 - For blocked tasks, suggest investigation steps
 - Use `timeline.commits` for landed work and `status` for the task goal and next step.
+- Use `roadmap.kickoff_status` to distinguish alignment/replanning from runnable implementation.
+- Never recommend decision-dependent implementation while kickoff is `pending`.
 - Report an empty timeline as unknown progress, not zero progress.
 - If `worktree.clean` is false, inspect the returned `suggested_commands` first.
 - Surface packet warnings instead of silently overriding task documentation.

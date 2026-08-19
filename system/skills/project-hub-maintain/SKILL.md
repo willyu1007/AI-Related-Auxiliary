@@ -16,6 +16,8 @@ description: >-
 
 The task bundle owns execution truth. The hub is a semantic map and derived projection; it does not replace checkpoint synchronization.
 
+Read `dev-docs/README.md` before auditing or changing a task bundle.
+
 ## Archive task
 
 Archiving is an approved destructive transition from a working record to a compact historical record. Use `./templates/archive-checklist.md`.
@@ -24,7 +26,7 @@ Archiving is an approved destructive transition from a working record to a compa
 
 1. **Clean, aligned checkpoint.** The closeout checkpoint is committed, the active bundle matches repository reality, and unrelated worktree changes are identified. If not, run the task checkpoint synchronization workflow first.
 
-2. **Completion audit.** Treat `State: done` as a claim. Read the goal and every `Done when` item from `01-status.md`, inspect the task's exact trailer-linked commit timeline and delivered code, and rerun the cheapest decisive verification from `verification.md` when it is still runnable. For a legacy bundle only, fall back to `04-verification.md` when the canonical file is absent. Environmental inability to run a check must be explicit; it is not a pass.
+2. **Completion audit.** Treat `State: done` as a claim. Require roadmap kickoff `ready`, read the goal and every `Done when` item from `01-status.md`, inspect the task's exact trailer-linked commit timeline and delivered code, and rerun the cheapest decisive verification from `verification.md` when it is still runnable. Environmental inability to run a check must be explicit; it is not a pass.
 
    Stop when either side disagrees: reality incomplete means finish the work; reality complete but the record stale means synchronize the task. Archiving itself never repairs the claim.
 
@@ -39,7 +41,7 @@ Archiving is an approved destructive transition from a working record to a compa
    - related tasks and the disposition of every unresolved `proposed:<slug>` follow-up;
    - `git log --grep="^Task: T-###"` as the full-history pointer.
 
-   Show the exact move, the proposed summary, and the deletion list. The deletion list is every bundle entry except `.ai-task.yaml` and the new `summary.md`, including roadmap, status, architecture, verification, optional files, requirements, artifacts, and legacy filenames.
+   Show the exact move, the proposed summary, and the deletion list. The deletion list is every bundle entry except `.ai-task.yaml` and the new `summary.md`, including roadmap, status, architecture, verification, optional files, requirements, and artifacts.
 
    Roadmap deletion must not erase future work.
 

@@ -1,6 +1,6 @@
 # Roadmap
 
-`01-status.md` is the current task head. This file owns the decisions and plan that lead to it.
+`01-status.md` is the current task head. This file is the living surface for decision alignment, task relationships, kickoff readiness, and the implementation route that lead to it.
 
 ## Scope and constraints
 
@@ -13,49 +13,62 @@
 ### Constraints and dependencies
 - <!-- technical, product, environment, or sequencing constraint -->
 
+## Decision alignment
+
+| Decision question | Options / tradeoffs | Current direction | Status | Owner / required confirmation | Closure evidence | Consequences |
+|---|---|---|---|---|---|---|
+| <!-- material top-level question --> | <!-- viable choices and material tradeoffs --> | <!-- recommendation or settled choice --> | open / proposed / decided / superseded | <!-- user, role, or evidence owner --> | <!-- confirmation or evidence that closes it --> | <!-- effect on scope, design, plan, or verification --> |
+
+Keep a material question here from discussion through resolution. Use `open` when no direction is ready, `proposed` when a direction awaits confirmation or evidence, `decided` when its closure condition is satisfied, and `superseded` only for a replaced decision whose rationale prevents replay. A user-owned choice about the goal, scope, product behavior, or acceptance boundary remains `open` or `proposed` until the user confirms it. A technical choice within the approved boundary may become `decided` from repository or experimental evidence. If a user-owned choice gates the current phase, close it before dependent implementation; independent discovery may continue. Reflect settled design in `02-architecture.md`; a decision that changes the goal or completion conditions must also update `01-status.md`. If no material decision is known, replace the placeholder with one `None` row rather than inventing a choice.
+
+### Assumptions
+
+| Assumption | Risk if wrong | Validation |
+|---|---|---|
+| <!-- current working assumption --> | <!-- consequence --> | <!-- evidence or discovery action --> |
+
+Use one `None` row when no assumption is currently needed.
+
 ## Task relationships
 
 | Task / proposed work | Relationship from this task | Owned boundary / exchanged contract | Coordination condition |
 |---|---|---|---|
 | <!-- T-### or proposed:<slug> --> | <!-- depends-on / blocks / sibling / follow-up / derived-from / supersedes --> | <!-- what each task owns or passes across the boundary --> | <!-- event, decision, or interface that requires coordination --> |
 
-Interpret the relationship from the current task: `depends-on` means this task needs the listed work, `blocks` means this task gates it, `follow-up` means the listed work follows this task, and `derived-from` or `supersedes` also use this-task-first direction. Record only relationships that touch this task. Do not copy another task's state here; resolve current state from that task's own status file. If a dependency blocks this task, also update `01-status.md`. Before archive, convert each unresolved `proposed:<slug>` into a task ID, cancel or descope it explicitly, or transfer it to the Feature Brief and `summary.md`.
+Interpret the relationship from the current task: `depends-on` means this task needs the listed work, `blocks` means this task gates it, `follow-up` means the listed work follows this task, and `derived-from` or `supersedes` also use this-task-first direction. Record only evidence-backed relationships that touch this task. If none is known, replace the placeholder with `| None | — | — | — |`; do not infer a relationship from shared files or domain alone. Use `proposed:<slug>` only for a concrete outcome with a creation trigger. Do not copy another task's state here; resolve current state from that task's own status file. If a dependency blocks this task, also update `01-status.md`. Before archive, convert each unresolved proposal into a task ID, cancel or descope it explicitly, or transfer it to the Feature Brief and `summary.md`.
 
-## Open questions and assumptions
-
-### Open questions
-- <!-- question, owner, and what it blocks -->
-
-### Assumptions
-- <!-- assumption, risk if wrong, and how to validate -->
-
-## Decision log
-
-| Decision | Status | Rationale / evidence | Consequences |
-|---|---|---|---|
-| <!-- topic and current choice --> | proposed / decided / superseded | <!-- why --> | <!-- scope or follow-up --> |
-
-Keep only the context needed to explain the current direction or prevent a rejected path from being replayed. Mark a changed decision superseded and preserve its concise rationale; move bulky analysis to `artifacts/` instead of growing this log indefinitely. A decided change to the task goal or completion conditions must also update `01-status.md`.
-
-## Phases
+## Implementation plan
 
 ### Phase 1 — <!-- name -->
 - Outcome:
+- Approach:
+- Planned changes:
+  1. <!-- first executable change -->
+- Affected boundaries / entry points:
 - Dependencies:
-- Acceptance:
+- Exit criteria:
 - Verification:
+- Recovery:
 
-### Phase 2 — <!-- name -->
-- Outcome:
-- Dependencies:
-- Acceptance:
-- Verification:
+While kickoff is `pending`, this may be an alignment or discovery phase and downstream implementation phases may remain absent rather than invented. When kickoff becomes `ready`, the first implementation phase must be concrete enough to begin without replanning the task. `01-status.md` points to the first unfinished action. Repeat this block only for another sequential, independently verifiable checkpoint that serves the same task goal and completion conditions. Work needing its own outcome, state, handoff, verification, or archive is a separate task instead.
+
+## Kickoff gate
+
+- Status: pending
+- [ ] Every user-owned choice that blocks implementation is decided.
+- [ ] Settled design and interfaces are reflected in `02-architecture.md`.
+- [ ] The first implementation phase is executable with exit, verification, and recovery criteria.
+- [ ] Every current completion condition has a decisive planned check in `verification.md`.
+
+Set `Status: ready` only when every item is checked. If evidence invalidates a gating premise or route, return to `pending` immediately and stop dependent implementation while replanning.
 
 ## Risks and recovery
 
 | Risk | Detection | Mitigation | Recovery / rollback |
 |---|---|---|---|
 | <!-- risk --> | <!-- signal --> | <!-- prevention --> | <!-- response --> |
+
+Use one `None` row when no material risk is currently known.
 
 ## Phase closeout
 

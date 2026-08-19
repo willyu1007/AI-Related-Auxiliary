@@ -13,9 +13,9 @@ node .ai/scripts/ctl-project-governance.mjs query --all-worktrees --json
 ```markdown
 ## Tasks
 
-| Task ID | Name | Status | Feature | Worktree | Path |
-|---------|------|--------|---------|----------|------|
-| T-001 | <slug> | <status> | F-xxx | <worktree> | dev-docs/active/<slug>/ |
+| Task ID | Name | Status | Kickoff | Feature | Worktree | Path |
+|---------|------|--------|---------|---------|----------|------|
+| T-001 | <slug> | <status> | pending / ready | F-xxx | <worktree> | dev-docs/active/<slug>/ |
 
 **Quick actions**:
 - View details: open the row's `status_doc_path` under its `worktree_path`
@@ -26,3 +26,4 @@ node .ai/scripts/ctl-project-governance.mjs query --all-worktrees --json
 - List all tasks from query results
 - Sort by status priority: in-progress > blocked > planned > done
 - Include worktree and path for quick navigation; do not collapse divergent checkouts silently
+- Report `kickoff_status` for active tasks; use `—` for archived tasks

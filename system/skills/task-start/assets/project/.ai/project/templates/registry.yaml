@@ -5,7 +5,6 @@
 #
 # IMPORTANT:
 # - Task progress status is derived from `dev-docs/**/active/<task>/01-status.md` (SoT).
-#   Legacy `00-overview.md` is read only when the canonical file is absent.
 # - Task IDs are anchored in `dev-docs/**/active/<task>/.ai-task.yaml` (SoT for identity).
 
 version: 1

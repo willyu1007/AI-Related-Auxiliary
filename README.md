@@ -27,11 +27,12 @@ checks/          # 本仓库自己的校验，不是分发物
 
 ## system/ —— 技能
 
-任务治理的六个技能，按实际操作划分 —— 每个对应工作流程里的一个时刻。注意两条回路： **`sync → resume` 走仓库**（跨时间、耐久），**`handoff → 新会话` 走对话**（零间隔、易失）。
+任务治理的七个技能，按实际操作划分 —— 每个对应工作流程里的一个时刻。主线是 `start → plan → implementation`；新证据推翻路线时回到 plan，实施检查点通过 `sync → resume` 走仓库跨越时间，`handoff → 新会话` 则通过对话完成零间隔交接。
 
 | Skill | 时刻 | 通道 |
 |---|---|---|
-| [task-start](system/skills/task-start/SKILL.md) | 开任务：查重、建立 roadmap/status bundle、分配 ID、记录跨任务边界并注册进 hub；**持有 Task Contract 与项目资产** | 仓库 |
+| [task-start](system/skills/task-start/SKILL.md) | 开任务：查重、建立带 pending roadmap seed 的 bundle、分配 ID 并注册进 hub；**持有 Task Contract 与项目资产** | 仓库 |
+| [task-plan](system/skills/task-plan/SKILL.md) | 持续收敛顶层决策、完成实施 kickoff，并在新证据推翻路线时 replan | 仓库 + 对话 |
 | [task-sync](system/skills/task-sync/SKILL.md) | 把记录与仓库现实拉平，保持当前态证据而非追加流水账；**持有 Git 钩子** | 仓库 |
 | [project-hub-maintain](system/skills/project-hub-maintain/SKILL.md) | 执行已选任务的归档转换，或修复 hub/registry 与派生视图漂移 | 仓库 |
 | [task-resume](system/skills/task-resume/SKILL.md) | 冷启动：只凭仓库重建已跟踪任务的上下文 | 仓库 |

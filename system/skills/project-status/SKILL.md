@@ -6,8 +6,6 @@ description: >-
   which tasks appear archive-ready, or whether the project hub has drifted.
 ---
 
-# Project Status
-
 Answer the question from what is written down, and make the answer actionable.
 
 Read-only is the point of this skill, not a limitation. Scope is the portfolio: several tasks at once, the shape of the whole. A question about one specific task the user intends to continue is a different job — that one rebuilds the task's context rather than summarizing it.
@@ -28,10 +26,10 @@ Pick by what was asked, then follow that reference's **Data Source** commands:
 
 ## Workflow
 
-1. **Classify the question** and open the matching reference.
+1. **Classify the question.** Read `dev-docs/README.md` for task semantics, then open the matching reference.
 
 2. **Gather from task bundles across linked worktrees.** Run the reference's data-source commands — usually
-   `ctl-project-governance.mjs query --all-worktrees` with a `--status` or `--text` filter. Never guess task details; open the returned `status_doc_path` when the query output is not enough. Legacy `00-overview.md` is a fallback only when `01-status.md` is absent.
+   `ctl-project-governance.mjs query --all-worktrees` with a `--status` or `--text` filter. Never guess task details; open the returned `status_doc_path` when the query output is not enough.
 
 3. **Check consistency, do not fix it.** `lint --check` reveals drift between the registry and the task bundles. Report the drift and the appropriate maintenance action; do not run write-mode repair.
 

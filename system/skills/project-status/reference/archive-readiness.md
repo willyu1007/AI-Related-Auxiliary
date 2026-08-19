@@ -15,7 +15,7 @@ For each plausible candidate, open its returned `status_doc_path` and run:
 node .ai/scripts/ctl-project-governance.mjs resume --repo-root <worktree_path> --task <T-###> --json
 ```
 
-Read the canonical goal and every `Done when` condition from `01-status.md`; use legacy `00-overview.md` only when the canonical file is absent. Inspect delivered code and the exact task-trailer commit timeline. Read `verification.md` for the latest decisive evidence, falling back to legacy `04-verification.md` only when needed. Check `00-roadmap.md` for unresolved decisions and `proposed:<slug>` follow-ups whose disposition would be lost on archive.
+Read the goal and every `Done when` condition from `01-status.md`. Inspect delivered code and the exact task-trailer commit timeline. Read `verification.md` for the latest decisive evidence. Check that roadmap kickoff is `ready`, then inspect unresolved decisions and `proposed:<slug>` follow-ups whose disposition would be lost on archive.
 
 ## Audit result
 
@@ -25,7 +25,7 @@ Report one row per candidate:
 |---|---|---|---|---|---|
 | `T-###` | `<path>` | done / other | complete / incomplete / unknown | yes / no | `<condition, evidence, clean-checkpoint, follow-up disposition, or approval>` |
 
-`State: done` is only a claim. Mark a task ready only when its completion conditions hold against repository reality, decisive evidence exists, its checkpoint is aligned, and every unresolved proposed follow-up has a durable disposition. Report environmental limitations as missing evidence, not as a pass. An archive still requires a separate approved destructive transition.
+`State: done` is only a claim. Mark a task ready only when kickoff is `ready`, its completion conditions hold against repository reality, decisive evidence exists, its checkpoint is aligned, and every unresolved proposed follow-up has a durable disposition. Report environmental limitations as missing evidence, not as a pass. An archive still requires a separate approved destructive transition.
 
 ## Next command
 

@@ -11,8 +11,7 @@
  * - Ships inside the skill that provisions the hub and installs itself into the target repository,
  *   because the Git hooks call it by repository path and cannot reach the skill's own location.
  * - Task progress SoT remains in the dev-docs task bundle (`01-status.md`).
- * - Legacy `00-overview.md` is read only when the canonical status file is absent.
- * - Legacy roadmap and detail paths are compatibility reads, never new write targets.
+ * - Task bundles follow the single contract in `dev-docs/README.md`.
  * - Task identity SoT is anchored by `.ai-task.yaml` (`task_id`).
  */
 
@@ -703,15 +702,12 @@ function dumpYamlDoc(doc) {
 function getBundleStatusFromStatusDoc(statusRaw, statusPath = '01-status.md') {
   const raw = normalizeEol(statusRaw);
   const lines = raw.split('\n');
-  const canonical = path.basename(statusPath) === '01-status.md';
 
   let inProgress = false;
   for (const line of lines) {
     const t = line.trim();
     if (t.startsWith('#')) {
-      const progressHeading = canonical
-        ? /^##\s+Progress\s*$/i.test(t)
-        : /^##\s+(Progress|Status)\s*$/i.test(t);
+      const progressHeading = /^##\s+Progress\s*$/i.test(t);
       if (progressHeading) {
         inProgress = true;
         continue;
@@ -742,7 +738,7 @@ function getBundleStatusFromStatusDoc(statusRaw, statusPath = '01-status.md') {
 
   return {
     status: null,
-    error: `Missing "## ${canonical ? 'Progress' : 'Status'}" / "- State: <status>" in ${toPosix(statusPath)}.`,
+    error: `Missing "## Progress" / "- State: <status>" in ${toPosix(statusPath)}.`,
   };
 }
 
@@ -808,18 +804,6 @@ function getMarkdownListField(markdownRaw, heading, field) {
   return '';
 }
 
-function getMarkdownBulletItems(markdownRaw, heading, limit) {
-  const items = [];
-  for (const line of getMarkdownSectionLines(markdownRaw, heading)) {
-    const match = line.trim().match(/^\-\s+(.+)$/);
-    if (!match) continue;
-    const value = cleanMarkdownValue(match[1] || '');
-    if (value) items.push(value);
-    if (items.length >= limit) break;
-  }
-  return items;
-}
-
 function getPitfallTableItems(markdownRaw, limit) {
   const items = [];
   let headerSeen = false;
@@ -846,7 +830,29 @@ function getPitfallTableItems(markdownRaw, limit) {
   return items;
 }
 
-function getCompletionCriteriaStats(statusRaw, statusKind = 'canonical') {
+function getMarkdownChecklistStats(markdownRaw, heading) {
+  let total = 0;
+  let checked = 0;
+  for (const line of getMarkdownSectionLines(markdownRaw, heading)) {
+    const match = line.trim().match(/^\-\s*\[(x|X|\s)\]\s+(.+)$/);
+    if (!match) continue;
+    total += 1;
+    if (String(match[1]).toLowerCase() === 'x') checked += 1;
+  }
+  return { total, checked };
+}
+
+function getRoadmapKickoff(roadmapRaw) {
+  const status = getMarkdownListField(roadmapRaw, 'Kickoff gate', 'Status').toLowerCase();
+  const checklist = getMarkdownChecklistStats(roadmapRaw, 'Kickoff gate');
+  return {
+    status: status === 'pending' || status === 'ready' ? status : '',
+    rawStatus: status,
+    ...checklist,
+  };
+}
+
+function getCompletionCriteriaStats(statusRaw) {
   const raw = normalizeEol(statusRaw);
   const lines = raw.split('\n');
 
@@ -857,10 +863,7 @@ function getCompletionCriteriaStats(statusRaw, statusKind = 'canonical') {
   for (const line of lines) {
     const t = line.trim();
     if (t.startsWith('#')) {
-      const completionHeading =
-        statusKind === 'legacy'
-          ? /^##\s+(Done when|Acceptance criteria)\b/i.test(t)
-          : /^##\s+Done when\b/i.test(t);
+      const completionHeading = /^##\s+Done when\b/i.test(t);
       if (completionHeading) {
         inAc = true;
         continue;
@@ -961,6 +964,89 @@ function getConfiguredRootsFromRegistry(registry) {
   return roots.map((r) => String(r)).filter(Boolean);
 }
 
+function validateRoadmap(roadmapRaw) {
+  const raw = normalizeEol(roadmapRaw);
+  const errors = [];
+  const requiredHeadings = [
+    'scope and constraints',
+    'decision alignment',
+    'task relationships',
+    'implementation plan',
+    'kickoff gate',
+    'risks and recovery',
+    'phase closeout',
+  ];
+  const headings = new Set();
+
+  for (const line of raw.split('\n')) {
+    const match = line.trim().match(/^##\s+(.+?)\s*$/);
+    if (match) headings.add(String(match[1] || '').trim().toLowerCase());
+  }
+
+  const missingHeadings = requiredHeadings.filter((heading) => !headings.has(heading));
+  if (missingHeadings.length > 0) {
+    errors.push(`Roadmap is missing required sections: ${missingHeadings.join(', ')}.`);
+  }
+
+  if (/<!--[\s\S]*?-->/.test(raw)) {
+    errors.push('Roadmap contains unfilled template placeholder comments.');
+  }
+
+  const kickoff = getRoadmapKickoff(raw);
+  if (!kickoff.status) {
+    errors.push('Kickoff gate must contain "- Status: pending" or "- Status: ready".');
+  }
+  if (kickoff.total < 4) {
+    errors.push(`Kickoff gate must contain the four readiness checks (found ${kickoff.total}).`);
+  } else if (kickoff.status === 'ready' && kickoff.checked !== kickoff.total) {
+    errors.push(`Kickoff is ready but only ${kickoff.checked}/${kickoff.total} gate items are checked.`);
+  } else if (kickoff.status === 'pending' && kickoff.checked === kickoff.total) {
+    errors.push('Kickoff is pending even though every gate item is checked.');
+  }
+
+  const implementationPlan = getMarkdownSectionLines(raw, 'Implementation plan').join('\n');
+  const phaseMatches = [
+    ...implementationPlan.matchAll(/^###\s+Phase\s+\d+\s+[—-]\s+.+$/gim),
+  ];
+  if (phaseMatches.length === 0) {
+    errors.push('Implementation plan must contain at least one named phase.');
+    return errors;
+  }
+
+  const requiredFields = [
+    'Outcome',
+    'Approach',
+    'Affected boundaries / entry points',
+    'Dependencies',
+    'Exit criteria',
+    'Verification',
+    'Recovery',
+  ];
+
+  for (let index = 0; index < phaseMatches.length; index++) {
+    const start = phaseMatches[index].index;
+    const end = phaseMatches[index + 1]?.index ?? implementationPlan.length;
+    const phaseRaw = implementationPlan.slice(start, end);
+    const phaseName = String(phaseMatches[index][0] || `Phase ${index + 1}`).trim();
+
+    for (const field of requiredFields) {
+      const escaped = field.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const match = phaseRaw.match(new RegExp(`^\\s*-\\s+${escaped}:\\s*(.+)$`, 'mi'));
+      if (!match || !cleanMarkdownValue(match[1])) {
+        errors.push(`${phaseName} is missing a populated "${field}" field.`);
+      }
+    }
+
+    if (!/^\s*-\s+Planned changes:\s*$/im.test(phaseRaw)) {
+      errors.push(`${phaseName} is missing "Planned changes".`);
+    } else if (!/^\s*\d+\.\s+\S.+$/m.test(phaseRaw)) {
+      errors.push(`${phaseName} needs at least one ordered planned change.`);
+    }
+  }
+
+  return errors;
+}
+
 function resolveDevDocsRoots(repoRoot, registry = null) {
   const configured = getConfiguredRootsFromRegistry(registry);
   return configured.length > 0
@@ -969,36 +1055,15 @@ function resolveDevDocsRoots(repoRoot, registry = null) {
 }
 
 function resolveTaskStatusDoc(taskDir) {
-  const canonicalPath = path.join(taskDir, '01-status.md');
-  if (exists(canonicalPath)) return { path: canonicalPath, kind: 'canonical' };
-
-  const legacyPath = path.join(taskDir, '00-overview.md');
-  if (exists(legacyPath)) return { path: legacyPath, kind: 'legacy' };
-
-  return { path: canonicalPath, kind: 'missing' };
+  return path.join(taskDir, '01-status.md');
 }
 
 function resolveTaskRoadmapDoc(taskDir) {
-  for (const [name, kind] of [
-    ['00-roadmap.md', 'canonical'],
-    ['roadmap.md', 'legacy'],
-    ['01-plan.md', 'legacy'],
-  ]) {
-    const candidate = path.join(taskDir, name);
-    if (exists(candidate)) return { path: candidate, kind };
-  }
-
-  return { path: path.join(taskDir, '00-roadmap.md'), kind: 'missing' };
+  return path.join(taskDir, '00-roadmap.md');
 }
 
 function resolveTaskPitfallsDoc(taskDir) {
-  const canonicalPath = path.join(taskDir, 'pitfalls.md');
-  if (exists(canonicalPath)) return { path: canonicalPath, kind: 'canonical' };
-
-  const legacyPath = path.join(taskDir, '05-pitfalls.md');
-  if (exists(legacyPath)) return { path: legacyPath, kind: 'legacy' };
-
-  return { path: canonicalPath, kind: 'missing' };
+  return path.join(taskDir, 'pitfalls.md');
 }
 
 function scanTasks(repoRoot, devDocsRoots) {
@@ -1010,8 +1075,8 @@ function scanTasks(repoRoot, devDocsRoots) {
       const slugs = listImmediateChildDirs(phaseDir);
       for (const slug of slugs) {
         const taskDir = path.join(phaseDir, slug);
-        const statusDoc = resolveTaskStatusDoc(taskDir);
-        const roadmapDoc = resolveTaskRoadmapDoc(taskDir);
+        const statusPath = resolveTaskStatusDoc(taskDir);
+        const roadmapPath = resolveTaskRoadmapDoc(taskDir);
         const metaPath = path.join(taskDir, '.ai-task.yaml');
         tasks.push({
           root,
@@ -1019,10 +1084,8 @@ function scanTasks(repoRoot, devDocsRoots) {
           slug,
           absPath: taskDir,
           relPath: path.relative(repoRoot, taskDir),
-          statusPath: statusDoc.path,
-          statusKind: statusDoc.kind,
-          roadmapPath: roadmapDoc.path,
-          roadmapKind: roadmapDoc.kind,
+          statusPath,
+          roadmapPath,
           metaPath,
         });
       }
@@ -1297,6 +1360,8 @@ function cmdLint({ repoRoot, strict }) {
   for (const task of tasks) {
     const metaRaw = readText(task.metaPath);
     const statusRaw = readText(task.statusPath);
+    const roadmapRaw = readText(task.roadmapPath);
+    const kickoff = roadmapRaw ? getRoadmapKickoff(roadmapRaw) : null;
 
     task.taskId = null;
     task.bundleStatus = null;
@@ -1305,22 +1370,22 @@ function cmdLint({ repoRoot, strict }) {
     if (task.phase === 'archive') {
       const names = fs.readdirSync(task.absPath).sort();
       const hasSummary = names.includes('summary.md');
+      const hasMeta = names.includes('.ai-task.yaml');
       const allowed = new Set(['.ai-task.yaml', 'summary.md']);
       const extras = names.filter((name) => !allowed.has(name));
-      if (hasSummary && extras.length > 0) {
+      if (!hasSummary || !hasMeta || extras.length > 0 || names.length !== 2) {
+        const details = [];
+        if (!hasMeta) details.push('missing .ai-task.yaml');
+        if (!hasSummary) details.push('missing summary.md');
+        if (extras.length > 0) details.push(`extra entries: ${extras.join(', ')}`);
         errors.push(
-          `${formatTaskRef(task)}: Archived bundle with summary.md must contain exactly ` +
-            `.ai-task.yaml and summary.md; extra entries: ${extras.join(', ')}.`
-        );
-      } else if (!hasSummary) {
-        warnings.push(
-          `${formatTaskRef(task)}: Legacy archive has no summary.md; new archives must contain exactly ` +
-            '.ai-task.yaml and summary.md.'
+          `${formatTaskRef(task)}: Archived bundle must contain exactly .ai-task.yaml and summary.md` +
+            `${details.length > 0 ? `; ${details.join('; ')}` : ''}.`
         );
       }
     }
 
-    if (task.phase === 'active' && task.statusKind === 'canonical') {
+    if (task.phase === 'active') {
       const requiredFiles = [
         '00-roadmap.md',
         '01-status.md',
@@ -1330,38 +1395,15 @@ function cmdLint({ repoRoot, strict }) {
       const missingFiles = requiredFiles.filter((name) => !exists(path.join(task.absPath, name)));
       if (missingFiles.length > 0) {
         errors.push(
-          `${formatTaskRef(task)}: Canonical active bundle is incomplete; missing: ${missingFiles.join(', ')}.`
+          `${formatTaskRef(task)}: Active bundle is incomplete; missing: ${missingFiles.join(', ')}.`
         );
       }
-    }
 
-    if (task.phase === 'active') {
-      const compatibilityPairs = [
-        ['00-overview.md', '01-status.md'],
-        ['roadmap.md', '00-roadmap.md'],
-        ['01-plan.md', '00-roadmap.md'],
-        ['03-implementation-notes.md', 'implementation.md'],
-        ['04-verification.md', 'verification.md'],
-        ['05-pitfalls.md', 'pitfalls.md'],
-      ];
-      for (const [legacyName, canonicalName] of compatibilityPairs) {
-        if (!exists(path.join(task.absPath, legacyName))) continue;
-        if (exists(path.join(task.absPath, canonicalName))) {
-          errors.push(
-            `${formatTaskRef(task)}: Duplicate authority ${legacyName}; keep ${canonicalName} and remove the legacy path.`
-          );
-        } else {
-          warnings.push(
-            `${formatTaskRef(task)}: Using legacy ${legacyName}; migrate useful current content to ${canonicalName}.`
-          );
+      if (roadmapRaw) {
+        for (const roadmapError of validateRoadmap(roadmapRaw)) {
+          errors.push(`${formatTaskRef(task)}: ${roadmapError}`);
         }
       }
-    }
-
-    if (!statusRaw && task.phase === 'active') {
-      warnings.push(`${formatTaskRef(task)}: Missing 01-status.md (task progress SoT file).`);
-    } else if (task.phase === 'active' && task.statusKind === 'legacy') {
-      warnings.push(`${formatTaskRef(task)}: Using legacy 00-overview.md; migrate it to 01-status.md.`);
     }
 
     if (task.phase === 'active' && statusRaw) {
@@ -1369,13 +1411,17 @@ function cmdLint({ repoRoot, strict }) {
         statusRaw,
         path.basename(task.statusPath)
       );
-      if (stateError) warnings.push(`${formatTaskRef(task)}: ${stateError}`);
+      if (stateError) errors.push(`${formatTaskRef(task)}: ${stateError}`);
       task.bundleStatus = status;
       if (status) task.effectiveStatus = status;
     }
 
+    if (task.phase === 'active' && task.effectiveStatus === 'done' && kickoff?.status !== 'ready') {
+      errors.push(`${formatTaskRef(task)}: State is done but roadmap kickoff is not ready.`);
+    }
+
     if (!metaRaw) {
-      warnings.push(`${formatTaskRef(task)}: Missing .ai-task.yaml (migration warning).`);
+      errors.push(`${formatTaskRef(task)}: Missing .ai-task.yaml.`);
       continue;
     }
 
@@ -1426,7 +1472,7 @@ function cmdLint({ repoRoot, strict }) {
 
     // Human verification warnings
     if (task.effectiveStatus === 'done' && statusRaw) {
-      const ac = getCompletionCriteriaStats(statusRaw, task.statusKind);
+      const ac = getCompletionCriteriaStats(statusRaw);
       if (ac.total === 0) {
         warnings.push(`${formatTaskRef(task)}: State is done but no Done when checkboxes were found.`);
       } else if (ac.checked < ac.total) {
@@ -1576,6 +1622,7 @@ function collectTaskRows({ repoRoot, quiet = false, fromBundles = false }) {
 
   for (const task of tasks) {
     const statusRaw = readText(task.statusPath);
+    const roadmapRaw = readText(task.roadmapPath);
     const metaRaw = readText(task.metaPath);
 
     const effectiveStatus =
@@ -1606,9 +1653,8 @@ function collectTaskRows({ repoRoot, quiet = false, fromBundles = false }) {
       meta_missing: !metaRaw,
       status_missing: !statusRaw,
       status_doc_path: toPosix(path.relative(repoRoot, task.statusPath)),
-      status_doc_kind: task.statusKind,
       roadmap_path: toPosix(path.relative(repoRoot, task.roadmapPath)),
-      roadmap_kind: task.roadmapKind,
+      kickoff_status: getRoadmapKickoff(roadmapRaw).status || 'unknown',
     });
   }
 
@@ -2029,7 +2075,7 @@ function renderResumeFailure(res, json) {
     truncated_fields: limiter.fields,
   };
 
-  if (json) console.log(JSON.stringify({ version: 2, error }));
+  if (json) console.log(JSON.stringify({ version: 3, error }));
   else {
     console.error(colors.yellow(`[warning] ${error.message}`));
     for (const candidate of error.candidates) {
@@ -2042,20 +2088,15 @@ function renderResumeFailure(res, json) {
 
 function readResumeStatus(repoRoot, task) {
   const taskDir = path.join(repoRoot, task.dev_docs_path);
-  const statusDoc = resolveTaskStatusDoc(taskDir);
-  const statusRaw = readText(statusDoc.path);
+  const statusPath = resolveTaskStatusDoc(taskDir);
+  const statusRaw = readText(statusPath);
   const status = statusRaw
-    ? getBundleStatusFromStatusDoc(statusRaw, path.basename(statusDoc.path))
+    ? getBundleStatusFromStatusDoc(statusRaw, path.basename(statusPath))
     : { status: null, error: 'Missing 01-status.md.' };
-  const nextStep =
-    statusDoc.kind === 'legacy'
-      ? getMarkdownListField(statusRaw, 'Status', 'Next step') ||
-        getMarkdownListField(statusRaw, 'Progress', 'Next step')
-      : getMarkdownListField(statusRaw, 'Progress', 'Next step');
+  const nextStep = getMarkdownListField(statusRaw, 'Progress', 'Next step');
 
   return {
-    path: toPosix(path.relative(repoRoot, statusDoc.path)),
-    kind: statusDoc.kind,
+    path: toPosix(path.relative(repoRoot, statusPath)),
     state: status.status || task.status || 'unknown',
     goal: getMarkdownSectionText(statusRaw, 'Goal') || null,
     next_step: nextStep || null,
@@ -2065,22 +2106,32 @@ function readResumeStatus(repoRoot, task) {
 
 function readResumePitfalls(repoRoot, task) {
   const taskDir = path.join(repoRoot, task.dev_docs_path);
-  const pitfallsDoc = resolveTaskPitfallsDoc(taskDir);
-  const pitfallsRaw = readText(pitfallsDoc.path);
+  const pitfallsPath = resolveTaskPitfallsDoc(taskDir);
+  const pitfallsRaw = readText(pitfallsPath);
   return {
-    path: toPosix(path.relative(repoRoot, pitfallsDoc.path)),
-    kind: pitfallsDoc.kind,
-    items:
-      pitfallsDoc.kind === 'canonical'
-        ? getPitfallTableItems(pitfallsRaw, 5)
-        : getMarkdownBulletItems(pitfallsRaw, 'Do-not-repeat summary (keep current)', 5),
+    path: toPosix(path.relative(repoRoot, pitfallsPath)),
+    present: pitfallsRaw !== null,
+    items: getPitfallTableItems(pitfallsRaw, 5),
+  };
+}
+
+function readResumeRoadmap(repoRoot, task) {
+  const taskDir = path.join(repoRoot, task.dev_docs_path);
+  const roadmapPath = resolveTaskRoadmapDoc(taskDir);
+  const roadmapRaw = readText(roadmapPath);
+  const kickoff = getRoadmapKickoff(roadmapRaw);
+  return {
+    path: toPosix(path.relative(repoRoot, roadmapPath)),
+    kickoff_status: kickoff.status || 'unknown',
+    kickoff_checked: kickoff.checked,
+    kickoff_total: kickoff.total,
   };
 }
 
 function buildResumeSuggestions({ task, commits, worktree, pitfalls }) {
   const taskPath = String(task.dev_docs_path || '').replace(/\/+$/, '');
   const reads = [task.roadmap_path || `${taskPath}/00-roadmap.md`];
-  if (pitfalls.kind !== 'missing') reads.push(pitfalls.path);
+  if (pitfalls.present) reads.push(pitfalls.path);
   const commands = [];
 
   if (worktree && !worktree.clean) {
@@ -2099,6 +2150,7 @@ function renderResumeText(packet) {
   console.log(`Goal: ${packet.status.goal || 'unknown'}`);
   console.log(`Docs: ${packet.task.docs_path}`);
   console.log(`Next step: ${packet.status.next_step || 'unknown'}`);
+  console.log(`Kickoff: ${packet.roadmap.kickoff_status}`);
   console.log(`Resolution: ${packet.task.resolution}`);
   console.log(`Branch: ${packet.repository.branch || 'unknown'}`);
   console.log(`HEAD: ${packet.repository.head || 'unknown'}`);
@@ -2164,6 +2216,7 @@ function cmdResume({ repoRoot, taskId, limit, scan, limitClamped, scanClamped, j
 
   const task = resolved.task;
   const statusDoc = readResumeStatus(repoRoot, task);
+  const roadmap = readResumeRoadmap(repoRoot, task);
   const pitfalls = readResumePitfalls(repoRoot, task);
   const records = readCommitTimeline({ repoRoot, scan });
   if (records === null) {
@@ -2196,10 +2249,11 @@ function cmdResume({ repoRoot, taskId, limit, scan, limitClamped, scanClamped, j
   if (limitClamped) warnings.push(`Requested commit limit exceeded the maximum; using ${limit}.`);
   if (scanClamped) warnings.push(`Requested scan limit exceeded the maximum; using ${scan}.`);
   if (statusDoc.status_error) warnings.push(statusDoc.status_error);
-  if (statusDoc.kind === 'legacy') warnings.push(`Using legacy status file ${statusDoc.path}; migrate it to 01-status.md.`);
-  if (pitfalls.kind === 'legacy') warnings.push(`Using legacy pitfalls file ${pitfalls.path}; migrate it to pitfalls.md.`);
   if (!statusDoc.goal) warnings.push(`Goal is missing from ${statusDoc.path}.`);
   if (!statusDoc.next_step) warnings.push(`Next step is missing from ${statusDoc.path}.`);
+  if (roadmap.kickoff_status === 'unknown') {
+    warnings.push(`Kickoff status is missing or invalid in ${roadmap.path}.`);
+  }
   if (linked.length === 0) {
     warnings.push(`No commit carries "Task: ${task.id}"; linked progress is unknown, not zero.`);
   }
@@ -2242,7 +2296,7 @@ function cmdResume({ repoRoot, taskId, limit, scan, limitClamped, scanClamped, j
           ),
         };
   const packet = {
-    version: 2,
+    version: 3,
     task: {
       id: task.id,
       slug: limiter.text(task.slug, RESUME_TEXT_LIMITS.short, 'task.slug'),
@@ -2254,6 +2308,12 @@ function cmdResume({ repoRoot, taskId, limit, scan, limitClamped, scanClamped, j
       path: limiter.text(statusDoc.path, RESUME_TEXT_LIMITS.path, 'status.path'),
       goal: limiter.text(statusDoc.goal, RESUME_TEXT_LIMITS.text, 'status.goal'),
       next_step: limiter.text(statusDoc.next_step, RESUME_TEXT_LIMITS.text, 'status.next_step'),
+    },
+    roadmap: {
+      path: limiter.text(roadmap.path, RESUME_TEXT_LIMITS.path, 'roadmap.path'),
+      kickoff_status: roadmap.kickoff_status,
+      kickoff_checked: roadmap.kickoff_checked,
+      kickoff_total: roadmap.kickoff_total,
     },
     repository: {
       branch: limiter.text(branch, RESUME_TEXT_LIMITS.short, 'repository.branch'),

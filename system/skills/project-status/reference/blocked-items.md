@@ -24,6 +24,6 @@ node .ai/scripts/ctl-project-governance.mjs query --all-worktrees --status block
 
 ## Rules
 - If no blockers exist, report "No blocked tasks"
-- Read the returned canonical `status_doc_path` for `Blocker:`; use legacy fallback only when identified by the query
+- Read the returned `status_doc_path` for `Blocker:`
 - Report "unknown" if reason not documented; do not invent reasons
 - Suggest concrete unblocking actions when possible

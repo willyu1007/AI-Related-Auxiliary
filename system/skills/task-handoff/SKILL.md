@@ -7,7 +7,7 @@ description: >-
 
 ## Stabilize the checkpoint
 
-Do not begin new work once handoff is chosen. Finish the current atomic action if that is safe, then run the checkpoint-sync workflow:
+Read `dev-docs/README.md`. Do not begin new work once handoff is chosen. Finish the current atomic action if that is safe, then run the checkpoint-sync workflow:
 
 - update the task bundle to match the repository;
 - verify and commit every coherent part that is safe to land with its `Task: T-###` trailer;
@@ -21,16 +21,18 @@ A handoff does not require finishing the whole task. It requires a truthful, rec
 Read the final values from the repository after synchronization:
 
 - `01-status.md`: goal, state, current phase, next step, blocker, and completion conditions
+- `00-roadmap.md` kickoff gate: whether implementation may continue
 - linked commits: what landed
 - `git status --short` and relevant diffs: what remains uncommitted
-- `pitfalls.md`, when present: paths the next session must not repeat; fall back to legacy `05-pitfalls.md` only when needed
-- `00-roadmap.md`: unresolved decisions, relevant task relationships, and near-term phase order, only as needed
+- `pitfalls.md`, when present: paths the next session must not repeat
+- the rest of `00-roadmap.md`: unresolved top-level choices, relevant task relationships, and the near-term implementation route, only as needed
 
 Render one pasteable block:
 
 ````markdown
 ## T-012 · oauth-provider-integration
 State: in-progress · HEAD: a3f9c21
+Kickoff: pending / ready
 > Stale check: if `git rev-parse --short HEAD` is not `a3f9c21`, discard this
 > block and recover from the repository.
 
@@ -66,9 +68,10 @@ Default to returning the block in the conversation. If the environment can creat
 - Never claim uncommitted work landed.
 - Never commit broken or unverified work merely to make the handoff look clean.
 - Never omit foreign worktree changes, unresolved blockers, or a known failed path.
+- Never hand off decision-dependent implementation as runnable when kickoff is `pending`; make alignment or replanning the first action.
 - Never write the handoff block into the repository; durable task facts belong in the bundle, and the transfer block belongs in the session channel.
 - If bundle synchronization or verification cannot complete, say exactly what failed and make that the first recovery action.
 
 ## Contract
 
-For an active task, progress is `01-status.md` `## Progress` → `State:`. `00-roadmap.md` owns decisions and phase order; it does not override the current status head.
+For an active task, progress is `01-status.md` `## Progress` → `State:`. `00-roadmap.md` owns decision alignment, task relationships, and the implementation plan; it does not override the current status head.

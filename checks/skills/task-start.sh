@@ -24,6 +24,13 @@ done
 for d in dev-docs/active dev-docs/archive; do
   [ -d "$d" ] || fail "install did not create $d"
 done
+for f in dev-docs/README.md dev-docs/CLAUDE.md dev-docs/AGENTS.md; do
+  [ -f "$f" ] || fail "install did not place $f"
+done
+cmp -s dev-docs/CLAUDE.md dev-docs/AGENTS.md \
+  || fail "Claude and Agent task-doc pointers drifted"
+grep -q 'README.md.*sole authority' dev-docs/CLAUDE.md \
+  || fail "task-doc pointer does not route to README.md"
 for f in registry.yaml dashboard.md feature-map.md task-index.md changelog.md; do
   [ -f ".ai/project/$f" ] || fail "install did not initialize .ai/project/$f"
 done
@@ -32,8 +39,12 @@ done
 # hub files are project data and stay. A second install that resets the registry would silently
 # discard every task the repository has.
 printf '\n# smoke-marker\n' >> .ai/project/registry.yaml
-node .ai/scripts/ctl-project-governance.mjs install --repo-root . >/dev/null
+printf '\nshipped-doc-drift\n' >> dev-docs/README.md
+node "$CTL" install --repo-root . >/dev/null
 grep -q 'smoke-marker' .ai/project/registry.yaml || fail "re-install overwrote hub data"
+if grep -q 'shipped-doc-drift' dev-docs/README.md; then
+  fail "re-install did not refresh the task-document contract"
+fi
 
 # Hooks ship with the skill that installs them. AUX_ROOT is set by checks/run.mjs.
 mkdir -p .githooks
@@ -49,7 +60,7 @@ if [ -d .ai/project/main ]; then fail "init created a per-project subdirectory";
 if grep -qE '^project:' .ai/project/registry.yaml; then fail "registry still has a project block"; fi
 
 mkdir -p dev-docs/active/sample
-printf '# Roadmap\n\n## Phases\n\n### Phase 1 — verify\n- Outcome: smoke test passes\n' \
+printf '# Roadmap\n\n## Scope and constraints\n- Scope: smoke test\n\n## Decision alignment\nNone.\n\n## Task relationships\nNone.\n\n## Implementation plan\n\n### Phase 1 — verify\n- Outcome: smoke test passes\n- Approach: exercise governance end to end\n- Planned changes:\n  1. Run the smoke workflow\n- Affected boundaries / entry points: governance script\n- Dependencies: none\n- Exit criteria: smoke test passes\n- Verification: run lint\n- Recovery: restore the fixture\n\n## Kickoff gate\n- Status: ready\n- [x] Every user-owned choice that blocks implementation is decided.\n- [x] Settled design and interfaces are reflected in `02-architecture.md`.\n- [x] The first implementation phase is executable with exit, verification, and recovery criteria.\n- [x] Every current completion condition has a decisive planned check in `verification.md`.\n\n## Risks and recovery\nNone.\n\n## Phase closeout\nCommit the verified fixture.\n' \
   > dev-docs/active/sample/00-roadmap.md
 printf '# Status\n\n## Goal\nSmoke test.\n\n## Progress\n- State: in-progress\n- Current phase: verify\n- Next step: wire verification\n- Blocker: none\n\n## Done when\n- [ ] Smoke test passes\n' \
   > dev-docs/active/sample/01-status.md
@@ -73,16 +84,42 @@ git log -1 --format='%B' | git interpret-trailers --parse | grep -q '^Task: T-00
 
 node .ai/scripts/ctl-project-governance.mjs lint --strict >/dev/null || fail "lint --strict failed"
 
-# resume must resolve the active task and carry the canonical status head.
+# A pending seed is valid before kickoff, but ready requires every gate item.
+cp dev-docs/active/sample/00-roadmap.md dev-docs/active/sample/00-roadmap.tmp
+sed -i 's/Status: ready/Status: pending/; s/\[x\]/[ ]/g' dev-docs/active/sample/00-roadmap.md
+node .ai/scripts/ctl-project-governance.mjs lint --check >/dev/null \
+  || fail "lint rejected a valid pending kickoff seed"
+mv dev-docs/active/sample/00-roadmap.tmp dev-docs/active/sample/00-roadmap.md
+
+cp dev-docs/active/sample/00-roadmap.md dev-docs/active/sample/00-roadmap.tmp
+sed -i '0,/\[x\]/{s/\[x\]/[ ]/}' dev-docs/active/sample/00-roadmap.md
+if node .ai/scripts/ctl-project-governance.mjs lint --check >/dev/null 2>&1; then
+  fail "lint accepted ready kickoff with an unchecked gate"
+fi
+mv dev-docs/active/sample/00-roadmap.tmp dev-docs/active/sample/00-roadmap.md
+
+# A roadmap must be usable, not a copied template with unresolved placeholders.
+cp dev-docs/active/sample/00-roadmap.md dev-docs/active/sample/00-roadmap.tmp
+printf '\n<!-- unfinished -->\n' >> dev-docs/active/sample/00-roadmap.md
+if node .ai/scripts/ctl-project-governance.mjs lint --check >/dev/null 2>&1; then
+  fail "lint accepted an unfilled roadmap template placeholder"
+fi
+mv dev-docs/active/sample/00-roadmap.tmp dev-docs/active/sample/00-roadmap.md
+
+# resume must resolve the active task and carry the current status head.
 node .ai/scripts/ctl-project-governance.mjs resume --json > resume.json
 grep -q '"id":"T-001"' resume.json || fail "resume did not resolve the task"
 grep -q '"status"' resume.json || fail "resume packet did not expose the status head"
 grep -q 'wire verification' resume.json || fail "resume packet lost the status next step"
+grep -q '"kickoff_status":"ready"' resume.json || fail "resume packet lost kickoff readiness"
 grep -q 'Repeating a stale path.*use the supported path' resume.json \
-  || fail "resume packet did not parse canonical pitfalls"
+  || fail "resume packet did not parse current pitfalls"
 rm -f resume.json
+node .ai/scripts/ctl-project-governance.mjs query --all-worktrees --id T-001 --json > query.json
+grep -q '"kickoff_status":"ready"' query.json || fail "query did not expose kickoff readiness"
+rm -f query.json
 
-# Optional context files are not required, but the canonical verification authority is.
+# Optional context files are not required, but verification.md is.
 rm dev-docs/active/sample/pitfalls.md
 node .ai/scripts/ctl-project-governance.mjs lint --strict >/dev/null \
   || fail "lint treated optional pitfalls.md as required"
@@ -90,15 +127,9 @@ printf '# Pitfalls\n\n| Hazard | Evidence | Prevention | Applies until |\n|---|-
   > dev-docs/active/sample/pitfalls.md
 mv dev-docs/active/sample/verification.md dev-docs/active/sample/verification.tmp
 if node .ai/scripts/ctl-project-governance.mjs lint --check >/dev/null 2>&1; then
-  fail "lint accepted a canonical bundle without verification.md"
+  fail "lint accepted an active bundle without verification.md"
 fi
 mv dev-docs/active/sample/verification.tmp dev-docs/active/sample/verification.md
-cp dev-docs/active/sample/verification.md dev-docs/active/sample/04-verification.md
-if node .ai/scripts/ctl-project-governance.mjs lint --check >/dev/null 2>&1; then
-  fail "lint accepted duplicate canonical and legacy verification authorities"
-fi
-rm dev-docs/active/sample/04-verification.md
-
 # sync is idempotent.
 node .ai/scripts/ctl-project-governance.mjs sync --apply >/dev/null
 node .ai/scripts/ctl-project-governance.mjs lint --strict >/dev/null || fail "lint failed after re-sync"
@@ -133,7 +164,7 @@ prepare_worktree_task() { # <path> <branch> <slug>
   rm -rf "$1"
   git worktree add -q "$1" -b "$2" "$BASE"
   mkdir -p "$1/dev-docs/active/$3"
-  printf '# Roadmap\n\n## Phases\n\n### Phase 1 — verify\n- Outcome: pass\n' \
+  printf '# Roadmap\n\n## Scope and constraints\n- Scope: allocate one task\n\n## Decision alignment\nNone.\n\n## Task relationships\nNone.\n\n## Implementation plan\n\n### Phase 1 — discovery\n- Outcome: allocation evidence is available\n- Approach: exercise allocation without beginning implementation\n- Planned changes:\n  1. Allocate the task ID\n- Affected boundaries / entry points: governance script\n- Dependencies: none\n- Exit criteria: allocation succeeds\n- Verification: inspect metadata\n- Recovery: remove the temporary worktree\n\n## Kickoff gate\n- Status: pending\n- [ ] Every user-owned choice that blocks implementation is decided.\n- [ ] Settled design and interfaces are reflected in `02-architecture.md`.\n- [ ] The first implementation phase is executable with exit, verification, and recovery criteria.\n- [ ] Every current completion condition has a decisive planned check in `verification.md`.\n\n## Risks and recovery\nNone.\n\n## Phase closeout\nRetain the allocated metadata for inspection.\n' \
     > "$1/dev-docs/active/$3/00-roadmap.md"
   printf '# Status\n\n## Goal\n%s smoke test.\n\n## Progress\n- State: planned\n- Current phase: verify\n- Next step: verify\n- Blocker: none\n\n## Done when\n- [ ] Pass\n' "$3" \
     > "$1/dev-docs/active/$3/01-status.md"
@@ -167,22 +198,6 @@ git worktree remove --force "$WT_A"
 git worktree remove --force "$WT_B"
 git branch -D feat/sib-a feat/sib-b >/dev/null 2>&1 || true
 
-# Legacy bundles remain readable but are not new write targets.
-mkdir -p dev-docs/active/legacy
-printf '# Legacy\n\n## Status\n- State: blocked\n- Next step: migrate the status head\n\n## Goal\nRecover old task records.\n' \
-  > dev-docs/active/legacy/00-overview.md
-printf '# Pitfalls\n\n## Do-not-repeat summary (keep current)\n- Keep the legacy fallback readable\n' \
-  > dev-docs/active/legacy/05-pitfalls.md
-node .ai/scripts/ctl-project-governance.mjs sync --apply >/dev/null
-LEGACY_ID=$(grep -oE 'T-[0-9]{3}' dev-docs/active/legacy/.ai-task.yaml)
-node .ai/scripts/ctl-project-governance.mjs resume --task "$LEGACY_ID" --json > legacy.json
-grep -q 'Recover old task records' legacy.json || fail "resume lost the legacy goal fallback"
-grep -q 'migrate the status head' legacy.json || fail "resume lost the legacy next-step fallback"
-grep -q 'legacy status file' legacy.json || fail "resume did not identify the legacy fallback"
-grep -q 'Keep the legacy fallback readable' legacy.json || fail "resume lost the legacy pitfalls fallback"
-grep -q 'legacy pitfalls file' legacy.json || fail "resume did not identify the legacy pitfalls fallback"
-rm -f legacy.json
-
 # archiving flips the effective status.
 mkdir -p dev-docs/archive
 printf '# T-001 · sample\n\nGoal: Smoke test.\n\nOutcome: passed.\n' > dev-docs/active/sample/summary.md
@@ -190,12 +205,8 @@ rm dev-docs/active/sample/00-roadmap.md dev-docs/active/sample/01-status.md \
   dev-docs/active/sample/02-architecture.md dev-docs/active/sample/verification.md \
   dev-docs/active/sample/pitfalls.md
 mv dev-docs/active/sample dev-docs/archive/
-printf '# %s · legacy\n\nGoal: Recover old task records.\n\nOutcome: migration fallback verified.\n' "$LEGACY_ID" \
-  > dev-docs/active/legacy/summary.md
-rm dev-docs/active/legacy/00-overview.md dev-docs/active/legacy/05-pitfalls.md
-mv dev-docs/active/legacy dev-docs/archive/
 node .ai/scripts/ctl-project-governance.mjs sync --apply >/dev/null
 grep -q 'status: archived' .ai/project/registry.yaml || fail "archive status not propagated"
 node .ai/scripts/ctl-project-governance.mjs lint --strict >/dev/null || fail "lint failed after archive"
 
-echo "install, canonical/legacy docs, optional/required lint, hook sync, feature/map, cross-worktree allocation, archive"
+echo "install/contract refresh, pending/ready kickoff gate, roadmap lint, resume, hook sync, feature/map, worktree allocation, archive"
