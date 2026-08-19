@@ -64,10 +64,11 @@ A completed task remains active with `State: done` until its separately approved
 
 Use each source only for what it proves:
 
-- The task documents own the intent described in the responsibilities above; one document never overrides another document's responsibility.
+- The task bundle owns its task-level identity, intent, progress, design, verification, and lifecycle according to the document responsibilities above.
+- The project hub provides the cross-task semantic map. `.ai/project/registry.yaml` owns Milestones, Features, Requirements, and their mappings; its task entries are projections of task bundles.
+- Generated hub views are derived and may be rebuilt. Neither registry task entries nor generated views override a task bundle.
 - Git history proves committed work; a task commit carries exactly one `Task: T-###` trailer.
 - The worktree proves current uncommitted work.
-- `.ai-task.yaml`, the registry, and generated hub views must not override the task documents or repository reality.
 
 Report disagreements instead of silently choosing one source. Never describe uncommitted or missing work as landed.
 
@@ -79,9 +80,4 @@ Report disagreements instead of silently choosing one source. Never describe unc
 4. When reality changes, update only the documents whose responsibility changed and keep status pointed at the first unfinished action.
 5. Preserve the verified unit in Git with its exact task trailer before relying on it as landed progress.
 
-## Invariants
-
-- One task is one flat, resumable outcome with one bundle, one active state, and one logical task-trailer timeline. Never nest bundles or duplicate an outcome already tracked elsewhere.
-- Keep sequential work serving the same goal as phases. Work needing its own outcome, state, owner, handoff, verification, archive, or independently managed boundary is another task.
-- Do not create a second plan, status, goal, decision log, architecture authority, or verification authority.
-- Never put secrets, credentials, or tokens in task or hub artifacts.
+Never put secrets, credentials, or tokens in task or hub artifacts.
