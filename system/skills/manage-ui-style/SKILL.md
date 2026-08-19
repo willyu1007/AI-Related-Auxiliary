@@ -19,18 +19,21 @@ Never copy the house layer into a project. A rulebook in a repository is a ruleb
 Every run starts by finding what the project already has. Search for the **artifact**, not for a filename — a crystallized project may have recorded itself as `PARADIGMS.md`, `DESIGN.md`, a kit README, or a Storybook, and looking only for `docs/ui/STYLE.md` will miss the best documentation in the repository:
 
 ```bash
-ls src/**/tokens.* src/**/theme.* tailwind.config.* 2>/dev/null
-rg -l --iglob '*.md' 'design token|design system|scale|paradigm|typography contract|style guide' . 2>/dev/null | head
-ls docs/ui/ 2>/dev/null
+fd -t f '(tokens|theme|design-tokens)\.(css|json|ts|js)$' . 2>/dev/null | head
+rg -l --iglob '*.md' 'design token|design system|scale|paradigm|typography|governance|style guide' . 2>/dev/null | head
+fd -t f 'tailwind.config' .; rg -l '@theme|@tailwind' --glob '*.css' . 2>/dev/null | head
 ```
 
-Read whatever turns up before concluding anything is missing. What is found decides the mode — you do not ask for it:
+Search the whole repository, not `src/` — a monorepo keeps its tokens in a package or a top-level `ui/`, and Tailwind v4 configures itself inside CSS with no config file to find. **A command finding nothing means the probe missed, not that the project has nothing**; widen it before concluding.
+
+Read whatever turns up before deciding anything is missing. What is found decides the mode — you do not ask for it:
 
 | Found | Mode | Meaning |
 |-------|------|---------|
-| Project has tokens / exemplars / `STYLE.md` | **Strict** | Derive from them. This is how consistency happens without anyone asking for it. |
+| Tokens *and* exemplars or a style record | **Strict** | Derive from them. This is how consistency happens without anyone asking for it. |
+| Tokens but nothing to derive composition from | **Strict on values, free on composition** | Every value comes from the token layer; the composition is yours to design, and it is a crystallize candidate the moment it is picked. |
 | Nothing yet | **Free** | Design against the house rubric, then crystallize (Workflow B). |
-| User says "try something different" | **Explore** | Overrides either default — but the anti-pattern floor still holds. |
+| User says "try something different" | **Explore** | Overrides any default — but the anti-pattern floor still holds. |
 
 ## Workflow A — Design
 
@@ -61,17 +64,17 @@ Run when a project has produced UI worth keeping and the project layer does not 
 
 When the user asks to check drift, or before a release that cares how it looks.
 
-1. Run the mechanical set from `./reference/anti-patterns.md` across the source.
-2. Count the scales actually in use and compare against the declared ones:
+1. **Scope and calibrate.** Name which packages are in the audit and which are excluded. Then establish how the project actually writes style — literal CSS, utility classes, CSS-in-JS — because the probes differ and the wrong one fails silently. `./reference/anti-patterns.md` opens with the calibration commands.
 
-   ```bash
-   rg -o 'border-radius:\s*[^;]+' src/ | sort | uniq -c | sort -rn
-   rg -o 'font-size:\s*[^;]+' src/ | sort | uniq -c | sort -rn
-   ```
+2. **Run the mechanical set**, using the variant that matches. **Treat a near-zero result as a probe failure until proven otherwise**: a mature application with no radius declarations is not a disciplined application, it is a probe pointed at the wrong syntax. Every count reported carries the command that produced it, so the reader can see what was actually measured.
 
-   A declared three-step radius scale that shows fourteen distinct values in practice is the finding — the contract exists and adherence decayed.
-3. Check the project layer against itself: exemplars still representative, `STYLE.md` claims still true, tokens declared but never consumed, tokens consumed but never declared.
-4. **Report, do not fix.** Group by severity — floor violations (accessibility, continuous repaint, contrast) first, then scale drift, then cosmetics. Every finding gets a file and line. Fixes happen only on a separate instruction, because a style sweep that rewrites while it reports is unreviewable.
+3. **Measure the scales and compare against what the project declares.** A declared four-step radius scale showing thirty-one distinct forms in practice is the finding — the contract exists and adherence decayed.
+
+4. **Trace token consumption**, which is where the highest-value findings live and where no single command reaches. Follow the chain: source declaration → generated variables → remapping into the styling layer → real call sites. A break anywhere means the token layer governs nothing downstream of it, and that failure is invisible to every grep in the mechanical set — a declared type scale with one consumer looks identical to a healthy one from the outside. Also check the reverse: values synthesized outside the token source, and themes fully built with no code path that activates them.
+
+5. **Triage every finding by owner before ranking it** — the question that makes an audit usable is *who can fix this*. A value inside a consumed library or kit is upstream: report it there with evidence, never as a local override, because an override is how a project forks its design system by accident. A local usage of a shared token is local — the *use* is yours, the *value* is not. Where the project ships a deviation ledger or decision record, read it before calling anything drift: several will be decisions.
+
+6. **Report, do not fix.** Group by severity — floor violations (accessibility, continuous repaint, contrast) first, then scale drift, then cosmetics. Every finding gets a file, a line, and its owner. Fixes happen only on a separate instruction, because a sweep that rewrites while it reports is unreviewable.
 
 ## Harvest
 

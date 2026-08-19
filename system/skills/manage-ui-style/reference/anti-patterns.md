@@ -66,17 +66,77 @@
 
 ## 机检命令集
 
-从 `[机检]` 条目派生。收尾时跑，命中不等于有罪——每条命中要么修，要么在交还里说明为什么合理。
+从 `[机检]` 条目派生。命中不等于有罪——每条命中要么修，要么说明为什么合理。
+
+### 跑之前：先确认探针适用
+
+**零命中最常见的原因是探针不匹配，不是代码干净。** 先看项目怎么写样式——字面 CSS 属性、工具类、还是 CSS-in-JS——再选对应的一组。搞错了不会报错，只会给你一个漂亮的假阴性。
+
+先定作用域：monorepo 要点名扫哪些包（通常是 web 应用 + 共享 UI 包），并在报告里写明排除了什么。
 
 ```bash
-rg -n 'bg-gradient|from-(purple|indigo|violet)-' src/      # 1
-rg -n 'rounded-(2xl|3xl)' src/                             # 2
-rg -n 'backdrop-blur' src/                                 # 3
-rg -n 'hover:scale-' src/                                  # 9
-rg -n '\[(#|[0-9.]+px)' src/                               # 17 23 任意值与裸色值
-rg -n '#[0-9a-fA-F]{3,8}\b' src/ -g '!**/tokens.*'         # 23 token 外的裸色值
-rg -n 'transition-all|transition:\s*all' src/              # 25
-rg -n 'infinite' src/; rg -c 'prefers-reduced-motion' src/ # 24 26 数量要能对上
+# 项目怎么写样式？两个数字哪个大就是哪种
+rg -c 'border-radius:|font-size:' --glob '*.{css,scss}' . | wc -l
+rg -c 'className=|class=' --glob '*.{tsx,jsx,vue,svelte}' . | wc -l
 ```
 
-对比度（21）没有便宜的 grep——收尾时对**新引入的**前景/背景组合手算一次即可，不必全量扫。
+### 通用（与样式写法无关）
+
+```bash
+rg -n 'backdrop-blur|filter:\s*blur' .                          # 3
+rg -n 'hover:scale-|:hover[^{]*\{[^}]*scale\(' .                # 9
+rg -n 'transition-all|transition:\s*all' .                      # 25
+rg -n 'infinite' .; rg -c 'prefers-reduced-motion' .            # 24 26 两个数要能对上
+rg -n 'outline:\s*none|outline-none|ring-0' .                   # 31 焦点指示器被清掉
+```
+
+`outline: none` 那条尤其重要：它不在原始清单里是因为它不像 AI 味，但它是**最常见的可访问性地板违规**——清掉焦点环而不给替代，键盘用户就彻底失明。
+
+### 渐变与裸色值：必须区分派生和原生
+
+```bash
+# 违规：直接取框架调色板
+rg -n 'from-(purple|indigo|violet|rose|fuchsia|sky|emerald)-\d' .
+# 合法：从 token 派生
+rg -n 'from-(primary|accent|muted|surface)' .
+rg -n '#[0-9a-fA-F]{3,8}\b' . -g '!**/tokens.*' -g '!**/*.json'
+```
+
+裸 hex 那条有个已知盲区：**token 声明了却没接进消费层时，业务代码会退回框架自带默认值，而不是写裸色值**——这条 grep 什么都测不到。要抓那种漏，走下面的消费链路追踪。
+
+### 尺度：按样式写法二选一
+
+```bash
+# 写字面 CSS 的项目
+rg -o 'border-radius:\s*[^;]+' . | sort | uniq -c | sort -rn
+rg -o 'font-size:\s*[^;]+' . | sort | uniq -c | sort -rn
+
+# 用工具类的项目（Tailwind 一类）
+rg -o '\brounded(-[a-z0-9]+)?\b' . | sort | uniq -c | sort -rn
+rg -o '\btext-(xs|sm|base|lg|[0-9]?xl)\b' . | sort | uniq -c | sort -rn
+rg -o 'text-\[[^]]+\]' . | sort | uniq -c | sort -rn      # 任意值字号，单独统计
+rg -o 'rounded-\[[^]]+\]' . | sort | uniq -c | sort -rn
+```
+
+拿到的档数跟项目**声明**的档数对比。声明 5 档、实测 33 档就是发现本身。
+
+### token 消费链路追踪
+
+「声明了但没人用」是最高价值的一类发现，且没有单条命令能抓。按链路逐段验证：
+
+```bash
+# 1 源头声明了什么
+rg -o '"(radius|size|space)"[^}]*' ui/tokens/*.json 2>/dev/null | head
+# 2 有没有生成成 CSS 变量
+rg -n -- '--[a-z-]*(radius|font|text|size)' --glob '*.css' . | head
+# 3 有没有被重映射进工具类命名空间（Tailwind v4 的 @theme）
+rg -n -A20 '@theme' --glob '*.css' .
+# 4 每个变量到底有几个真实消费点
+rg -c -- '--ui-typography-size-body' .
+```
+
+第 3 步断掉是最隐蔽的失败：变量生成了、看起来一切正常，但工具类从没连上去，整层声明只管住零个组件。
+
+### 对比度
+
+审计场景没有"新引入的"可框定。做法：先找出代码里**真实成对使用**的前景/背景组合（`text-success` 配 `bg-success/10` 这类惯用法），每种组合手算一次。一个惯用法错了就是几十个文件一起错——按组合算，不按出现次数算。
