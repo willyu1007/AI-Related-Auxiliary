@@ -52,6 +52,6 @@ Pick by what was asked, then follow that reference's **Data Source** commands:
 - Never present a claim about landed work the `resume` packet does not support; state the gap.
 - Status counts in the answer must match the query output they came from.
 
-## Contract
+## Authority
 
-Hub behavior follows `.ai/project/CONTRACT.md`. Active task progress is `01-status.md` `## Progress` → `State:`; archive location owns archived state. Registry task status is a derived projection.
+Hub semantics follow `.ai/project/AGENTS.md`. Active task progress is `01-status.md` `## Progress` → `State:`; archive location owns archived state. Registry task status is a derived projection.

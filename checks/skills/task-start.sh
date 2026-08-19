@@ -18,9 +18,12 @@ if [ -d .ai ] || [ -d dev-docs ]; then fail "target repo is not empty before ins
 node "$CTL" install --repo-root . >/dev/null
 
 for f in .ai/scripts/ctl-project-governance.mjs .ai/scripts/lib/yaml-lite.mjs \
-         .ai/project/CONTRACT.md .ai/project/AGENTS.md .ai/project/templates/registry.yaml; do
+         .ai/project/AGENTS.md .ai/project/CLAUDE.md .ai/project/templates/registry.yaml; do
   [ -f "$f" ] || fail "install did not place $f"
 done
+[ ! -e .ai/project/CONTRACT.md ] || fail "install retained the superseded hub contract"
+grep -q 'Follow `AGENTS.md`' .ai/project/CLAUDE.md \
+  || fail "hub Claude entry does not route to AGENTS.md"
 for d in dev-docs/active dev-docs/archive; do
   [ -d "$d" ] || fail "install did not create $d"
 done
@@ -40,11 +43,13 @@ done
 # discard every task the repository has.
 printf '\n# smoke-marker\n' >> .ai/project/registry.yaml
 printf '\nshipped-doc-drift\n' >> dev-docs/README.md
+printf '# Superseded contract\n' > .ai/project/CONTRACT.md
 node "$CTL" install --repo-root . >/dev/null
 grep -q 'smoke-marker' .ai/project/registry.yaml || fail "re-install overwrote hub data"
 if grep -q 'shipped-doc-drift' dev-docs/README.md; then
-  fail "re-install did not refresh the task-document contract"
+  fail "re-install did not refresh the task-document guidance"
 fi
+[ ! -e .ai/project/CONTRACT.md ] || fail "re-install did not remove the superseded hub contract"
 
 # Hooks ship with the skill that installs them. AUX_ROOT is set by checks/run.mjs.
 mkdir -p .githooks
@@ -283,4 +288,4 @@ node .ai/scripts/ctl-project-governance.mjs sync --apply >/dev/null
 grep -q 'status: archived' .ai/project/registry.yaml || fail "archive status not propagated"
 node .ai/scripts/ctl-project-governance.mjs lint --strict >/dev/null || fail "lint failed after archive"
 
-echo "install/contract refresh, pending seed example, kickoff/completion gates, roadmap and registry lint, resume, hook sync, feature/requirement mapping, YAML round-trip, worktree allocation, archive"
+echo "install/guidance refresh, pending seed example, kickoff/completion gates, roadmap and registry lint, resume, hook sync, feature/requirement mapping, YAML round-trip, worktree allocation, archive"

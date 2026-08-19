@@ -45,7 +45,7 @@ Open and register a durable task bundle before implementation begins.
 
    Record unresolved conflicts in `00-roadmap.md`; never drop one silently.
 
-6. **Seed the bundle from the contract.** Create `dev-docs/active/<slug>/` from `./templates/` according to `dev-docs/README.md`. Populate the current goal and `State: planned`. Write a roadmap seed containing confirmed scope, known constraints and relationships, material open decisions, risks, and one concrete alignment or discovery phase. Set the kickoff gate to `pending`; do not invent downstream implementation phases or close decisions merely to make the task look ready. Do not leave required sections as unfilled template placeholders; express missing evidence as a discovery action. Apart from a `requirement.md` justified in Step 5, do not create optional entries speculatively; actual work may add them later when each has a distinct durable purpose. Never use an optional entry as a second goal, status, plan, decision, architecture, or verification authority.
+6. **Seed the bundle from its defined semantics.** Create `dev-docs/active/<slug>/` from `./templates/` according to `dev-docs/README.md`. Populate the current goal and `State: planned`. Write a roadmap seed containing confirmed scope, known constraints and relationships, material open decisions, risks, and one concrete alignment or discovery phase. Set the kickoff gate to `pending`; do not invent downstream implementation phases or close decisions merely to make the task look ready. Do not leave required sections as unfilled template placeholders; express missing evidence as a discovery action. Apart from a `requirement.md` justified in Step 5, do not create optional entries speculatively; actual work may add them later when each has a distinct durable purpose. Never use an optional entry as a second goal, status, plan, decision, architecture, or verification authority.
 
 7. **Allocate and register atomically.** Let the control script create `.ai-task.yaml`, update the registry, and regenerate derived views:
 
@@ -111,4 +111,4 @@ Before proceeding, verify that a fresh agent can read `01-status.md` and answer 
 
 - `./templates/` — required initial bundle templates and the conditional requirements input
 - `./examples/sample-roadmap-seed.md` — a worked pending roadmap seed
-- `./assets/project/` — repository contract, governance code, and hub assets installed into a project
+- `./assets/project/` — repository governance guidance, code, and hub assets installed into a project

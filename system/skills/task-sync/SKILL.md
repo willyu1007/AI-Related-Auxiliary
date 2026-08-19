@@ -93,6 +93,6 @@ Hooks do not change the workflow's authority or attribution rules. A manual pre-
 - Never guess or manually allocate a task ID; `sync --apply` owns allocation across linked worktrees.
 - Do not put secrets, credentials, or tokens in task artifacts.
 
-## Contract
+## Authority
 
-For an active task, progress is `01-status.md` `## Progress` → `State:`. The registry and `.ai-task.yaml` status are derived projections. Hub behavior follows `.ai/project/CONTRACT.md`.
+For an active task, progress is `01-status.md` `## Progress` → `State:`. The registry and `.ai-task.yaml` status are derived projections. Hub semantics follow `.ai/project/AGENTS.md`.

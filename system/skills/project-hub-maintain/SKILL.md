@@ -102,6 +102,6 @@ node .ai/scripts/ctl-project-governance.mjs lint --check
 - Never combine multiple task archives in one commit.
 - Never put secrets in hub files, task bundles, or summaries.
 
-## Contract
+## Authority
 
-For active tasks, `01-status.md` owns progress. For archived tasks, path owns effective state and the bundle contains exactly `.ai-task.yaml` plus `summary.md`. Hub behavior follows `.ai/project/CONTRACT.md`.
+For active tasks, `01-status.md` owns progress. For archived tasks, path owns effective state and the bundle contains exactly `.ai-task.yaml` plus `summary.md`. Hub semantics follow `.ai/project/AGENTS.md`.

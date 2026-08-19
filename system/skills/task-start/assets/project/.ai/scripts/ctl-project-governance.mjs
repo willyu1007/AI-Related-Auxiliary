@@ -4,14 +4,14 @@
  *
  * Project governance control tool (install/init/lint/sync).
  *
- * @reference .ai/project/CONTRACT.md
+ * @reference .ai/project/AGENTS.md
  *
  * Design notes:
  * - Dependency-free (Node built-ins only).
  * - Ships inside the skill that provisions the hub and installs itself into the target repository,
  *   because the Git hooks call it by repository path and cannot reach the skill's own location.
  * - Task progress SoT remains in the dev-docs task bundle (`01-status.md`).
- * - Task bundles follow the single contract in `dev-docs/README.md`.
+ * - Task bundles follow the semantics in `dev-docs/README.md`.
  * - Task identity SoT is anchored by `.ai-task.yaml` (`task_id`).
  */
 
@@ -99,7 +99,7 @@ Commands:
     --repo-root <path>        Repo root (default: auto-detect; fallback: cwd)
     --check                   (default) Exit non-zero only on errors (warnings do not fail)
     --strict                  Treat warnings as errors
-    Validate repo project governance state against the Project Contract.
+    Validate repository state against the project governance rules.
 
   sync
     --repo-root <path>        Repo root (default: auto-detect; fallback: cwd)
@@ -264,8 +264,8 @@ function exists(p) {
 function findRepoRoot(startDir) {
   let dir = path.resolve(startDir);
   while (true) {
-    const contractPath = path.join(dir, '.ai', 'project', 'CONTRACT.md');
-    if (exists(contractPath)) return dir;
+    const governancePath = path.join(dir, '.ai', 'project', 'AGENTS.md');
+    if (exists(governancePath)) return dir;
     const parent = path.dirname(dir);
     if (parent === dir) return null;
     dir = parent;
@@ -941,6 +941,7 @@ function renderTaskMetaYaml(meta) {
 // the repository root once the script has been installed, which is what makes install a no-op copy
 // when it is run from inside a repository that already has it.
 const SHIPPED_ROOT = path.resolve(__dirname, '..', '..');
+const RETIRED_SHIPPED_FILES = ['.ai/project/CONTRACT.md'];
 
 /** Every file under dir, as paths relative to dir. */
 function collectFiles(dir, base = dir) {
@@ -954,9 +955,9 @@ function collectFiles(dir, base = dir) {
 }
 
 // Install is the entry point for a repository that has nothing yet: the shipped tree is the control
-// script, its lib, the contract, the templates init reads, and the empty task directories. Shipped
-// material is overwritten on every run so a re-install upgrades it in place; the hub files init
-// creates are project data and are never touched here.
+// script, its lib, the governance guidance, the templates init reads, and the empty task
+// directories. Shipped material is overwritten on every run so a re-install upgrades it in place;
+// the hub files init creates are project data and are never touched here.
 function cmdInstall({ repoRoot, dryRun }) {
   const srcRoot = SHIPPED_ROOT;
   const dstRoot = repoRoot;
@@ -982,6 +983,17 @@ function cmdInstall({ repoRoot, dryRun }) {
       }
       const changed = writeTextIfChanged(to, content);
       actions.push({ op: changed ? (existed ? 'update' : 'write') : 'same', path: to });
+    }
+
+    for (const rel of RETIRED_SHIPPED_FILES) {
+      const retired = path.join(dstRoot, rel);
+      if (!exists(retired)) continue;
+      if (dryRun) {
+        actions.push({ op: 'remove', path: retired, mode: 'dry-run' });
+        continue;
+      }
+      fs.unlinkSync(retired);
+      actions.push({ op: 'remove', path: retired });
     }
 
     ok('[ok] Project assets installed.');
@@ -1160,9 +1172,9 @@ function cmdLint({ repoRoot, strict }) {
   const errors = [];
   const warnings = [];
 
-  const contractPath = path.join(repoRoot, '.ai', 'project', 'CONTRACT.md');
-  if (!exists(contractPath)) {
-    errors.push('Missing .ai/project/CONTRACT.md (required).');
+  for (const file of ['AGENTS.md', 'CLAUDE.md']) {
+    const guidancePath = path.join(repoRoot, '.ai', 'project', file);
+    if (!exists(guidancePath)) errors.push(`Missing .ai/project/${file} (required).`);
   }
 
   const { registry, error: registryParseError } = loadRegistry(repoRoot);
