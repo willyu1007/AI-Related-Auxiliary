@@ -1,7 +1,8 @@
 # Project registry (template)
 #
 # This file is created by: `node .ai/scripts/ctl-project-governance.mjs init`
-# It is the semantic SSOT for Milestones/Features/Requirements/Tasks.
+# It owns Milestones, Features, Requirements, and their mappings.
+# Task entries are projections from task bundles.
 #
 # IMPORTANT:
 # - Task progress status is derived from `dev-docs/**/active/<task>/01-status.md` (SoT).

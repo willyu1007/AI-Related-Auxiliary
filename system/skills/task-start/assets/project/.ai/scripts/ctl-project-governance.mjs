@@ -21,7 +21,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { colors, die, header, info, ok, warn } from './lib/colors.mjs';
-import { parseSimpleList, parseSimpleMap, parseTopLevelVersion } from './lib/yaml-lite.mjs';
+import { parseYaml } from './lib/yaml-lite.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -98,7 +98,7 @@ Commands:
   lint
     --repo-root <path>        Repo root (default: auto-detect; fallback: cwd)
     --check                   (default) Exit non-zero only on errors (warnings do not fail)
-    --strict                  Treat warnings as errors (except "human verification" warnings)
+    --strict                  Treat warnings as errors
     Validate repo project governance state against the Project Contract.
 
   sync
@@ -150,7 +150,7 @@ Commands:
     --task <T-###>            Task ID to map (required)
     --feature <F-###>         Feature ID to map the task to
     --milestone <M-###>       Milestone ID to map the task to
-    --requirement <R-###>     Requirement ID to map the task to (creates if needed)
+    --requirement <R-###>     Existing Requirement ID to map the task to
     --dry-run                 Show what would change without writing
     --apply                   Apply the mapping change
     Map a task to Feature/Milestone/Requirement in the registry.
@@ -164,12 +164,23 @@ Commands:
     --json                    Output the resolved feature as JSON
     Resolve an existing feature by title or allocate one across linked worktrees.
 
+  requirement
+    --repo-root <path>        Repo root (default: auto-detect; fallback: cwd)
+    --title <text>            Exact requirement title to find or create (required)
+    --feature <F-###>         Existing parent Feature ID (required)
+    --description <text>      Description used only when creating a requirement
+    --dry-run                 Show what would change without writing
+    --apply                   Ensure the requirement exists in the current registry
+    --json                    Output the resolved requirement as JSON
+    Resolve an existing requirement by Feature/title or allocate one across linked worktrees.
+
 Examples:
   node .ai/scripts/ctl-project-governance.mjs init
   node .ai/scripts/ctl-project-governance.mjs lint --check
   node .ai/scripts/ctl-project-governance.mjs sync --dry-run
   node .ai/scripts/ctl-project-governance.mjs sync --apply
   node .ai/scripts/ctl-project-governance.mjs feature --title "OAuth providers" --apply --json
+  node .ai/scripts/ctl-project-governance.mjs requirement --title "Google sign-in" --feature F-002 --apply --json
   node .ai/scripts/ctl-project-governance.mjs map --task T-001 --feature F-002 --apply
   node .ai/scripts/ctl-project-governance.mjs resume --json
   node .ai/scripts/ctl-project-governance.mjs commits --task T-001
@@ -323,206 +334,6 @@ function replaceAutoBlock(raw, blockId, content, filePath, allowFullReplace = tr
 
 function normalizeEol(s) {
   return String(s || '').replace(/\r\n/g, '\n');
-}
-
-function stripInlineComment(line) {
-  // Minimal: treat '#' as comment delimiter only when not inside quotes.
-  const s = String(line || '');
-  let inSingle = false;
-  let inDouble = false;
-  for (let i = 0; i < s.length; i++) {
-    const ch = s[i];
-    // Skip escaped characters inside quoted strings
-    if (ch === '\\' && (inSingle || inDouble) && i + 1 < s.length) {
-      i++; // skip the next character (escaped)
-      continue;
-    }
-    if (ch === "'" && !inDouble) inSingle = !inSingle;
-    else if (ch === '"' && !inSingle) inDouble = !inDouble;
-    else if (ch === '#' && !inSingle && !inDouble) {
-      return s.slice(0, i);
-    }
-  }
-  return s;
-}
-
-function countIndent(line) {
-  const m = String(line).match(/^( *)/);
-  return m ? m[1].length : 0;
-}
-
-function unquoteScalar(s) {
-  const t = String(s || '').trim();
-  if ((t.startsWith('"') && t.endsWith('"')) || (t.startsWith("'") && t.endsWith("'"))) return t.slice(1, -1);
-  return t;
-}
-
-function parseScalar(raw) {
-  const t = unquoteScalar(String(raw || '').trim());
-  if (t === '[]') return [];
-  if (t === '{}') return {};
-  if (t === 'null') return null;
-  if (t === 'true') return true;
-  if (t === 'false') return false;
-  if (/^[0-9]+$/.test(t)) return Number(t);
-  return t;
-}
-
-function parseYamlDoc(raw) {
-  // Minimal YAML parser for this repo's registry format.
-  // Supports:
-  // - indentation-based maps/lists
-  // - scalar values
-  // - inline empty list: []
-  // - list of maps (with "- key: value" lines)
-  const lines = normalizeEol(raw)
-    .split('\n')
-    .map((l) => stripInlineComment(l).trimEnd());
-
-  function skip(i) {
-    while (i < lines.length) {
-      const t = lines[i].trim();
-      if (!t) {
-        i++;
-        continue;
-      }
-      if (t.startsWith('#')) {
-        i++;
-        continue;
-      }
-      break;
-    }
-    return i;
-  }
-
-  function parseBlock(i, indent) {
-    i = skip(i);
-    if (i >= lines.length) return { value: null, next: i };
-
-    const line = lines[i];
-    const ind = countIndent(line);
-    if (ind < indent) return { value: null, next: i };
-
-    const atIndent = line.slice(indent);
-    if (atIndent.trimStart().startsWith('- ')) return parseList(i, indent);
-    return parseMap(i, indent);
-  }
-
-  function parseMap(i, indent) {
-    const obj = {};
-    while (true) {
-      i = skip(i);
-      if (i >= lines.length) break;
-      const line = lines[i];
-      const ind = countIndent(line);
-      if (ind < indent) break;
-      if (ind > indent) {
-        throw new Error(`Invalid indentation at line ${i + 1}`);
-      }
-
-      const t = line.slice(indent);
-      if (t.trimStart().startsWith('- ')) {
-        // List at same indent means map ended
-        break;
-      }
-
-      const m = t.match(/^([A-Za-z0-9_-]+)\s*:\s*(.*)$/);
-      if (!m) {
-        throw new Error(`Invalid mapping at line ${i + 1}: ${t}`);
-      }
-
-      const key = m[1];
-      const rest = (m[2] ?? '').trim();
-      if (rest === '') {
-        const child = parseBlock(i + 1, indent + 2);
-        obj[key] = child.value === null ? {} : child.value;
-        i = child.next;
-        continue;
-      }
-
-      obj[key] = parseScalar(rest);
-      i++;
-    }
-
-    return { value: obj, next: i };
-  }
-
-  function parseMapInto(obj, i, indent) {
-    while (true) {
-      i = skip(i);
-      if (i >= lines.length) break;
-      const line = lines[i];
-      const ind = countIndent(line);
-      if (ind < indent) break;
-      if (ind > indent) throw new Error(`Invalid indentation at line ${i + 1}`);
-
-      const t = line.slice(indent);
-      if (t.trimStart().startsWith('- ')) break;
-
-      const m = t.match(/^([A-Za-z0-9_-]+)\s*:\s*(.*)$/);
-      if (!m) throw new Error(`Invalid mapping at line ${i + 1}: ${t}`);
-      const key = m[1];
-      const rest = (m[2] ?? '').trim();
-      if (rest === '') {
-        const child = parseBlock(i + 1, indent + 2);
-        obj[key] = child.value === null ? {} : child.value;
-        i = child.next;
-        continue;
-      }
-      obj[key] = parseScalar(rest);
-      i++;
-    }
-    return i;
-  }
-
-  function parseList(i, indent) {
-    const out = [];
-    while (true) {
-      i = skip(i);
-      if (i >= lines.length) break;
-      const line = lines[i];
-      const ind = countIndent(line);
-      if (ind < indent) break;
-      if (ind > indent) throw new Error(`Invalid indentation at line ${i + 1}`);
-
-      const t = line.slice(indent);
-      if (!t.trimStart().startsWith('- ')) break;
-
-      const after = t.replace(/^\-\s*/, '');
-      if (!after.trim()) {
-        const child = parseBlock(i + 1, indent + 2);
-        out.push(child.value);
-        i = child.next;
-        continue;
-      }
-
-      const m = after.match(/^([A-Za-z0-9_-]+)\s*:\s*(.*)$/);
-      if (m) {
-        const obj = {};
-        const key = m[1];
-        const rest = (m[2] ?? '').trim();
-        if (rest === '') {
-          const child = parseBlock(i + 1, indent + 4);
-          obj[key] = child.value;
-          i = child.next;
-        } else {
-          obj[key] = parseScalar(rest);
-          i++;
-        }
-        i = parseMapInto(obj, i, indent + 2);
-        out.push(obj);
-        continue;
-      }
-
-      out.push(parseScalar(after));
-      i++;
-    }
-
-    return { value: out, next: i };
-  }
-
-  const root = parseBlock(0, 0);
-  return root.value || {};
 }
 
 function needsQuote(s) {
@@ -951,7 +762,7 @@ function loadRegistry(repoRoot) {
   if (!raw) return { path: registryPath, registry: null, error: null };
 
   try {
-    const parsed = parseYamlDoc(raw);
+    const parsed = parseYaml(raw);
     return { path: registryPath, registry: parsed, error: null };
   } catch (e) {
     return { path: registryPath, registry: null, error: e.message || String(e) };
@@ -1096,18 +907,16 @@ function scanTasks(repoRoot, devDocsRoots) {
 }
 
 function parseTaskMeta(metaRaw) {
-  const raw = normalizeEol(metaRaw);
-  const version = parseTopLevelVersion(raw);
-  const map = parseSimpleMap(raw);
-  const keywords = parseSimpleList(raw, 'keywords');
+  const parsed = parseYaml(normalizeEol(metaRaw));
+  const map = parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
 
   return {
-    version,
-    task_id: map.task_id || map.taskId || '',
-    slug: map.slug || '',
-    status: map.status || '',
-    updated: map.updated || '',
-    keywords,
+    version: Number.isFinite(map.version) ? map.version : null,
+    task_id: String(map.task_id || map.taskId || ''),
+    slug: String(map.slug || ''),
+    status: String(map.status || ''),
+    updated: String(map.updated || ''),
+    keywords: Array.isArray(map.keywords) ? map.keywords.map((value) => String(value)) : [],
   };
 }
 
@@ -1247,6 +1056,106 @@ function cmdInit({ repoRoot, dryRun, force }) {
   }
 }
 
+function collectRegistryIds(registry, key, label, idPattern, errors) {
+  const items = registry[key];
+  const ids = new Map();
+  if (!Array.isArray(items)) {
+    errors.push(`Registry "${key}" must be a list.`);
+    return ids;
+  }
+
+  for (const item of items) {
+    if (!item || typeof item !== 'object' || Array.isArray(item)) {
+      errors.push(`${label} entry must be a mapping.`);
+      continue;
+    }
+    const id = String(item.id || '').trim();
+    if (!id) {
+      errors.push(`${label} is missing required "id" field.`);
+      continue;
+    }
+    if (!idPattern.test(id)) {
+      errors.push(`${label} ID "${id}" does not match the required format.`);
+      continue;
+    }
+    if (ids.has(id)) {
+      errors.push(`Duplicate ${label} ID "${id}" in registry.`);
+      continue;
+    }
+    ids.set(id, item);
+  }
+  return ids;
+}
+
+function validateRegistryGraph(registry, errors) {
+  if (registry.version !== 1) {
+    errors.push('Registry version must be 1.');
+  }
+
+  const milestones = collectRegistryIds(
+    registry,
+    'milestones',
+    'Milestone',
+    MILESTONE_ID_RE,
+    errors
+  );
+  const features = collectRegistryIds(registry, 'features', 'Feature', FEATURE_ID_RE, errors);
+  const requirements = collectRegistryIds(
+    registry,
+    'requirements',
+    'Requirement',
+    REQUIREMENT_ID_RE,
+    errors
+  );
+  const tasks = collectRegistryIds(registry, 'tasks', 'Task', TASK_ID_RE, errors);
+
+  if (!milestones.has('M-000')) errors.push('Registry is missing reserved Milestone M-000.');
+  if (!features.has('F-000')) errors.push('Registry is missing reserved Feature F-000.');
+  if (features.has('F-000') && String(features.get('F-000').milestone_id || '') !== 'M-000') {
+    errors.push('Reserved Feature F-000 must belong to Milestone M-000.');
+  }
+
+  for (const [id, feature] of features) {
+    const milestoneId = String(feature.milestone_id || '').trim();
+    if (!milestoneId) errors.push(`Feature ${id} is missing milestone_id.`);
+    else if (!milestones.has(milestoneId)) {
+      errors.push(`Feature ${id} references missing Milestone ${milestoneId}.`);
+    }
+  }
+
+  for (const [id, requirement] of requirements) {
+    const featureId = String(requirement.feature_id || '').trim();
+    if (!featureId) errors.push(`Requirement ${id} is missing feature_id.`);
+    else if (!features.has(featureId)) {
+      errors.push(`Requirement ${id} references missing Feature ${featureId}.`);
+    }
+  }
+
+  for (const [id, task] of tasks) {
+    const featureId = String(task.feature_id || '').trim();
+    const milestoneId = String(task.milestone_id || '').trim();
+    if (!featureId) errors.push(`Task ${id} is missing feature_id.`);
+    else if (!features.has(featureId)) errors.push(`Task ${id} references missing Feature ${featureId}.`);
+    if (!milestoneId) errors.push(`Task ${id} is missing milestone_id.`);
+    else if (!milestones.has(milestoneId)) {
+      errors.push(`Task ${id} references missing Milestone ${milestoneId}.`);
+    }
+
+    if (task.requirement_ids !== undefined && !Array.isArray(task.requirement_ids)) {
+      errors.push(`Task ${id} requirement_ids must be a list.`);
+      continue;
+    }
+    for (const requirementId of task.requirement_ids || []) {
+      const normalized = String(requirementId || '').trim();
+      if (!requirements.has(normalized)) {
+        errors.push(`Task ${id} references missing Requirement ${normalized || '(empty)'}.`);
+      } else if (String(requirements.get(normalized).feature_id || '').trim() !== featureId) {
+        errors.push(`Task ${id} references Requirement ${normalized} from a different Feature.`);
+      }
+    }
+  }
+}
+
 function cmdLint({ repoRoot, strict }) {
   const errors = [];
   const warnings = [];
@@ -1269,67 +1178,13 @@ function cmdLint({ repoRoot, strict }) {
     );
     devDocsRoots = discoverDevDocsRoots(repoRoot);
   } else {
-    // CONTRACT 5.2: Validate required top-level keys
     const REQUIRED_REGISTRY_KEYS = ['version', 'milestones', 'features', 'requirements', 'tasks'];
     for (const key of REQUIRED_REGISTRY_KEYS) {
       if (!(key in registry) || registry[key] === undefined) {
-        errors.push(`Registry missing required top-level key: "${key}" (CONTRACT 5.2).`);
+        errors.push(`Registry missing required top-level key: "${key}".`);
       }
     }
-
-    // CONTRACT 2.1: Validate M/F/R ID formats
-    if (Array.isArray(registry.milestones)) {
-      for (const m of registry.milestones) {
-        if (!m || typeof m !== 'object') continue;
-        const id = String(m.id || '').trim();
-        if (!id) {
-          errors.push('Milestone is missing required "id" field (CONTRACT 2.1).');
-          continue;
-        }
-        if (!MILESTONE_ID_RE.test(id)) {
-          errors.push(`Milestone ID "${id}" does not match required format M-### (CONTRACT 2.1).`);
-        }
-      }
-    }
-    if (Array.isArray(registry.features)) {
-      for (const f of registry.features) {
-        if (!f || typeof f !== 'object') continue;
-        const id = String(f.id || '').trim();
-        if (!id) {
-          errors.push('Feature is missing required "id" field (CONTRACT 2.1).');
-          continue;
-        }
-        if (!FEATURE_ID_RE.test(id)) {
-          errors.push(`Feature ID "${id}" does not match required format F-### (CONTRACT 2.1).`);
-        }
-      }
-    }
-    if (Array.isArray(registry.requirements)) {
-      for (const r of registry.requirements) {
-        if (!r || typeof r !== 'object') continue;
-        const id = String(r.id || '').trim();
-        if (!id) {
-          errors.push('Requirement is missing required "id" field (CONTRACT 2.1).');
-          continue;
-        }
-        if (!REQUIREMENT_ID_RE.test(id)) {
-          errors.push(`Requirement ID "${id}" does not match required format R-### (CONTRACT 2.1).`);
-        }
-      }
-    }
-    if (Array.isArray(registry.tasks)) {
-      for (const t of registry.tasks) {
-        if (!t || typeof t !== 'object') continue;
-        const id = String(t.id || '').trim();
-        if (!id) {
-          errors.push('Task is missing required "id" field (CONTRACT 2.1).');
-          continue;
-        }
-        if (!TASK_ID_RE.test(id)) {
-          errors.push(`Task ID "${id}" does not match required format T-### (CONTRACT 2.1).`);
-        }
-      }
-    }
+    validateRegistryGraph(registry, errors);
 
     const configured = getConfiguredRootsFromRegistry(registry);
     devDocsRoots =
@@ -1470,13 +1325,12 @@ function cmdLint({ repoRoot, strict }) {
       }
     }
 
-    // Human verification warnings
     if (task.effectiveStatus === 'done' && statusRaw) {
       const ac = getCompletionCriteriaStats(statusRaw);
       if (ac.total === 0) {
-        warnings.push(`${formatTaskRef(task)}: State is done but no Done when checkboxes were found.`);
+        errors.push(`${formatTaskRef(task)}: State is done but no Done when checkboxes were found.`);
       } else if (ac.checked < ac.total) {
-        warnings.push(
+        errors.push(
           `${formatTaskRef(task)}: State is done but Done when is not fully checked (${ac.checked}/${ac.total}).`
         );
       }
@@ -1527,7 +1381,7 @@ function cmdLint({ repoRoot, strict }) {
     }
   }
 
-  // Validate Milestone/Feature/Requirement status enums (CONTRACT 3.2, 3.3)
+  // Validate Milestone/Feature/Requirement status enums.
   if (registry) {
     if (Array.isArray(registry.milestones)) {
       for (const m of registry.milestones) {
@@ -1561,12 +1415,8 @@ function cmdLint({ repoRoot, strict }) {
     }
   }
 
-  const humanWarnings = warnings.filter((w) => w.includes('Done when') || w.includes('meta.status'));
-  const otherWarnings = warnings.filter((w) => !humanWarnings.includes(w));
-
-  if (strict && otherWarnings.length > 0) {
-    // Promote non-human-verification warnings to errors, but still print them as warnings for clarity.
-    for (const w of otherWarnings) errors.push(`[strict] ${w}`);
+  if (strict && warnings.length > 0) {
+    for (const warning of warnings) errors.push(`[strict] ${warning}`);
   }
 
   if (errors.length > 0) {
@@ -2497,7 +2347,7 @@ function cmdSync({ repoRoot, dryRun, apply, initIfMissing, changelog }) {
     }
 
     try {
-      reg = parseYamlDoc(renderTemplate(tplRaw, templateVars()));
+      reg = parseYaml(renderTemplate(tplRaw, templateVars()));
     } catch (e) {
       errors.push(`Failed to parse registry template: ${e.message || String(e)}`);
       return { ok: false, errors, warnings, actions };
@@ -2913,7 +2763,7 @@ function cmdMap({ repoRoot, taskId, featureId, milestoneId, requirementId, dryRu
     return { ok: false, errors, actions };
   }
 
-  // Validate ID formats per CONTRACT 2.1
+  // Validate ID formats.
   if (featureId && !FEATURE_ID_RE.test(featureId)) {
     errors.push(`Invalid --feature ID format (expected F-###, got "${featureId}").`);
     return { ok: false, errors, actions };
@@ -2962,19 +2812,23 @@ function cmdMap({ repoRoot, taskId, featureId, milestoneId, requirementId, dryRu
     }
   }
 
-  // Validate/create requirement
+  // Validate requirement and its Feature relationship.
   if (requirementId) {
-    if (!Array.isArray(reg.requirements)) reg.requirements = [];
-    const reqExists = reg.requirements.some((r) => r && r.id === requirementId);
-    if (!reqExists) {
-      // Auto-create the requirement entry
-      reg.requirements.push({
-        id: requirementId,
-        title: `(auto-created for ${taskId})`,
-        feature_id: featureId || taskEntry.feature_id || 'F-000',
-        status: 'planned',
-      });
-      actions.push({ op: 'create', target: 'requirement', id: requirementId, note: 'auto-created' });
+    const requirement = Array.isArray(reg.requirements)
+      ? reg.requirements.find((item) => item && item.id === requirementId)
+      : null;
+    if (!requirement) {
+      errors.push(`Requirement "${requirementId}" not found in registry. Allocate it first.`);
+      return { ok: false, errors, actions };
+    }
+    const targetFeatureId = featureId || String(taskEntry.feature_id || '').trim();
+    const requirementFeatureId = String(requirement.feature_id || '').trim();
+    if (targetFeatureId !== requirementFeatureId) {
+      errors.push(
+        `Requirement "${requirementId}" belongs to Feature ${requirementFeatureId || '(missing)'}, ` +
+          `but task ${taskId} would belong to ${targetFeatureId || '(missing)'}.`
+      );
+      return { ok: false, errors, actions };
     }
   }
 
@@ -3042,7 +2896,7 @@ function collectFeaturesFromAllWorktrees(repoRoot) {
       if (!feature || typeof feature !== 'object') continue;
       const id = String(feature.id || '').trim();
       const title = String(feature.title || '').trim();
-      if (!FEATURE_ID_RE.test(id) || !title) continue;
+      if (!FEATURE_ID_RE.test(id)) continue;
       rows.push({
         ...feature,
         id,
@@ -3111,6 +2965,7 @@ function cmdFeature({ repoRoot, title, description, dryRun, apply, json }) {
       feature = {
         id,
         title: source.title,
+        milestone_id: String(source.milestone_id || 'M-000'),
         status: FEATURE_STATUS.has(String(source.status || '')) ? source.status : 'planned',
         description: String(source.description || description || '').trim(),
       };
@@ -3130,6 +2985,7 @@ function cmdFeature({ repoRoot, title, description, dryRun, apply, json }) {
     feature = {
       id,
       title: String(title).trim().replace(/\s+/g, ' '),
+      milestone_id: 'M-000',
       status: 'planned',
       description: String(description || '').trim(),
     };
@@ -3161,6 +3017,162 @@ function cmdFeature({ repoRoot, title, description, dryRun, apply, json }) {
   return { ok: true, errors, actions, feature: result };
 }
 
+function collectRequirementsFromAllWorktrees(repoRoot) {
+  const rows = [];
+  for (const worktree of listGitWorktrees(repoRoot)) {
+    const registry = loadRegistry(worktree.path).registry;
+    if (!registry || !Array.isArray(registry.requirements)) continue;
+    for (const requirement of registry.requirements) {
+      if (!requirement || typeof requirement !== 'object') continue;
+      const id = String(requirement.id || '').trim();
+      const title = String(requirement.title || '').trim();
+      const featureId = String(requirement.feature_id || '').trim();
+      if (!REQUIREMENT_ID_RE.test(id)) continue;
+      rows.push({
+        ...requirement,
+        id,
+        title,
+        feature_id: featureId,
+        worktree_path: worktree.path,
+        worktree_branch: worktree.branch,
+      });
+    }
+  }
+  return rows;
+}
+
+function cmdRequirement({ repoRoot, title, featureId, description, dryRun, apply, json }) {
+  const errors = [];
+  const actions = [];
+  const normalizedTitle = normalizeFeatureTitle(title);
+  if (!normalizedTitle) {
+    return { ok: false, errors: ['Missing --title for requirement resolution.'], actions };
+  }
+  if (!FEATURE_ID_RE.test(featureId || '')) {
+    return {
+      ok: false,
+      errors: [`Invalid or missing --feature (expected F-###, got "${featureId || ''}").`],
+      actions,
+    };
+  }
+
+  const loaded = loadRegistry(repoRoot);
+  if (!loaded.registry) {
+    return {
+      ok: false,
+      errors: [`Failed to load registry: ${loaded.error || 'registry not found'}`],
+      actions,
+    };
+  }
+
+  const registry = loaded.registry;
+  const parentExists =
+    Array.isArray(registry.features) &&
+    registry.features.some((feature) => feature && feature.id === featureId);
+  if (!parentExists) {
+    return { ok: false, errors: [`Feature "${featureId}" not found in registry.`], actions };
+  }
+
+  const allRequirements = collectRequirementsFromAllWorktrees(repoRoot);
+  const identitiesById = new Map();
+  for (const requirement of allRequirements) {
+    const identities = identitiesById.get(requirement.id) || new Set();
+    identities.add(`${requirement.feature_id}\u0000${normalizeFeatureTitle(requirement.title)}`);
+    identitiesById.set(requirement.id, identities);
+  }
+  for (const [id, identities] of identitiesById) {
+    if (identities.size > 1) {
+      errors.push(`Requirement ID ${id} has different Feature/title identities across linked worktrees.`);
+    }
+  }
+  if (errors.length > 0) return { ok: false, errors, actions };
+
+  const matches = allRequirements.filter(
+    (requirement) =>
+      requirement.feature_id === featureId &&
+      normalizeFeatureTitle(requirement.title) === normalizedTitle
+  );
+  const matchingIds = [...new Set(matches.map((requirement) => requirement.id))];
+  if (matchingIds.length > 1) {
+    return {
+      ok: false,
+      errors: [
+        `Requirement title "${title}" under ${featureId} maps to multiple IDs across linked worktrees: ` +
+          `${matchingIds.join(', ')}.`,
+      ],
+      actions,
+    };
+  }
+
+  if (!Array.isArray(registry.requirements)) registry.requirements = [];
+  let requirement = null;
+  let created = false;
+
+  if (matchingIds.length === 1) {
+    const id = matchingIds[0];
+    requirement = registry.requirements.find((item) => item && item.id === id) || null;
+    if (!requirement) {
+      const source = matches[0];
+      requirement = {
+        id,
+        title: source.title,
+        feature_id: featureId,
+        status: REQUIREMENT_STATUS.has(String(source.status || '')) ? source.status : 'planned',
+        description: String(source.description || description || '').trim(),
+      };
+      registry.requirements.push(requirement);
+      actions.push({ op: 'copy', target: 'requirement', id, note: 'found in linked worktree' });
+    }
+  } else {
+    let max = 0;
+    for (const id of identitiesById.keys()) {
+      const n = Number(id.slice(2));
+      if (Number.isFinite(n) && n > max) max = n;
+    }
+    if (max >= 999) {
+      return { ok: false, errors: ['Exhausted requirement IDs (R-001..R-999).'], actions };
+    }
+    const id = `R-${String(max + 1).padStart(3, '0')}`;
+    requirement = {
+      id,
+      title: String(title).trim().replace(/\s+/g, ' '),
+      feature_id: featureId,
+      status: 'planned',
+      description: String(description || '').trim(),
+    };
+    registry.requirements.push(requirement);
+    actions.push({ op: 'create', target: 'requirement', id });
+    created = true;
+  }
+
+  registry.requirements.sort((a, b) => String(a?.id || '').localeCompare(String(b?.id || '')));
+
+  if (apply && !dryRun && actions.length > 0) {
+    writeTextIfChanged(loaded.path, dumpYamlDoc(registry));
+  }
+
+  const result = {
+    id: requirement.id,
+    title: requirement.title,
+    feature_id: requirement.feature_id,
+    status: String(requirement.status || 'planned'),
+    created,
+    changed: actions.length > 0,
+    mode: apply && !dryRun ? 'apply' : 'dry-run',
+  };
+
+  if (json) console.log(JSON.stringify(result));
+  else if (actions.length === 0) {
+    ok(`[ok] Requirement ${requirement.id} already exists: ${requirement.title}`);
+  } else if (apply && !dryRun) {
+    ok(`[ok] Requirement ${requirement.id} is available: ${requirement.title}`);
+  } else {
+    info(`[dry-run] Requirement ${requirement.id} would be available: ${requirement.title}`);
+  }
+
+  return { ok: true, errors, actions, requirement: result };
+}
+
 function main() {
   const { command, opts } = parseArgs(process.argv);
   const repoRoot =
@@ -3177,7 +3189,7 @@ function main() {
       const strict = !!opts.strict;
       // --check is the default behavior (exit non-zero only on errors; warnings do not fail).
       // It is accepted for explicitness but does not change behavior.
-      // --strict promotes non-human-verification warnings to errors.
+      // --strict promotes every warning to an error.
       const _check = opts.check; // consumed to avoid "unknown flag" warnings
       void _check;
       const { ok: okLint } = cmdLint({ repoRoot, strict });
@@ -3283,18 +3295,61 @@ function main() {
       if (!dryRun && !apply) {
         info('No mode specified; defaulting to --dry-run.');
       }
-      const res = cmdMap({
-        repoRoot,
-        taskId,
-        featureId: featureId || null,
-        milestoneId: milestoneId || null,
-        requirementId: requirementId || null,
-        dryRun: dryRun || !apply,
-        apply: apply && !dryRun,
-      });
+      let res;
+      try {
+        const runMap = () =>
+          cmdMap({
+            repoRoot,
+            taskId,
+            featureId: featureId || null,
+            milestoneId: milestoneId || null,
+            requirementId: requirementId || null,
+            dryRun: dryRun || !apply,
+            apply: apply && !dryRun,
+          });
+        res = apply && !dryRun ? withGovernanceWriteLock(repoRoot, runMap) : runMap();
+      } catch (error) {
+        console.error(colors.red(`[error] Mapping aborted: ${error?.message || String(error)}`));
+        process.exit(1);
+      }
       if (!res.ok) {
         header('Errors:');
         for (const e of res.errors) console.log(colors.red(`- ${e}`));
+      }
+      process.exit(res.ok ? 0 : 1);
+      break;
+    }
+    case 'requirement': {
+      const title = opts.title ? String(opts.title) : '';
+      const featureId = opts.feature ? String(opts.feature).trim() : '';
+      const description = opts.description ? String(opts.description) : '';
+      const dryRun = !!opts['dry-run'];
+      const apply = !!opts.apply;
+      if (!dryRun && !apply) info('No mode specified; defaulting to --dry-run.');
+
+      let res;
+      try {
+        const runRequirement = () =>
+          cmdRequirement({
+            repoRoot,
+            title,
+            featureId,
+            description,
+            dryRun: dryRun || !apply,
+            apply: apply && !dryRun,
+            json: !!opts.json,
+          });
+        res = apply && !dryRun ? withGovernanceWriteLock(repoRoot, runRequirement) : runRequirement();
+      } catch (error) {
+        console.error(
+          colors.red(`[error] Requirement resolution aborted: ${error?.message || String(error)}`)
+        );
+        process.exit(1);
+      }
+
+      if (!res.ok) {
+        header('Errors:');
+        for (const error of res.errors) console.log(colors.red(`- ${error}`));
       }
       process.exit(res.ok ? 0 : 1);
       break;

@@ -66,13 +66,15 @@ IDs are stable, opaque, monotonically allocated, and never reused.
 
 ### Allocation and worktrees
 
-Only `sync --apply` allocates missing task IDs. Write-mode sync must hold the shared governance lock under Git's common directory so linked worktrees cannot allocate concurrently. Allocation considers:
+Only `sync --apply` allocates missing task IDs. Every registry mutation in write mode holds the shared governance lock under Git's common directory so linked worktrees cannot allocate or map concurrently. Task allocation considers:
 
 - task metadata in every linked worktree, including uncommitted files
 - the current registry
 - `Task:` trailers across all branch history
 
-Cross-worktree queries are read-only and report the source worktree. They detect duplicate goals before a bundle is created. A lock failure or duplicate is a stop condition; callers must not invent an ID. `feature --apply` uses the same lock to resolve an exact existing Feature title or allocate a Feature ID across linked worktree registries.
+Cross-worktree queries are read-only and report the source worktree. They surface plausible duplicate goals for caller review before a bundle is created. A lock failure or confirmed duplicate is a stop condition; callers must not invent an ID.
+
+Feature allocation resolves an exact title or allocates the next Feature ID across linked worktree registries. Requirement allocation does the same within a parent Feature. Mapping accepts existing objects only; it never creates a caller-supplied ID implicitly.
 
 ## 3. Project object model
 
@@ -89,9 +91,18 @@ Reserved:
 
 Feature and Requirement statuses are `planned | in-progress | blocked | done | cut`. Milestone statuses are `planned | in-progress | blocked | done`. IDs are stable and never reused.
 
+- Every Feature has a `milestone_id` that references an existing Milestone.
+- Every Requirement has a `feature_id` that references an existing Feature.
+- Every task projection has existing `feature_id` and `milestone_id` references; each optional
+  `requirement_ids` entry references an existing Requirement belonging to the task's Feature.
+- IDs are unique within each object type. `F-000` belongs to `M-000`.
+
 ## 4. Registry consistency
 
 `registry.yaml` contains top-level `version`, `milestones`, `features`, `requirements`, and `tasks`; it may contain `task_doc_roots`.
+
+Lint treats missing reserved objects, duplicate IDs, malformed object collections, and dangling
+relationships as errors.
 
 For each valid task bundle:
 
@@ -135,7 +146,8 @@ Errors include:
 - registry path or status drift
 - malformed project object IDs, mappings, or enums
 
-Warnings include display metadata ahead of task status and `State: done` without a complete `## Done when` checklist. Warnings do not fail `lint --check`; `lint --strict` promotes non-human-verification warnings.
+`State: done` requires kickoff `ready` and a non-empty, fully checked `## Done when` checklist.
+Warnings do not fail `lint --check`; `lint --strict` promotes every warning.
 
 ## 7. Change control
 

@@ -59,10 +59,19 @@ Open and register a durable task bundle before implementation begins.
    node .ai/scripts/ctl-project-governance.mjs feature --title "<feature title>" --description "<intent>" --apply --json
    ```
 
-   Map the task, refresh the Feature's manual brief in `.ai/project/feature-map.md`, and regenerate derived views:
+   When the project graph needs a named Requirement, resolve it within the parent Feature before
+   mapping. Never choose or pass a missing Requirement ID directly to the mapping command:
+
+   ```bash
+   node .ai/scripts/ctl-project-governance.mjs requirement --title "<requirement title>" --feature F-### --description "<intent>" --apply --json
+   ```
+
+   Map the task to existing project objects, refresh the Feature's manual brief in
+   `.ai/project/feature-map.md`, and regenerate derived views:
 
    ```bash
    node .ai/scripts/ctl-project-governance.mjs map --task T-### --feature F-### --apply
+   node .ai/scripts/ctl-project-governance.mjs map --task T-### --feature F-### --requirement R-### --apply  # when resolved
    node .ai/scripts/ctl-project-governance.mjs sync --apply
    ```
 

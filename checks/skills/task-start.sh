@@ -84,6 +84,14 @@ git log -1 --format='%B' | git interpret-trailers --parse | grep -q '^Task: T-00
 
 node .ai/scripts/ctl-project-governance.mjs lint --strict >/dev/null || fail "lint --strict failed"
 
+# A task cannot claim completion while its completion conditions remain unchecked.
+cp dev-docs/active/sample/01-status.md dev-docs/active/sample/01-status.tmp
+sed -i 's/State: in-progress/State: done/' dev-docs/active/sample/01-status.md
+if node .ai/scripts/ctl-project-governance.mjs lint --check >/dev/null 2>&1; then
+  fail "lint accepted a done task with unchecked completion conditions"
+fi
+mv dev-docs/active/sample/01-status.tmp dev-docs/active/sample/01-status.md
+
 # A pending seed is valid before kickoff, but ready requires every gate item.
 cp dev-docs/active/sample/00-roadmap.md dev-docs/active/sample/00-roadmap.tmp
 sed -i 's/Status: ready/Status: pending/; s/\[x\]/[ ]/g' dev-docs/active/sample/00-roadmap.md
@@ -155,13 +163,51 @@ node .ai/scripts/ctl-project-governance.mjs feature --title "Smoke capability" -
 grep -q '"id":"F-001"' feature.json || fail "feature command was not idempotent"
 grep -q '"created":false' feature.json || fail "feature command recreated an existing title"
 rm -f feature.json
+
+# Quoted YAML scalars must survive a write/read cycle without changing identity.
+node .ai/scripts/ctl-project-governance.mjs feature --title "Quoted \"feature\"\\path" \
+  --description "Description with \"quotes\" and a \\path" --apply --json > feature.json
+grep -q '"id":"F-002"' feature.json || fail "quoted feature did not allocate F-002"
+node .ai/scripts/ctl-project-governance.mjs feature --title "Quoted \"feature\"\\path" \
+  --apply --json > feature.json
+grep -q '"id":"F-002"' feature.json || fail "quoted feature changed identity after YAML round-trip"
+grep -q '"created":false' feature.json || fail "quoted feature was recreated after YAML round-trip"
+rm -f feature.json
+
 node .ai/scripts/ctl-project-governance.mjs map --task T-001 --feature F-001 --apply >/dev/null
 node .ai/scripts/ctl-project-governance.mjs sync --apply >/dev/null
 grep -q 'feature_id: F-001' .ai/project/registry.yaml || fail "map did not retain the feature mapping"
 
-# Requirement mapping writes into the registry.
+# Requirements use the same locked, monotonic allocation model as features. Mapping only accepts
+# an existing requirement; it must not silently invent a user-supplied ID.
+node .ai/scripts/ctl-project-governance.mjs requirement --title "Smoke requirement" \
+  --feature F-001 --description "Exercise requirement allocation" --apply --json > requirement.json
+grep -q '"id":"R-001"' requirement.json || fail "requirement command did not allocate R-001"
+grep -q '"created":true' requirement.json || fail "requirement command did not report creation"
+node .ai/scripts/ctl-project-governance.mjs requirement --title "Smoke requirement" \
+  --feature F-001 --apply --json > requirement.json
+grep -q '"id":"R-001"' requirement.json || fail "requirement command was not idempotent"
+grep -q '"created":false' requirement.json || fail "requirement command recreated an existing title"
+rm -f requirement.json
 node .ai/scripts/ctl-project-governance.mjs map --task T-001 --requirement R-001 --apply >/dev/null
 grep -q 'R-001' .ai/project/registry.yaml || fail "map did not record the requirement"
+if node .ai/scripts/ctl-project-governance.mjs map --task T-001 --requirement R-999 --apply >/dev/null 2>&1; then
+  fail "map silently created a missing requirement"
+fi
+
+# Registry IDs and references are integrity constraints, not advisory metadata.
+cp .ai/project/registry.yaml registry.tmp
+sed -i '0,/id: F-002/{s/id: F-002/id: F-001/}' .ai/project/registry.yaml
+if node .ai/scripts/ctl-project-governance.mjs lint --check >/dev/null 2>&1; then
+  fail "lint accepted duplicate feature IDs"
+fi
+mv registry.tmp .ai/project/registry.yaml
+cp .ai/project/registry.yaml registry.tmp
+sed -i '/^tasks:/,$ s/feature_id: F-001/feature_id: F-999/' .ai/project/registry.yaml
+if node .ai/scripts/ctl-project-governance.mjs lint --check >/dev/null 2>&1; then
+  fail "lint accepted a dangling task feature mapping"
+fi
+mv registry.tmp .ai/project/registry.yaml
 
 # Two linked worktrees branched from the same base must not allocate the same id,
 # even while the first task metadata is still uncommitted.
@@ -201,6 +247,22 @@ ID_B=$(grep -oE 'T-[0-9]{3}' "$WT_B/dev-docs/active/beta/.ai-task.yaml")
 IDS=$(printf '%s\n%s\n' "$ID_A" "$ID_B" | sort | tr '\n' ' ')
 [ "$IDS" = "T-002 T-003 " ] || fail "parallel worktrees allocated '$IDS', expected T-002 and T-003"
 
+( cd "$WT_A" && node .ai/scripts/ctl-project-governance.mjs requirement \
+    --title "Alpha requirement" --feature F-000 --apply --json > requirement.json ) &
+PID_A=$!
+( cd "$WT_B" && node .ai/scripts/ctl-project-governance.mjs requirement \
+    --title "Beta requirement" --feature F-000 --apply --json > requirement.json ) &
+PID_B=$!
+wait "$PID_A"
+wait "$PID_B"
+
+REQ_A=$(sed -n 's/.*"id":"\(R-[0-9][0-9][0-9]\)".*/\1/p' "$WT_A/requirement.json")
+REQ_B=$(sed -n 's/.*"id":"\(R-[0-9][0-9][0-9]\)".*/\1/p' "$WT_B/requirement.json")
+[ "$REQ_A" != "$REQ_B" ] || fail "parallel worktrees both allocated $REQ_A"
+REQ_IDS=$(printf '%s\n%s\n' "$REQ_A" "$REQ_B" | sort | tr '\n' ' ')
+[ "$REQ_IDS" = "R-002 R-003 " ] \
+  || fail "parallel worktrees allocated '$REQ_IDS', expected R-002 and R-003"
+
 node .ai/scripts/ctl-project-governance.mjs query --all-worktrees --text alpha --json > worktrees.json
 grep -q "\"id\":\"$ID_A\"" worktrees.json || fail "cross-worktree query missed uncommitted task metadata"
 grep -q 'alpha smoke test' worktrees.json || fail "cross-worktree query did not search or return the task goal"
@@ -221,4 +283,4 @@ node .ai/scripts/ctl-project-governance.mjs sync --apply >/dev/null
 grep -q 'status: archived' .ai/project/registry.yaml || fail "archive status not propagated"
 node .ai/scripts/ctl-project-governance.mjs lint --strict >/dev/null || fail "lint failed after archive"
 
-echo "install/contract refresh, pending seed example, kickoff gate, roadmap lint, resume, hook sync, feature/map, worktree allocation, archive"
+echo "install/contract refresh, pending seed example, kickoff/completion gates, roadmap and registry lint, resume, hook sync, feature/requirement mapping, YAML round-trip, worktree allocation, archive"
