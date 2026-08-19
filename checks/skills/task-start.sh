@@ -91,6 +91,18 @@ node .ai/scripts/ctl-project-governance.mjs lint --check >/dev/null \
   || fail "lint rejected a valid pending kickoff seed"
 mv dev-docs/active/sample/00-roadmap.tmp dev-docs/active/sample/00-roadmap.md
 
+# The worked example must function as a valid pending seed, not merely resemble the template.
+cp dev-docs/active/sample/00-roadmap.md dev-docs/active/sample/00-roadmap.tmp
+cp "$AUX_ROOT/system/skills/task-start/examples/sample-roadmap-seed.md" \
+  dev-docs/active/sample/00-roadmap.md
+node .ai/scripts/ctl-project-governance.mjs lint --check >/dev/null \
+  || fail "lint rejected the worked pending roadmap seed"
+node .ai/scripts/ctl-project-governance.mjs resume --json > seed-resume.json
+grep -q '"kickoff_status":"pending"' seed-resume.json \
+  || fail "worked roadmap seed did not recover as kickoff pending"
+rm -f seed-resume.json
+mv dev-docs/active/sample/00-roadmap.tmp dev-docs/active/sample/00-roadmap.md
+
 cp dev-docs/active/sample/00-roadmap.md dev-docs/active/sample/00-roadmap.tmp
 sed -i '0,/\[x\]/{s/\[x\]/[ ]/}' dev-docs/active/sample/00-roadmap.md
 if node .ai/scripts/ctl-project-governance.mjs lint --check >/dev/null 2>&1; then
@@ -209,4 +221,4 @@ node .ai/scripts/ctl-project-governance.mjs sync --apply >/dev/null
 grep -q 'status: archived' .ai/project/registry.yaml || fail "archive status not propagated"
 node .ai/scripts/ctl-project-governance.mjs lint --strict >/dev/null || fail "lint failed after archive"
 
-echo "install/contract refresh, pending/ready kickoff gate, roadmap lint, resume, hook sync, feature/map, worktree allocation, archive"
+echo "install/contract refresh, pending seed example, kickoff gate, roadmap lint, resume, hook sync, feature/map, worktree allocation, archive"
