@@ -55,7 +55,7 @@ Implementation readiness lives separately in the roadmap kickoff gate:
 - Every new task starts `pending`.
 - While `pending`, alignment and independent discovery may continue, but implementation that depends on the unresolved route may not.
 - `ready` means the roadmap gate is fully satisfied and the first implementation action is executable.
-- If evidence invalidates a gating premise or route, return to `pending` immediately and stop dependent implementation until the route is aligned again.
+- Kickoff is `pending` whenever evidence invalidates a gating premise or route; route-dependent implementation remains paused until alignment is restored.
 - A `done` task must have kickoff `ready`.
 
 A completed task remains active with `State: done` until its separately approved archive transition.
@@ -78,6 +78,3 @@ Report disagreements instead of silently choosing one source. Never describe unc
 2. Read current `pitfalls.md` when present, reconcile linked commits and worktree changes, and check roadmap kickoff before implementation.
 3. Expand to roadmap decisions and phases, architecture, implementation context, verification, or other supporting documents only for the current question.
 4. When reality changes, update only the documents whose responsibility changed and keep status pointed at the first unfinished action.
-5. Preserve the verified unit in Git with its exact task trailer before relying on it as landed progress.
-
-Never put secrets, credentials, or tokens in task or hub artifacts.
