@@ -29,17 +29,15 @@ Archive location makes the effective state `archived`. `summary.md` preserves th
 
 ## Document responsibilities
 
-| File | Sole responsibility |
-|---|---|
-| `.ai-task.yaml` | Stable task identity and non-authoritative display metadata |
-| `00-roadmap.md` | Decision alignment and rationale, working assumptions, relationships touching this task, kickoff readiness, phased route, and recovery strategy |
-| `01-status.md` | Current goal, progress state, phase, next step, blocker, and high-level completion conditions |
-| `02-architecture.md` | Current settled technical design and contracts, without alternatives or decision history |
-| `verification.md` | Current completion-condition matrix, latest decisive evidence, outstanding checks, and material limitations |
-| `implementation.md` | Optional current realization map when architecture alone is not enough to resume safely |
-| `pitfalls.md` | Optional current anti-error register for recurring, evidenced hazards |
-| `requirement.md` | Optional requirements-alignment input; it does not override the current status or roadmap |
-| `artifacts/` and other supporting entries | Task-specific evidence or context with a stated purpose and no competing authority |
+- **`.ai-task.yaml`** — Stable task identity and non-authoritative display metadata.
+- **`00-roadmap.md`** — Decision alignment and rationale, working assumptions, relationships touching this task, kickoff readiness, phased route, and recovery strategy.
+- **`01-status.md`** — Current goal, progress state, phase, next step, blocker, and high-level completion conditions.
+- **`02-architecture.md`** — Current settled technical design and contracts, without alternatives or decision history.
+- **`verification.md`** — Current completion-condition matrix, latest decisive evidence, outstanding checks, and material limitations.
+- **`implementation.md`** *(optional)* — Current realization map when architecture alone is not enough to resume safely.
+- **`pitfalls.md`** *(optional)* — Current anti-error register for recurring, evidenced hazards.
+- **`requirement.md`** *(optional)* — Requirements-alignment input; it does not override the current status or roadmap.
+- **`artifacts/` and other supporting entries** *(optional)* — Task-specific evidence or context with a stated purpose and no competing authority.
 
 Update these as current snapshots. Git history retains superseded states; avoid chronological journals and repeated raw logs in the main documents.
 
