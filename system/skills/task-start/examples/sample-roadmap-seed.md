@@ -19,8 +19,8 @@
 
 | Decision question | Options / tradeoffs | Current direction | Status | Owner / required confirmation | Closure evidence | Consequences |
 |---|---|---|---|---|---|---|
-| How should frontend and backend evaluate the checkout flag? | Duplicate evaluation is locally simple but risks cohort drift; a shared boundary adds one dependency but keeps behavior coherent | Use the existing shared flag client if discovery confirms both entry points support it | proposed | Technical owner | Repository evidence from Phase 1 | Determines the later integration boundary |
-| What gates rollout increases? | Faster rollout shortens delivery; conservative thresholds reduce exposure | Start at 1% and require conversion, error-rate, and latency gates before each increase | open | Product owner confirmation | Confirmed thresholds and rollback owner | Defines later rollout exit criteria and safety |
+| How should frontend and backend evaluate the checkout flag? | Duplicate evaluation is locally simple but risks cohort drift; a shared boundary adds one dependency but keeps behavior coherent | Prefer the existing shared flag client because one evaluation boundary prevents cohort drift, provided Phase 1 confirms support at both entry points | proposed | Technical owner | Repository evidence from Phase 1 | Determines the later integration boundary |
+| What gates rollout increases? | Faster rollout shortens delivery; conservative thresholds reduce exposure | Propose a 1% start with conversion, error-rate, and latency gates because limited exposure makes rollback safer | proposed | Product owner confirmation | Confirmed thresholds and rollback owner | Defines later rollout exit criteria and safety |
 
 ### Assumptions
 
