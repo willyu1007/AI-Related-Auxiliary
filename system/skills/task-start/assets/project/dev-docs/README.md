@@ -32,9 +32,9 @@ Archive location makes the effective state `archived`. `summary.md` preserves th
 | File | Sole responsibility |
 |---|---|
 | `.ai-task.yaml` | Stable task identity and non-authoritative display metadata |
-| `00-roadmap.md` | Top-level decisions, assumptions, relationships touching this task, kickoff readiness, phased route, and recovery strategy |
+| `00-roadmap.md` | Decision alignment and rationale, working assumptions, relationships touching this task, kickoff readiness, phased route, and recovery strategy |
 | `01-status.md` | Current goal, progress state, phase, next step, blocker, and high-level completion conditions |
-| `02-architecture.md` | Current settled design, interfaces, boundaries, and migration implications |
+| `02-architecture.md` | Current settled technical design and contracts, without alternatives or decision history |
 | `verification.md` | Current completion-condition matrix, latest decisive evidence, outstanding checks, and material limitations |
 | `implementation.md` | Optional current realization map when architecture alone is not enough to resume safely |
 | `pitfalls.md` | Optional current anti-error register for recurring, evidenced hazards |
