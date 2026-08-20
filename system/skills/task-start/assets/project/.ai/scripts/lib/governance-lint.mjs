@@ -6,7 +6,6 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import {
-  DATE_RE,
   FEATURE_ID_RE,
   FEATURE_STATUS,
   MILESTONE_ID_RE,
@@ -28,11 +27,31 @@ import {
   renderDashboardProjection,
   renderFeatureMap,
   scanTasks,
-  statusRank,
   toPosix,
 } from './governance-read.mjs';
 
 const header = (message) => console.log(message);
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+function validateExactFields(value, label, fields, errors) {
+  const allowed = new Set(fields);
+  for (const field of fields) {
+    if (!Object.hasOwn(value, field) || value[field] === undefined) {
+      errors.push(`${label} is missing required field "${field}".`);
+    }
+  }
+  for (const field of Object.keys(value)) {
+    if (!allowed.has(field)) errors.push(`${label} contains unsupported field "${field}".`);
+  }
+}
+
+function validateStringField(value, label, field, errors, { allowEmpty = false } = {}) {
+  if (typeof value[field] !== 'string' || (!allowEmpty && !value[field].trim())) {
+    errors.push(`${label} field "${field}" must be ${allowEmpty ? 'a string' : 'a non-empty string'}.`);
+  } else if (value[field] !== value[field].trim()) {
+    errors.push(`${label} field "${field}" must not have leading or trailing whitespace.`);
+  }
+}
 
 function validateRoadmap(roadmapRaw) {
   const raw = normalizeEol(roadmapRaw);
@@ -242,9 +261,14 @@ function collectRegistryIds(registry, key, label, idPattern, errors) {
       errors.push(`${label} entry must be a mapping.`);
       continue;
     }
-    const id = String(item.id || '').trim();
-    if (!id) {
+    const rawId = item.id;
+    if (typeof rawId !== 'string' || !rawId) {
       errors.push(`${label} is missing required "id" field.`);
+      continue;
+    }
+    const id = rawId;
+    if (id !== id.trim()) {
+      errors.push(`${label} ID "${id}" must not have leading or trailing whitespace.`);
       continue;
     }
     if (!idPattern.test(id)) {
@@ -273,12 +297,7 @@ function validateRegistryGraph(registry, errors, { validateTasks = true } = {}) 
     errors
   );
   const features = collectRegistryIds(registry, 'features', 'Feature', FEATURE_ID_RE, errors);
-  const tasks = validateTasks
-    ? collectRegistryIds(registry, 'tasks', 'Task', TASK_ID_RE, errors)
-    : new Map();
-  if (Object.hasOwn(registry, 'requirements')) {
-    errors.push('Registry contains unsupported top-level key: "requirements".');
-  }
+  const tasks = collectRegistryIds(registry, 'tasks', 'Task', TASK_ID_RE, errors);
   if (registry.ideas !== undefined && !Array.isArray(registry.ideas)) {
     errors.push('Registry "ideas" must be a list when present.');
   } else {
@@ -292,7 +311,8 @@ function validateRegistryGraph(registry, errors, { validateTasks = true } = {}) 
         keys.length !== 1 ||
         keys[0] !== 'idea' ||
         typeof idea.idea !== 'string' ||
-        !idea.idea.trim()
+        !idea.idea.trim() ||
+        idea.idea !== idea.idea.trim()
       ) {
         errors.push(`Registry Idea at index ${index} must contain only a non-empty "idea" field.`);
       }
@@ -305,24 +325,55 @@ function validateRegistryGraph(registry, errors, { validateTasks = true } = {}) 
     errors.push('Reserved Feature F-000 must belong to Milestone M-000.');
   }
 
+  for (const [id, milestone] of milestones) {
+    const label = `Milestone ${id}`;
+    validateExactFields(milestone, label, ['id', 'title', 'status', 'description'], errors);
+    validateStringField(milestone, label, 'title', errors);
+    validateStringField(milestone, label, 'description', errors, { allowEmpty: true });
+  }
+
   for (const [id, feature] of features) {
-    const milestoneId = String(feature.milestone_id || '').trim();
+    const label = `Feature ${id}`;
+    validateExactFields(
+      feature,
+      label,
+      ['id', 'title', 'milestone_id', 'status', 'description'],
+      errors
+    );
+    validateStringField(feature, label, 'title', errors);
+    validateStringField(feature, label, 'description', errors, { allowEmpty: true });
+    const rawMilestoneId = feature.milestone_id;
+    const milestoneId = typeof rawMilestoneId === 'string' ? rawMilestoneId : '';
     if (!milestoneId) errors.push(`Feature ${id} is missing milestone_id.`);
-    else if (!milestones.has(milestoneId)) {
+    else if (milestoneId !== milestoneId.trim()) {
+      errors.push(`Feature ${id} milestone_id must not have leading or trailing whitespace.`);
+    } else if (!milestones.has(milestoneId)) {
       errors.push(`Feature ${id} references missing Milestone ${milestoneId}.`);
     }
   }
 
   for (const [id, task] of tasks) {
-    const featureId = String(task.feature_id || '').trim();
-    if (!featureId) errors.push(`Task ${id} is missing feature_id.`);
-    else if (!features.has(featureId)) errors.push(`Task ${id} references missing Feature ${featureId}.`);
-    if (Object.hasOwn(task, 'milestone_id')) {
-      errors.push(`Task ${id} must not store milestone_id; its Milestone is derived from Feature ${featureId || '(missing)'}.`);
+    const label = `Task ${id}`;
+    if (validateTasks) {
+      validateExactFields(
+        task,
+        label,
+        ['id', 'slug', 'status', 'updated', 'dev_docs_path', 'feature_id'],
+        errors
+      );
+      validateStringField(task, label, 'slug', errors);
+      validateStringField(task, label, 'dev_docs_path', errors);
+      if (typeof task.updated !== 'string' || !DATE_RE.test(task.updated)) {
+        errors.push(`Task ${id} field "updated" must use YYYY-MM-DD.`);
+      }
     }
-
-    if (Object.hasOwn(task, 'requirement_ids')) {
-      errors.push(`Task ${id} contains unsupported field: "requirement_ids".`);
+    const rawFeatureId = task.feature_id;
+    const featureId = typeof rawFeatureId === 'string' ? rawFeatureId : '';
+    if (!featureId) errors.push(`Task ${id} is missing feature_id.`);
+    else if (featureId !== featureId.trim()) {
+      errors.push(`Task ${id} feature_id must not have leading or trailing whitespace.`);
+    } else if (!features.has(featureId)) {
+      errors.push(`Task ${id} references missing Feature ${featureId}.`);
     }
   }
 }
@@ -332,10 +383,12 @@ function validateRegistryStatuses(items, label, allowed, errors, projection = fa
   const field = projection ? 'registry status' : 'status';
   for (const item of items) {
     if (!item || typeof item !== 'object') continue;
-    const id = String(item.id || '');
-    const status = String(item.status || '').trim();
+    const id = typeof item.id === 'string' ? item.id : '';
+    const status = typeof item.status === 'string' ? item.status : '';
     if (!status) errors.push(`${label} ${id}: Missing ${field}.`);
-    else if (!allowed.has(status)) {
+    else if (status !== status.trim()) {
+      errors.push(`${label} ${id}: ${field} must not have leading or trailing whitespace.`);
+    } else if (!allowed.has(status)) {
       errors.push(`${label} ${id}: Invalid ${field} "${status}". Allowed: ${[...allowed].join(', ')}`);
     }
   }
@@ -349,17 +402,8 @@ export function getRegistryDataErrors(
     return ['Registry root must be a mapping.'];
   }
   const errors = [];
-  const requiredKeys = validateTasks
-    ? ['version', 'milestones', 'features', 'tasks']
-    : ['version', 'milestones', 'features'];
-  for (const key of requiredKeys) {
-    if (!(key in registry) || registry[key] === undefined) {
-      errors.push(`Registry missing required top-level key: "${key}".`);
-    }
-  }
-  if (Object.hasOwn(registry, 'task_doc_roots')) {
-    errors.push('Registry contains unsupported top-level key: "task_doc_roots".');
-  }
+  const requiredKeys = ['version', 'milestones', 'features', 'ideas', 'tasks'];
+  validateExactFields(registry, 'Registry', requiredKeys, errors);
   validateRegistryGraph(registry, errors, { validateTasks });
   validateRegistryStatuses(registry.milestones, 'Milestone', MILESTONE_STATUS, errors);
   validateRegistryStatuses(registry.features, 'Feature', FEATURE_STATUS, errors);
@@ -584,12 +628,12 @@ export function cmdLint({ repoRoot, strict }) {
       continue;
     }
 
-    if (meta.version !== 1) {
-      errors.push(`${formatTaskRef(task)}: Invalid meta version (expected 1).`);
+    for (const schemaError of meta.schema_errors) {
+      errors.push(`${formatTaskRef(task)}: Invalid .ai-task.json: ${schemaError}`);
     }
 
     if (!TASK_ID_RE.test(meta.task_id)) {
-      errors.push(`${formatTaskRef(task)}: Invalid task_id "${meta.task_id}" (expected T-###).`);
+      continue;
     } else {
       task.taskId = meta.task_id;
       if (taskIdToTask.has(meta.task_id)) {
@@ -606,25 +650,8 @@ export function cmdLint({ repoRoot, strict }) {
       slugToIds.set(task.slug, ids);
     }
 
-    if (meta.slug && meta.slug !== task.slug) {
+    if (meta.slug !== task.slug) {
       errors.push(`${formatTaskRef(task)}: meta.slug="${meta.slug}" does not match directory slug "${task.slug}".`);
-    }
-
-    if (meta.status && !TASK_STATUS.has(meta.status)) {
-      errors.push(`${formatTaskRef(task)}: Invalid meta.status "${meta.status}".`);
-    }
-
-    if (meta.updated && !DATE_RE.test(meta.updated)) {
-      errors.push(`${formatTaskRef(task)}: Invalid meta.updated "${meta.updated}" (expected YYYY-MM-DD).`);
-    }
-
-    // Special drift warning: meta status ahead of bundle status (not authoritative)
-    if (meta.status && task.effectiveStatus) {
-      if (statusRank(meta.status) > statusRank(task.effectiveStatus)) {
-        warnings.push(
-          `${formatTaskRef(task)}: meta.status="${meta.status}" is ahead of bundle status "${task.effectiveStatus}".`
-        );
-      }
     }
 
     if (task.effectiveStatus === 'done' && statusRaw !== null) {

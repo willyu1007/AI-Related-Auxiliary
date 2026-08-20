@@ -3,7 +3,8 @@ name: task-sync
 description: >-
   Use when an active tracked task reaches a checkpoint: a phase lands, a
   verification runs, work is about to stop, or task-linked commits and records
-  need to be brought level with repository reality. Do not use to discuss
+  need to be brought level with repository reality, including repair of that
+  task's invalid identity metadata. Do not use to discuss
   unresolved top-level choices, prepare implementation kickoff, or revise a
   route before the underlying decision is settled.
 ---
@@ -19,6 +20,15 @@ description: >-
 ## Workflow
 
 1. **Resolve and inspect reality.** Read `dev-docs/AGENTS.md`, identify the task, then inspect linked commits, `git status --short`, and relevant diffs before editing its record. Git history proves committed work; the worktree proves uncommitted work.
+
+   If query reports `invalid: true`, repair `.ai-task.json` before the checkpoint. It contains
+   exactly `version: 1`, `task_id`, directory `slug`, and `keywords`. Preserve a valid `task_id` only when
+   the bundle path, registry projection, and task trailers do not disagree; preserve only valid,
+   unique, non-empty keyword strings and remove every other field. For malformed metadata, recover
+   an existing ID automatically only when those durable sources identify exactly one ID. Otherwise
+   stop and request identity evidence. If those sources prove the bundle has never received an ID,
+   remove the invalid metadata file and let sync allocate it. Absence of one source alone is not
+   that proof. This is identity repair, never manual allocation.
 
 2. **Attribute every changed path.** Split changes into this task and foreign work. Use environment session-attribution when available, but still inspect the whole worktree. Never modify, stage, or commit the foreign set. Report it in the handback.
 
@@ -48,7 +58,7 @@ description: >-
    node .ai/scripts/ctl-project-governance.mjs lint
    ```
 
-   Sync calculates and validates its complete governance change set before writing, then allocates missing task IDs under a cross-worktree lock and refreshes `.ai-task.json`, registry entries, and derived views. A validation error leaves that planned change set unapplied. Lint validates the resulting cross-document semantics. Inspect the generated diff. If it exposes unrelated pre-existing hub drift that cannot be separated safely from this checkpoint, do not attach that drift to the task commit; report it for the hub-maintenance workflow.
+   Sync calculates and validates its complete governance change set before writing, then allocates missing task IDs under a cross-worktree lock, validates task metadata, and refreshes registry projections and derived views. A validation error leaves that planned change set unapplied. Lint validates the resulting cross-document semantics. Inspect the generated diff. If it exposes unrelated pre-existing hub drift that cannot be separated safely from this checkpoint, do not attach that drift to the task commit; report it for the hub-maintenance workflow.
 
 5. **Commit the verified checkpoint.** Before staging implementation, verify that the roadmap kickoff gate is `ready`. When it is `pending`, commit only coherent planning, discovery evidence, or record synchronization and do not land decision-dependent implementation. Stage this task's allowed implementation and bundle paths plus the governance changes caused by this task. Stage by explicit path; never use a worktree-wide catch-all when foreign changes exist.
 
@@ -73,9 +83,9 @@ Use `./templates/full-pass-checklist.md` for the compact checklist.
 - Never erase why a decision changed; mark it superseded with evidence. Pitfalls are different: curate them as a current warning set and remove an item when encoded prevention makes it obsolete.
 - Never move a bundle into `archive/` here.
 - Never hand-edit AUTO-generated hub blocks or treat registry/meta status as authoritative.
-- Never guess or manually allocate a task ID; `sync --apply` owns allocation across linked worktrees.
+- Never guess or manually allocate a new task ID; `sync --apply` owns allocation across linked worktrees. Repair may only preserve or recover an existing ID proved by durable repository evidence.
 - Do not put secrets, credentials, or tokens in task artifacts.
 
 ## Authority
 
-For an active task, progress is `01-status.md` `## Progress` → `State:`. The registry and `.ai-task.json` status are derived projections. Hub semantics follow `.ai/project/AGENTS.md`.
+For an active task, progress is `01-status.md` `## Progress` → `State:`. Registry task status is a derived projection; `.ai-task.json` contains identity and search metadata only. Hub semantics follow `.ai/project/AGENTS.md`.

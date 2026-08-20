@@ -39,6 +39,7 @@ for task evidence across linked worktrees.
   separate from observed task state.
 - Do not use a conflicted logical task row as stage-progress evidence until its differing facts are
   reconciled; list the conflict separately.
+- Do not use an invalid task row as stage-progress evidence; list its metadata diagnostics separately.
 - Counts are evidence, not weighted completion percentages. Do not infer effort or scope coverage
   from the number of tasks.
 - A Milestone marked `done` while any Feature is not `done` or `cut` is inconsistent.

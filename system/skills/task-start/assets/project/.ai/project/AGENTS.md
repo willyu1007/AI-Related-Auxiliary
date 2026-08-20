@@ -16,7 +16,8 @@ Milestones and Features without replacing task records or repository reality.
 
 The hub consumes these task facts:
 
-- `.ai-task.json` supplies stable `T-###` identity and optional display metadata.
+- `.ai-task.json` supplies stable `T-###` identity, directory slug, and optional search keywords;
+  it does not duplicate status, dates, or other lifecycle facts.
 - An active bundle's `01-status.md` supplies `planned | in-progress | blocked | done`, goal,
   current phase, next step, blocker, and completion conditions.
 - `00-roadmap.md` supplies independent `pending | ready` kickoff readiness for queries and
@@ -37,6 +38,10 @@ The hub consumes these task facts:
 - Every Feature references an existing Milestone.
 - Every task projection references an existing Feature. Its Milestone is derived only through
   that Feature; task entries never store an independent `milestone_id`.
+- Registry records use one exact shape: Milestones contain `id`, `title`, `status`, and
+  `description`; Features add `milestone_id`; task projections contain `id`, `slug`, `status`,
+  `updated`, `dev_docs_path`, and `feature_id`; Ideas contain only `idea`. Extra fields are not a
+  secondary extension mechanism.
 - Milestone and Feature statuses are project-level claims, not task-count rollups. Task states are
   progress evidence; they may reveal a contradiction or possible readiness, but never change a
   Milestone or Feature status automatically. A real Milestone is `done` only after its outcome is
@@ -65,6 +70,8 @@ The hub consumes these task facts:
   `worktrees`. Equal copies collapse into that row. `conflict: true` means one or more task facts
   differ; the differing top-level facts are unset and `conflicts` preserves the evidence. Do not
   select a source until the disagreement is resolved.
+- `invalid: true` means at least one occurrence has invalid task metadata. `metadata_errors`
+  preserves those diagnostics; do not use that row as task evidence until the metadata is fixed.
 - Confirmed duplicate goals under distinct task IDs and lock failures are stop conditions.
 - Mapping accepts existing project objects only; it never invents a caller-supplied ID.
 - Each valid task bundle has one registry projection with its actual path and effective status.

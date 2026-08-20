@@ -15,6 +15,7 @@ export const RESUME_DEFAULT_SCAN_LIMIT = 500;
 export const RESUME_MAX_SCAN_LIMIT = 10000;
 
 const RESUME_MAX_CANDIDATES = 20;
+const RESUME_MAX_COMPLETION_CONDITIONS = 50;
 const RESUME_TEXT_LIMITS = Object.freeze({
   short: 256,
   text: 500,
@@ -27,8 +28,6 @@ const RESUME_TEXT_LIMITS = Object.freeze({
 export const TASK_ID_RE = /^T-\d{3}$/;
 export const MILESTONE_ID_RE = /^M-\d{3}$/;
 export const FEATURE_ID_RE = /^F-\d{3}$/;
-export const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
-
 export const TASK_STATUS = new Set(['planned', 'in-progress', 'blocked', 'done', 'archived']);
 const BUNDLE_STATUS = new Set(['planned', 'in-progress', 'blocked', 'done']);
 export const MILESTONE_STATUS = new Set(['planned', 'in-progress', 'blocked', 'done']);
@@ -308,15 +307,23 @@ function getPitfallTableItems(markdownRaw, limit) {
 }
 
 function getMarkdownChecklistStats(markdownRaw, heading) {
-  let total = 0;
-  let checked = 0;
+  const items = getMarkdownChecklistItems(markdownRaw, heading);
+  return {
+    total: items.length,
+    checked: items.filter((item) => item.checked).length,
+  };
+}
+
+function getMarkdownChecklistItems(markdownRaw, heading) {
+  const items = [];
   for (const line of getMarkdownSectionLines(markdownRaw, heading)) {
     const match = line.trim().match(/^\-\s*\[(x|X|\s)\]\s+(.+)$/);
     if (!match) continue;
-    total += 1;
-    if (String(match[1]).toLowerCase() === 'x') checked += 1;
+    const text = cleanMarkdownValue(match[2]);
+    if (!text) continue;
+    items.push({ checked: String(match[1]).toLowerCase() === 'x', condition: text });
   }
-  return { total, checked };
+  return items;
 }
 
 export function getRoadmapKickoff(roadmapRaw) {
@@ -329,38 +336,7 @@ export function getRoadmapKickoff(roadmapRaw) {
 }
 
 export function getCompletionCriteriaStats(statusRaw) {
-  const lines = normalizeEol(statusRaw).split('\n');
-  let inCompletion = false;
-  let total = 0;
-  let checked = 0;
-
-  for (const line of lines) {
-    const trimmed = line.trim();
-    if (trimmed.startsWith('#')) {
-      if (/^##\s+Done when\b/i.test(trimmed)) {
-        inCompletion = true;
-        continue;
-      }
-      if (inCompletion && /^##\s+/.test(trimmed)) break;
-    }
-    if (!inCompletion) continue;
-    const match = trimmed.match(/^\-\s*\[(x|X|\s)\]\s+(.+)$/);
-    if (!match) continue;
-    total += 1;
-    if (String(match[1]).toLowerCase() === 'x') checked += 1;
-  }
-  return { total, checked };
-}
-
-export function statusRank(status) {
-  switch (status) {
-    case 'planned': return 10;
-    case 'in-progress':
-    case 'blocked': return 20;
-    case 'done': return 30;
-    case 'archived': return 40;
-    default: return 0;
-  }
+  return getMarkdownChecklistStats(statusRaw, 'Done when');
 }
 
 export function formatTaskRef(task) {
@@ -435,21 +411,59 @@ export function parseTaskMeta(metaRaw) {
       version: null,
       task_id: '',
       slug: '',
-      status: '',
-      updated: '',
       keywords: [],
       parse_error: error?.message || String(error),
+      schema_errors: [],
     };
   }
-  const map = parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    return {
+      version: null,
+      task_id: '',
+      slug: '',
+      keywords: [],
+      parse_error: null,
+      schema_errors: ['Metadata root must be a JSON object.'],
+    };
+  }
+
+  const map = parsed;
+  const expected = ['version', 'task_id', 'slug', 'keywords'];
+  const schemaErrors = [];
+  for (const key of expected) {
+    if (!Object.hasOwn(map, key)) schemaErrors.push(`Missing required field: "${key}".`);
+  }
+  for (const key of Object.keys(map)) {
+    if (!expected.includes(key)) schemaErrors.push(`Unsupported field: "${key}".`);
+  }
+  if (map.version !== 1) schemaErrors.push('Field "version" must be 1.');
+  if (typeof map.task_id !== 'string' || !TASK_ID_RE.test(map.task_id)) {
+    schemaErrors.push('Field "task_id" must match T-###.');
+  }
+  if (typeof map.slug !== 'string' || !map.slug.trim()) {
+    schemaErrors.push('Field "slug" must be a non-empty string.');
+  }
+  if (!Array.isArray(map.keywords)) {
+    schemaErrors.push('Field "keywords" must be an array of unique non-empty strings.');
+  } else {
+    const normalized = map.keywords.map((value) => typeof value === 'string' ? value.trim() : '');
+    if (
+      normalized.some((value) => !value) ||
+      map.keywords.some((value, index) => value !== normalized[index]) ||
+      new Set(normalized).size !== normalized.length
+    ) {
+      schemaErrors.push('Field "keywords" must be an array of unique non-empty strings.');
+    }
+  }
   return {
-    version: Number.isFinite(map.version) ? map.version : null,
-    task_id: String(map.task_id || map.taskId || ''),
-    slug: String(map.slug || ''),
-    status: String(map.status || ''),
-    updated: String(map.updated || ''),
-    keywords: Array.isArray(map.keywords) ? map.keywords.map((value) => String(value)) : [],
+    version: map.version,
+    task_id: typeof map.task_id === 'string' ? map.task_id : '',
+    slug: typeof map.slug === 'string' ? map.slug : '',
+    keywords: Array.isArray(map.keywords)
+      ? map.keywords.filter((value) => typeof value === 'string').map((value) => value.trim())
+      : [],
     parse_error: null,
+    schema_errors: schemaErrors,
   };
 }
 
@@ -473,10 +487,16 @@ function collectBundleTaskRows({ repoRoot }) {
 
     let taskId = '';
     let keywords = [];
-    if (metaRaw) {
+    let metaInvalid = false;
+    let metaErrors = [];
+    if (metaRaw !== null) {
       const meta = parseTaskMeta(metaRaw);
       if (TASK_ID_RE.test(meta.task_id)) taskId = meta.task_id;
-      keywords = Array.isArray(meta.keywords) ? meta.keywords : [];
+      metaErrors = meta.parse_error ? [meta.parse_error] : meta.schema_errors;
+      metaInvalid = metaErrors.length > 0;
+      if (!metaInvalid) {
+        keywords = meta.keywords;
+      }
     }
 
     rows.push({
@@ -484,10 +504,11 @@ function collectBundleTaskRows({ repoRoot }) {
       status: effectiveStatus,
       slug: task.slug,
       dev_docs_path: toPosix(task.relPath),
-      updated: '',
       goal: getMarkdownSectionText(statusRaw, 'Goal'),
       keywords: keywords.map((keyword) => String(keyword)),
-      meta_missing: !metaRaw,
+      meta_missing: metaRaw === null,
+      meta_invalid: metaInvalid,
+      meta_errors: metaErrors,
       status_missing: !statusRaw,
       status_doc_path: toPosix(path.relative(repoRoot, task.statusPath)),
       roadmap_path: toPosix(path.relative(repoRoot, task.roadmapPath)),
@@ -514,7 +535,6 @@ function collectAllWorktreeTaskOccurrences(repoRoot) {
       rows.push({
         feature_id: String(projection.feature_id || ''),
         milestone_id: featureMilestones.get(String(projection.feature_id || '')) || '',
-        title: String(projection.title || ''),
         ...task,
         worktree_path: toPosix(worktree.path),
         worktree_branch: worktree.branch,
@@ -534,8 +554,6 @@ const QUERY_FACT_FIELDS = [
   'dev_docs_path',
   'feature_id',
   'milestone_id',
-  'title',
-  'updated',
   'goal',
   'keywords',
   'meta_missing',
@@ -602,6 +620,14 @@ function mergeTaskOccurrences(repoRoot, rows) {
 
     result.conflict = conflicts.length > 0;
     result.conflicts = conflicts;
+    result.invalid = ordered.some((occurrence) => occurrence.meta_invalid);
+    result.metadata_errors = ordered
+      .filter((occurrence) => occurrence.meta_invalid)
+      .map((occurrence) => ({
+        worktree_path: occurrence.worktree_path,
+        dev_docs_path: occurrence.dev_docs_path,
+        errors: occurrence.meta_errors,
+      }));
     result.occurrence_count = ordered.length;
     result.worktrees = ordered.map((occurrence) => ({
       worktree_path: occurrence.worktree_path,
@@ -634,7 +660,7 @@ export function queryTasks({ repoRoot, id = null, status = null, text = null }) 
     if (text) {
       const parts = [];
       for (const field of [
-        'id', 'slug', 'title', 'description', 'goal', 'status', 'dev_docs_path',
+        'id', 'slug', 'goal', 'status', 'dev_docs_path',
         'feature_id', 'milestone_id', 'worktree_path', 'worktree_branch',
       ]) {
         parts.push(String(task[field] || ''));
@@ -679,23 +705,57 @@ function taskIdsFromBranch(branch) {
 }
 
 function resolveResumeTaskContext({ repoRoot, taskId, branch }) {
-  if (taskId) return { ...resolveTaskContext({ repoRoot, taskId }), source: 'explicit', branch };
+  function verifyOccurrence(localResult, source, missingReason, requestedId) {
+    if (!localResult.ok && localResult.reason !== 'not-found') {
+      return { ...localResult, source, branch };
+    }
+    const id = localResult.ok ? localResult.task.id : requestedId;
+    const [global] = queryTasks({ repoRoot, id });
+    if (!global) {
+      return {
+        ok: false,
+        reason: missingReason,
+        source,
+        branch,
+        branchTaskIds: source === 'branch' ? [id] : [],
+        candidates: [],
+      };
+    }
+    if (global.conflict) {
+      return { ok: false, reason: 'conflict', source, branch, candidates: [global] };
+    }
+    if (global.invalid) {
+      return { ok: false, reason: 'invalid-metadata', source, branch, candidates: [global] };
+    }
+    if (path.resolve(global.worktree_path) !== path.resolve(repoRoot)) {
+      return { ok: false, reason: 'other-worktree', source, branch, candidates: [global] };
+    }
+    if (!localResult.ok) {
+      return { ok: false, reason: missingReason, source, branch, candidates: [] };
+    }
+    return { ...localResult, source, branch };
+  }
+
+  if (taskId) {
+    return verifyOccurrence(resolveTaskContext({ repoRoot, taskId }), 'explicit', 'not-found', taskId);
+  }
 
   const branchTaskIds = taskIdsFromBranch(branch);
   if (branchTaskIds.length > 1) {
     return { ok: false, reason: 'branch-ambiguous', source: 'branch', branch, branchTaskIds, candidates: [] };
   }
   if (branchTaskIds.length === 1) {
-    const branchTask = resolveTaskContext({ repoRoot, taskId: branchTaskIds[0] });
-    return {
-      ...branchTask,
-      reason: branchTask.ok ? undefined : 'branch-task-not-found',
-      source: 'branch',
-      branch,
-      branchTaskIds,
-    };
+    const branchTaskId = branchTaskIds[0];
+    return verifyOccurrence(
+      resolveTaskContext({ repoRoot, taskId: branchTaskId }),
+      'branch',
+      'branch-task-not-found',
+      branchTaskId
+    );
   }
-  return { ...resolveTaskContext({ repoRoot, taskId: null }), source: 'active', branch };
+  const active = resolveTaskContext({ repoRoot, taskId: null });
+  if (!active.ok) return { ...active, source: 'active', branch };
+  return verifyOccurrence(active, 'active', 'not-found', active.task.id);
 }
 
 function docsTrailerValue(devDocsPath) {
@@ -743,9 +803,16 @@ export function taskIdsFromAllWorktrees(repoRoot) {
   for (const worktree of listGitWorktrees(repoRoot)) {
     for (const task of scanTasks(worktree.path)) {
       const metaRaw = readText(task.metaPath);
-      if (!metaRaw) continue;
-      const taskId = parseTaskMeta(metaRaw).task_id;
-      if (TASK_ID_RE.test(taskId)) ids.add(taskId);
+      if (metaRaw === null) continue;
+      const meta = parseTaskMeta(metaRaw);
+      if (meta.parse_error || meta.schema_errors.length > 0) {
+        const detail = meta.parse_error || meta.schema_errors.join(' ');
+        throw new Error(
+          `Invalid task metadata in linked worktree ${toPosix(worktree.path)} at ` +
+            `${toPosix(task.relPath)}/.ai-task.json: ${detail}`
+        );
+      }
+      ids.add(meta.task_id);
     }
   }
   return [...ids];
@@ -823,9 +890,14 @@ function readWorktreeStatus(repoRoot, limit = 10) {
 }
 
 function resumeFailureExitCode(reason) {
-  if (reason === 'ambiguous' || reason === 'branch-ambiguous') return 2;
+  if (
+    reason === 'ambiguous' ||
+    reason === 'branch-ambiguous' ||
+    reason === 'conflict' ||
+    reason === 'invalid-metadata'
+  ) return 2;
   if (reason === 'none') return 3;
-  if (reason === 'not-found' || reason === 'branch-task-not-found') return 4;
+  if (reason === 'not-found' || reason === 'branch-task-not-found' || reason === 'other-worktree') return 4;
   return 1;
 }
 
@@ -840,6 +912,15 @@ function resumeFailureMessage(result) {
     return 'Multiple active tasks exist; pass --task <T-###> or use a branch containing one task ID.';
   }
   if (result.reason === 'not-found') return 'The requested task was not found.';
+  if (result.reason === 'conflict') {
+    return 'The requested task has conflicting facts across linked worktrees; reconcile them before resuming.';
+  }
+  if (result.reason === 'other-worktree') {
+    return 'The requested task exists only in another linked worktree; run recovery there or confirm a worktree change.';
+  }
+  if (result.reason === 'invalid-metadata') {
+    return 'The requested task has invalid metadata in a linked worktree; repair that identity record before resuming.';
+  }
   if (result.reason === 'none') return 'No active task was found; pass --task <T-###>.';
   if (result.reason === 'git-unavailable') return 'Unable to read Git history for context recovery.';
   return 'Unable to resolve a task for context recovery.';
@@ -856,20 +937,82 @@ function renderResumeFailure(result) {
   }
   if (allCandidates.length > RESUME_MAX_CANDIDATES) limiter.mark('error.candidates');
 
+  function boundedValue(value, field) {
+    const encoded = JSON.stringify(value);
+    if (encoded === undefined || encoded.length <= RESUME_TEXT_LIMITS.text) return value;
+    return limiter.text(encoded, RESUME_TEXT_LIMITS.text, field);
+  }
+
+  function boundedWorktree(worktree, field) {
+    return {
+      worktree_path: limiter.text(worktree.worktree_path, RESUME_TEXT_LIMITS.path, `${field}.worktree_path`),
+      worktree_branch: limiter.text(worktree.worktree_branch, RESUME_TEXT_LIMITS.short, `${field}.worktree_branch`),
+      dev_docs_path: limiter.text(worktree.dev_docs_path, RESUME_TEXT_LIMITS.path, `${field}.dev_docs_path`),
+    };
+  }
+
   const error = {
     reason: result.reason || 'unknown',
     message: limiter.text(resumeFailureMessage(result), RESUME_TEXT_LIMITS.warning, 'error.message'),
     branch: limiter.text(result.branch || '', RESUME_TEXT_LIMITS.short, 'error.branch'),
     branch_task_ids: branchTaskIds,
-    candidates: allCandidates.slice(0, RESUME_MAX_CANDIDATES).map((candidate, index) => ({
-      id: candidate.id,
-      slug: limiter.text(candidate.slug, RESUME_TEXT_LIMITS.short, `error.candidates[${index}].slug`),
-      state: candidate.status,
-      docs_path: limiter.text(candidate.dev_docs_path, RESUME_TEXT_LIMITS.path, `error.candidates[${index}].docs_path`),
-    })),
+    candidates: allCandidates.slice(0, RESUME_MAX_CANDIDATES).map((candidate, index) => {
+      const field = `error.candidates[${index}]`;
+      if ((candidate.worktrees || []).length > RESUME_MAX_CANDIDATES) limiter.mark(`${field}.worktrees`);
+      if ((candidate.conflicts || []).length > RESUME_MAX_CANDIDATES) limiter.mark(`${field}.conflicts`);
+      if ((candidate.metadata_errors || []).length > RESUME_MAX_CANDIDATES) {
+        limiter.mark(`${field}.metadata_errors`);
+      }
+      return {
+        id: candidate.id,
+        slug: limiter.text(candidate.slug, RESUME_TEXT_LIMITS.short, `${field}.slug`),
+        state: candidate.status,
+        docs_path: limiter.text(candidate.dev_docs_path, RESUME_TEXT_LIMITS.path, `${field}.docs_path`),
+        worktree_path: limiter.text(candidate.worktree_path, RESUME_TEXT_LIMITS.path, `${field}.worktree_path`),
+        worktrees: (candidate.worktrees || [])
+          .slice(0, RESUME_MAX_CANDIDATES)
+          .map((worktree, worktreeIndex) => boundedWorktree(worktree, `${field}.worktrees[${worktreeIndex}]`)),
+        conflicts: (candidate.conflicts || []).slice(0, RESUME_MAX_CANDIDATES).map((conflict, conflictIndex) => {
+          const conflictField = `${field}.conflicts[${conflictIndex}]`;
+          if ((conflict.values || []).length > RESUME_MAX_CANDIDATES) limiter.mark(`${conflictField}.values`);
+          return {
+            field: limiter.text(conflict.field, RESUME_TEXT_LIMITS.short, `${conflictField}.field`),
+            values: (conflict.values || []).slice(0, RESUME_MAX_CANDIDATES).map((entry, valueIndex) => {
+              const valueField = `${conflictField}.values[${valueIndex}]`;
+              if ((entry.worktrees || []).length > RESUME_MAX_CANDIDATES) {
+                limiter.mark(`${valueField}.worktrees`);
+              }
+              return {
+                value: boundedValue(entry.value, `${valueField}.value`),
+                worktrees: (entry.worktrees || [])
+                  .slice(0, RESUME_MAX_CANDIDATES)
+                  .map((worktree, worktreeIndex) => boundedWorktree(
+                    worktree,
+                    `${valueField}.worktrees[${worktreeIndex}]`
+                  )),
+              };
+            }),
+          };
+        }),
+        metadata_errors: (candidate.metadata_errors || [])
+          .slice(0, RESUME_MAX_CANDIDATES)
+          .map((entry, errorIndex) => {
+            const errorField = `${field}.metadata_errors[${errorIndex}]`;
+            if ((entry.errors || []).length > RESUME_MAX_CANDIDATES) {
+              limiter.mark(`${errorField}.errors`);
+            }
+            return {
+              ...boundedWorktree(entry, errorField),
+              errors: (entry.errors || []).slice(0, RESUME_MAX_CANDIDATES).map((error, itemIndex) =>
+                limiter.text(error, RESUME_TEXT_LIMITS.warning, `${errorField}.errors[${itemIndex}]`)
+              ),
+            };
+          }),
+      };
+    }),
     truncated_fields: limiter.fields,
   };
-  console.log(JSON.stringify({ version: 3, error }));
+  console.log(JSON.stringify({ version: 4, error }));
   return resumeFailureExitCode(result.reason);
 }
 
@@ -883,7 +1026,10 @@ function readResumeStatus(repoRoot, task) {
     path: toPosix(path.relative(repoRoot, statusPath)),
     state: status.status || task.status || 'unknown',
     goal: getMarkdownSectionText(statusRaw, 'Goal') || null,
+    current_phase: getMarkdownListField(statusRaw, 'Progress', 'Current phase') || null,
     next_step: getMarkdownListField(statusRaw, 'Progress', 'Next step') || null,
+    blocker: getMarkdownListField(statusRaw, 'Progress', 'Blocker') || null,
+    completion_conditions: getMarkdownChecklistItems(statusRaw, 'Done when'),
     status_error: status.error || null,
   };
 }
@@ -952,7 +1098,12 @@ export function cmdResume({ repoRoot, taskId, limit, scan, limitClamped, scanCla
   if (scanClamped) warnings.push(`Requested scan limit exceeded the maximum; using ${scan}.`);
   if (statusDoc.status_error) warnings.push(statusDoc.status_error);
   if (!statusDoc.goal) warnings.push(`Goal is missing from ${statusDoc.path}.`);
+  if (!statusDoc.current_phase) warnings.push(`Current phase is missing from ${statusDoc.path}.`);
   if (!statusDoc.next_step) warnings.push(`Next step is missing from ${statusDoc.path}.`);
+  if (!statusDoc.blocker) warnings.push(`Blocker is missing from ${statusDoc.path}.`);
+  if (statusDoc.completion_conditions.length === 0) {
+    warnings.push(`Done when has no completion conditions in ${statusDoc.path}.`);
+  }
   if (roadmap.kickoff_status === 'unknown') warnings.push(`Kickoff status is missing or invalid in ${roadmap.path}.`);
   if (linked.length === 0) warnings.push(`No commit carries "Task: ${task.id}"; linked progress is unknown, not zero.`);
   if (records.length >= scan) warnings.push(`Commit scan limit reached (${scan}); older commits were not examined.`);
@@ -976,8 +1127,11 @@ export function cmdResume({ repoRoot, taskId, limit, scan, limitClamped, scanCla
       limiter.text(entry, RESUME_TEXT_LIMITS.path, `worktree.entries[${index}]`)
     ),
   };
+  if (statusDoc.completion_conditions.length > RESUME_MAX_COMPLETION_CONDITIONS) {
+    limiter.mark('status.completion_conditions');
+  }
   const packet = {
-    version: 3,
+    version: 4,
     task: {
       id: task.id,
       slug: limiter.text(task.slug, RESUME_TEXT_LIMITS.short, 'task.slug'),
@@ -988,7 +1142,23 @@ export function cmdResume({ repoRoot, taskId, limit, scan, limitClamped, scanCla
     status: {
       path: limiter.text(statusDoc.path, RESUME_TEXT_LIMITS.path, 'status.path'),
       goal: limiter.text(statusDoc.goal, RESUME_TEXT_LIMITS.text, 'status.goal'),
+      current_phase: limiter.text(
+        statusDoc.current_phase,
+        RESUME_TEXT_LIMITS.text,
+        'status.current_phase'
+      ),
       next_step: limiter.text(statusDoc.next_step, RESUME_TEXT_LIMITS.text, 'status.next_step'),
+      blocker: limiter.text(statusDoc.blocker, RESUME_TEXT_LIMITS.text, 'status.blocker'),
+      completion_conditions: statusDoc.completion_conditions
+        .slice(0, RESUME_MAX_COMPLETION_CONDITIONS)
+        .map((item, index) => ({
+          checked: item.checked,
+          condition: limiter.text(
+            item.condition,
+            RESUME_TEXT_LIMITS.text,
+            `status.completion_conditions[${index}].condition`
+          ),
+        })),
     },
     roadmap: {
       path: limiter.text(roadmap.path, RESUME_TEXT_LIMITS.path, 'roadmap.path'),

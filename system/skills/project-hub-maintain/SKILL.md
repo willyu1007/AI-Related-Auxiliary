@@ -64,7 +64,7 @@ Archiving is an approved destructive transition from a working record to a compa
 
    A failure stops the commit. Restore the clean active layout from the pre-archive checkpoint or correct the approved transition; never leave a half-archived bundle.
 
-9. Stage the archive move, `.ai-task.json` status refresh, affected Feature record, registry, and derived views. Commit one task per archive so its transition remains on its own timeline:
+9. Stage the archive move, affected Feature record, registry, and derived views. Commit one task per archive so its transition remains on its own timeline:
 
    ```bash
    git commit -m "chore(archive): archive T-### <slug>" -m "Task: T-###"
@@ -85,8 +85,8 @@ Use this only after the project outcome, ownership, or lifecycle claim is confir
 records the decision; it does not decide product scope or infer a rollup from task counts.
 
 1. Inspect `git status --short`, query the affected tasks across linked worktrees, and inspect
-   `.ai/project/registry.json` in every linked worktree. Stop on foreign work, a conflicted task
-   row, an uncommitted semantic edit, or conflicting meaning for the same project ID.
+   `.ai/project/registry.json` in every linked worktree. Stop on foreign work, a conflicted or
+   invalid task row, an uncommitted semantic edit, or conflicting meaning for the same project ID.
 2. For a new stage, allocate its monotonic ID under the shared Git-common-dir lock; `M-000` is
    reserved:
 

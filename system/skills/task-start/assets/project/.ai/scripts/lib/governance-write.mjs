@@ -34,23 +34,34 @@ const ok = (message) => console.log(message);
 const info = (message) => console.log(message);
 const header = (message) => console.log(message);
 
-function getTaskConflictErrors(repoRoot, taskId = null) {
-  return getTaskConflictErrorsFromRows(queryTasks({ repoRoot, id: taskId }));
+function getTaskRowErrors(repoRoot, taskId = null) {
+  return getTaskRowErrorsFromRows(queryTasks({ repoRoot, id: taskId }));
 }
 
-function getTaskConflictErrorsFromRows(tasks) {
-  return tasks
-    .filter((task) => task.id && task.conflict)
-    .map((task) => {
+function getTaskRowErrorsFromRows(tasks) {
+  const errors = [];
+  for (const task of tasks) {
+    if (task.id && task.conflict) {
       const fields = task.conflicts.map((conflict) => conflict.field).join(', ');
       const occurrences = task.worktrees
         .map((worktree) => `${worktree.worktree_branch}@${worktree.worktree_path}`)
         .join('; ');
-      return (
+      errors.push(
         `Cross-worktree task conflict for ${task.id} (${fields}). ` +
-        `Resolve the divergent occurrences before writing: ${occurrences}.`
+          `Resolve the divergent occurrences before writing: ${occurrences}.`
       );
-    });
+    }
+    if (task.invalid) {
+      const occurrences = task.metadata_errors
+        .map((entry) => `${toPosix(entry.worktree_path)}/${toPosix(entry.dev_docs_path)}`)
+        .join('; ');
+      errors.push(
+        `Invalid cross-worktree task metadata for ${task.id || '(unknown task ID)'}. ` +
+          `Repair these occurrences before writing: ${occurrences}.`
+      );
+    }
+  }
+  return errors;
 }
 
 function getRegistryWriteErrors(registry) {
@@ -139,8 +150,6 @@ function renderTaskMetaJson(meta) {
     version: 1,
     task_id: meta.task_id,
     slug: meta.slug,
-    status: meta.status,
-    updated: meta.updated,
     keywords: Array.isArray(meta.keywords) ? meta.keywords : [],
   });
 }
@@ -223,7 +232,7 @@ export function cmdSync({ repoRoot, dryRun, apply }) {
     return { ok: succeeded, errors, warnings, actions };
   };
 
-  const taskConflicts = getTaskConflictErrors(repoRoot);
+  const taskConflicts = getTaskRowErrors(repoRoot);
   if (taskConflicts.length > 0) {
     errors.push(...taskConflicts);
     return finish();
@@ -298,12 +307,9 @@ export function cmdSync({ repoRoot, dryRun, apply }) {
   const todayStr = today();
 
   // Build/refresh registry tasks
-  if (!Array.isArray(reg.tasks)) reg.tasks = [];
   const tasksById = new Map();
   for (const t of reg.tasks) {
-    if (!t || typeof t !== 'object') continue;
-    const id = String(t.id || '').trim();
-    if (id) tasksById.set(id, t);
+    tasksById.set(t.id, t);
   }
 
   for (const task of tasks) {
@@ -329,8 +335,6 @@ export function cmdSync({ repoRoot, dryRun, apply }) {
       const meta = {
         task_id: id,
         slug: task.slug,
-        status: effectiveStatus || 'planned',
-        updated: todayStr,
         keywords: [],
       };
       const rendered = renderTaskMetaJson(meta);
@@ -342,65 +346,49 @@ export function cmdSync({ repoRoot, dryRun, apply }) {
         errors.push(`${toPosix(task.relPath)}: Failed to parse .ai-task.json: ${meta.parse_error}`);
         continue;
       }
-      if (!TASK_ID_RE.test(meta.task_id)) {
-        errors.push(`${toPosix(task.relPath)}: Invalid task_id; sync will not auto-repair without manual fix.`);
+      if (meta.schema_errors.length > 0) {
+        errors.push(
+          ...meta.schema_errors.map(
+            (error) => `${toPosix(task.relPath)}: Invalid .ai-task.json: ${error}`
+          )
+        );
         continue;
       }
       task.taskId = meta.task_id;
 
-      const desiredStatus = effectiveStatus || meta.status || 'planned';
-      const shouldUpdate = desiredStatus !== meta.status || meta.slug !== task.slug;
+      const shouldUpdate = meta.slug !== task.slug;
 
       if (shouldUpdate) {
         const nextMeta = {
           task_id: meta.task_id,
           slug: task.slug,
-          status: desiredStatus,
-          updated: todayStr,
-          keywords: meta.keywords || [],
+          keywords: meta.keywords,
         };
-        const rendered = renderTaskMetaJson(nextMeta);
-        planWrite(task.metaPath, rendered, { op: 'update', note: 'refresh derived fields' });
+        planWrite(task.metaPath, renderTaskMetaJson(nextMeta), { op: 'update', note: 'refresh slug' });
       }
     }
 
     if (!task.taskId) continue;
 
-    const entry = tasksById.get(task.taskId) || { id: task.taskId };
-    const prevStatus = entry.status;
-    entry.slug = task.slug;
-    entry.status = effectiveStatus || entry.status || 'planned';
-    entry.dev_docs_path = toPosix(task.relPath);
-    if (!entry.updated || entry.status !== prevStatus) entry.updated = todayStr;
-    if (!entry.feature_id) entry.feature_id = 'F-000';
-    delete entry.milestone_id;
+    const previous = tasksById.get(task.taskId) || {};
+    const nextStatus = effectiveStatus;
+    const entry = {
+      id: task.taskId,
+      slug: task.slug,
+      status: nextStatus,
+      updated:
+        /^\d{4}-\d{2}-\d{2}$/.test(String(previous.updated || '')) && previous.status === nextStatus
+          ? previous.updated
+          : todayStr,
+      dev_docs_path: toPosix(task.relPath),
+      feature_id: previous.feature_id || 'F-000',
+    };
 
     tasksById.set(task.taskId, entry);
   }
 
   reg.tasks = [...tasksById.values()].sort((a, b) => String(a.id).localeCompare(String(b.id)));
 
-  // Ensure system nodes exist
-  if (!Array.isArray(reg.milestones)) reg.milestones = [];
-  if (!reg.milestones.some((m) => m && m.id === 'M-000')) {
-    reg.milestones.unshift({
-      id: 'M-000',
-      title: 'Inbox / Triage',
-      status: 'in-progress',
-      description: 'Triage queue for new or unplanned work.',
-    });
-  }
-  if (!Array.isArray(reg.features)) reg.features = [];
-  if (!reg.features.some((f) => f && f.id === 'F-000')) {
-    reg.features.unshift({
-      id: 'F-000',
-      title: 'Inbox / Untriaged',
-      milestone_id: 'M-000',
-      status: 'in-progress',
-      description: 'Untriaged tasks live here until mapped to a real feature.',
-    });
-  }
-  if (reg.ideas === undefined) reg.ideas = [];
   errors.push(...getRegistryWriteErrors(reg));
   if (errors.length > 0) return finish();
   // Write registry
@@ -477,7 +465,7 @@ export function cmdMap({ repoRoot, taskId, featureId, dryRun, apply }) {
   }
 
   const taskRows = queryTasks({ repoRoot, id: taskId });
-  const taskConflicts = getTaskConflictErrorsFromRows(taskRows);
+  const taskConflicts = getTaskRowErrorsFromRows(taskRows);
   if (taskConflicts.length > 0) {
     errors.push(...taskConflicts);
     return { ok: false, errors, actions };
@@ -506,14 +494,13 @@ export function cmdMap({ repoRoot, taskId, featureId, dryRun, apply }) {
   const registryPath = loaded.path;
 
   // Find the task in registry
-  if (!Array.isArray(reg.tasks)) reg.tasks = [];
   const taskEntry = reg.tasks.find((t) => t && t.id === taskId);
   if (!taskEntry) {
     errors.push(`Task "${taskId}" not found in registry. Run sync first.`);
     return { ok: false, errors, actions };
   }
 
-  const featureExists = Array.isArray(reg.features) && reg.features.some((f) => f && f.id === featureId);
+  const featureExists = reg.features.some((f) => f && f.id === featureId);
   if (!featureExists) {
     errors.push(`Feature "${featureId}" not found in registry.`);
     return { ok: false, errors, actions };
@@ -740,7 +727,7 @@ export function cmdMilestone({ repoRoot, title, description, dryRun, apply, json
     id: milestone.id,
     title: milestone.title,
     description: String(milestone.description || ''),
-    status: String(milestone.status || 'planned'),
+    status: milestone.status,
     created,
     changed: actions.length > 0,
     mode: apply && !dryRun ? 'apply' : 'dry-run',
@@ -790,7 +777,6 @@ export function cmdFeature({ repoRoot, title, description, dryRun, apply, json }
   }
 
   const registry = loaded.registry;
-  if (!Array.isArray(registry.features)) registry.features = [];
   let feature = null;
   let created = false;
 
@@ -855,7 +841,7 @@ export function cmdFeature({ repoRoot, title, description, dryRun, apply, json }
     title: feature.title,
     description: String(feature.description || ''),
     milestone_id: String(feature.milestone_id || ''),
-    status: String(feature.status || 'planned'),
+    status: feature.status,
     created,
     changed: actions.length > 0,
     mode: apply && !dryRun ? 'apply' : 'dry-run',

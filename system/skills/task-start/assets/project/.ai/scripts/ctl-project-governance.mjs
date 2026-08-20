@@ -78,7 +78,8 @@ Commands:
     --scan <n>                History scan limit (default: ${RESUME_DEFAULT_SCAN_LIMIT}; max: ${RESUME_MAX_SCAN_LIMIT})
     Output one bounded JSON context packet from dev-docs, linked commits, and the worktree.
     Resolution order: --task, branch T-###, single in-progress, then single blocked task.
-    Exit codes: 0 resolved, 2 ambiguous, 3 none, 4 not found.
+    Exit codes: 0 resolved, 1 unreadable evidence, 2 ambiguous/conflicted/invalid,
+                3 none, 4 unavailable in this worktree.
 
   map
     --repo-root <path>        Repo root (default: auto-detect; fallback: cwd)

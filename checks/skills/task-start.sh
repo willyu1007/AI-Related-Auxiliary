@@ -44,8 +44,8 @@ grep -q 'Follow `AGENTS.md`' dev-docs/CLAUDE.md \
 for f in registry.json dashboard.md feature-map.md; do
   [ -f ".ai/project/$f" ] || fail "install did not initialize .ai/project/$f"
 done
-node -e "const r=require('./.ai/project/registry.json');process.exit(Object.hasOwn(r,'task_doc_roots')?1:0)" \
-  || fail "registry retained configurable task roots"
+node -e "const r=require('./.ai/project/registry.json');const keys=Object.keys(r).sort().join(',');process.exit(keys==='features,ideas,milestones,tasks,version'?0:1)" \
+  || fail "registry did not use the exact project-graph schema"
 node .ai/scripts/ctl-project-governance.mjs sync --apply >/dev/null \
   || fail "first sync was blocked by a linked worktree created before governance installation"
 git worktree remove --force "$PREINSTALL_WT"
@@ -161,35 +161,44 @@ fi
 mv registry.tmp .ai/project/registry.json
 
 cp .ai/project/registry.json registry.tmp
-node -e "const fs=require('fs');const p='.ai/project/registry.json';const r=JSON.parse(fs.readFileSync(p,'utf8'));r.task_doc_roots=['dev-docs'];fs.writeFileSync(p,JSON.stringify(r,null,2)+'\n')"
+node -e "const fs=require('fs');const p='.ai/project/registry.json';const r=JSON.parse(fs.readFileSync(p,'utf8'));r.unexpected=[];fs.writeFileSync(p,JSON.stringify(r,null,2)+'\n')"
 registry_hash_before="$(git hash-object .ai/project/registry.json)"
 if node .ai/scripts/ctl-project-governance.mjs lint >/dev/null 2>&1; then
-  fail "lint accepted configurable task roots"
+  fail "lint accepted an unknown registry collection"
 fi
 if node .ai/scripts/ctl-project-governance.mjs sync --apply >/dev/null 2>&1; then
-  fail "sync accepted configurable task roots"
+  fail "sync accepted an unknown registry collection"
 fi
-if node .ai/scripts/ctl-project-governance.mjs milestone --title "Invalid root allocation" --apply >/dev/null 2>&1; then
-  fail "milestone allocation accepted configurable task roots"
+if node .ai/scripts/ctl-project-governance.mjs feature --title "Invalid graph allocation" --apply >/dev/null 2>&1; then
+  fail "feature allocation accepted an unknown registry collection"
 fi
 [ "$registry_hash_before" = "$(git hash-object .ai/project/registry.json)" ] \
   || fail "a rejected project-graph write changed the registry"
 mv registry.tmp .ai/project/registry.json
 
+# Project-owned graph items reject extra semantic fields instead of silently preserving extensions.
 cp .ai/project/registry.json registry.tmp
-node -e "const fs=require('fs');const p='.ai/project/registry.json';const r=JSON.parse(fs.readFileSync(p,'utf8'));r.requirements=[];fs.writeFileSync(p,JSON.stringify(r,null,2)+'\n')"
+node -e "const fs=require('fs');const p='.ai/project/registry.json';const r=JSON.parse(fs.readFileSync(p,'utf8'));r.features[0].unexpected='second meaning';fs.writeFileSync(p,JSON.stringify(r,null,2)+'\n')"
 registry_hash_before="$(git hash-object .ai/project/registry.json)"
 if node .ai/scripts/ctl-project-governance.mjs lint >/dev/null 2>&1; then
-  fail "lint accepted the removed project-level requirements collection"
+  fail "lint accepted an unknown Feature field"
 fi
 if node .ai/scripts/ctl-project-governance.mjs sync --apply >/dev/null 2>&1; then
-  fail "sync accepted the removed project-level requirements collection"
-fi
-if node .ai/scripts/ctl-project-governance.mjs feature --title "Invalid graph allocation" --apply >/dev/null 2>&1; then
-  fail "feature allocation accepted the removed project-level requirements collection"
+  fail "sync accepted an unknown Feature field"
 fi
 [ "$registry_hash_before" = "$(git hash-object .ai/project/registry.json)" ] \
-  || fail "a rejected project-graph write changed the registry"
+  || fail "a rejected Feature field changed the registry"
+mv registry.tmp .ai/project/registry.json
+
+# Exact graph values are not normalized by readers; padded IDs/statuses must stop writes.
+cp .ai/project/registry.json registry.tmp
+node -e "const fs=require('fs');const p='.ai/project/registry.json';const r=JSON.parse(fs.readFileSync(p,'utf8'));r.features[0].status=' in-progress ';fs.writeFileSync(p,JSON.stringify(r,null,2)+'\n')"
+if node .ai/scripts/ctl-project-governance.mjs lint >/dev/null 2>&1; then
+  fail "lint accepted a padded Feature status"
+fi
+if node .ai/scripts/ctl-project-governance.mjs sync --apply >/dev/null 2>&1; then
+  fail "sync accepted a padded Feature status"
+fi
 mv registry.tmp .ai/project/registry.json
 
 cp .ai/project/registry.json registry.tmp
@@ -218,10 +227,10 @@ mv registry.tmp .ai/project/registry.json
 # Installing again must not disturb what the first run created: shipped assets refresh in place,
 # hub files are project data and stay. A second install that resets the registry would silently
 # discard every task the repository has.
-node -e "const fs=require('fs');const p='.ai/project/registry.json';const r=JSON.parse(fs.readFileSync(p,'utf8'));r.smoke_marker=true;fs.writeFileSync(p,JSON.stringify(r,null,2)+'\n')"
+node -e "const fs=require('fs');const p='.ai/project/registry.json';const r=JSON.parse(fs.readFileSync(p,'utf8'));r.ideas=[{idea:'installer preservation sentinel'}];fs.writeFileSync(p,JSON.stringify(r,null,2)+'\n')"
 printf '\nshipped-doc-drift\n' >> dev-docs/AGENTS.md
 node "$INSTALLER" --repo-root . >/dev/null
-node -e "const r=require('./.ai/project/registry.json');process.exit(r.smoke_marker===true?0:1)" \
+node -e "const r=require('./.ai/project/registry.json');process.exit(r.ideas.some(x=>x.idea==='installer preservation sentinel')?0:1)" \
   || fail "re-install overwrote hub data"
 if grep -q 'shipped-doc-drift' dev-docs/AGENTS.md; then
   fail "re-install did not refresh the task-document guidance"
@@ -230,7 +239,7 @@ fi
 rm .ai/project/dashboard.md
 node "$INSTALLER" --repo-root . >/dev/null
 [ -f .ai/project/dashboard.md ] || fail "skill-source installer did not restore missing hub data"
-node -e "const r=require('./.ai/project/registry.json');process.exit(r.smoke_marker===true?0:1)" \
+node -e "const r=require('./.ai/project/registry.json');process.exit(r.ideas.some(x=>x.idea==='installer preservation sentinel')?0:1)" \
   || fail "skill-source installer overwrote existing hub data"
 
 cp .ai/project/dashboard.md dashboard.tmp
@@ -286,7 +295,7 @@ git -c user.email=ci@local -c user.name=ci commit -qm "feat(sample): add task bu
 
 # Explicit synchronization allocates the ID and updates the hub before staging.
 [ -f dev-docs/active/sample/.ai-task.json ] || fail "sync did not allocate .ai-task.json"
-node -e "const m=require('./dev-docs/active/sample/.ai-task.json');process.exit(m.task_id==='T-001'&&!Object.hasOwn(m,'project')?0:1)" \
+node -e "const m=require('./dev-docs/active/sample/.ai-task.json');const keys=Object.keys(m).sort().join(',');process.exit(m.task_id==='T-001'&&keys==='keywords,slug,task_id,version'?0:1)" \
   || fail "unexpected task metadata"
 node -e "const r=require('./.ai/project/registry.json');process.exit(r.tasks.some(x=>x.id==='T-001'&&!Object.hasOwn(x,'milestone_id'))?0:1)" \
   || fail "registry was not synced"
@@ -314,6 +323,20 @@ fi
 if node .ai/scripts/ctl-project-governance.mjs sync --apply >/dev/null 2>&1; then
   fail "sync accepted malformed task metadata"
 fi
+mv dev-docs/active/sample/.ai-task.tmp dev-docs/active/sample/.ai-task.json
+
+# Task metadata contains identity/search data only; lifecycle facts must not form a second head.
+cp dev-docs/active/sample/.ai-task.json dev-docs/active/sample/.ai-task.tmp
+node -e "const fs=require('fs');const p='dev-docs/active/sample/.ai-task.json';const m=JSON.parse(fs.readFileSync(p,'utf8'));m.status='in-progress';fs.writeFileSync(p,JSON.stringify(m,null,2)+'\n')"
+meta_hash_before="$(git hash-object dev-docs/active/sample/.ai-task.json)"
+if node .ai/scripts/ctl-project-governance.mjs lint >/dev/null 2>&1; then
+  fail "lint accepted lifecycle state in task metadata"
+fi
+if node .ai/scripts/ctl-project-governance.mjs sync --apply >/dev/null 2>&1; then
+  fail "sync accepted lifecycle state in task metadata"
+fi
+[ "$meta_hash_before" = "$(git hash-object dev-docs/active/sample/.ai-task.json)" ] \
+  || fail "rejected task metadata changed during sync"
 mv dev-docs/active/sample/.ai-task.tmp dev-docs/active/sample/.ai-task.json
 
 # Empty required task documents are invalid content, not valid placeholders.
@@ -472,15 +495,14 @@ mv dev-docs/active/sample/00-roadmap.tmp dev-docs/active/sample/00-roadmap.md
 
 # resume must resolve the active task and carry the current status head.
 node .ai/scripts/ctl-project-governance.mjs resume > resume.json
-grep -q '"id":"T-001"' resume.json || fail "resume did not resolve the task"
-grep -q '"status"' resume.json || fail "resume packet did not expose the status head"
-grep -q 'wire verification' resume.json || fail "resume packet lost the status next step"
-grep -q '"kickoff_status":"ready"' resume.json || fail "resume packet lost kickoff readiness"
+node -e "const r=require('./resume.json');const s=r.status;process.exit(r.version===4&&r.task.id==='T-001'&&r.task.state==='in-progress'&&s.goal==='Smoke test.'&&s.current_phase==='verify'&&s.next_step==='wire verification'&&s.blocker==='none'&&s.completion_conditions.length===1&&s.completion_conditions[0].condition==='Smoke test passes'&&r.roadmap.kickoff_status==='ready'?0:1)" \
+  || fail "resume packet did not expose the complete current status head"
 grep -q 'Repeating a stale path.*use the supported path' resume.json \
   || fail "resume packet did not parse current pitfalls"
 rm -f resume.json
 node .ai/scripts/ctl-project-governance.mjs query --id T-001 --json > query.json
-grep -q '"kickoff_status":"ready"' query.json || fail "query did not expose kickoff readiness"
+node -e "const q=require('./query.json');const t=q[0];process.exit(q.length===1&&t.kickoff_status==='ready'&&!Object.hasOwn(t,'title')&&!Object.hasOwn(t,'description')&&!Object.hasOwn(t,'updated')?0:1)" \
+  || fail "query did not expose only authoritative task fields"
 rm -f query.json
 
 # Optional context files are not required, but verification.md is.
@@ -528,6 +550,17 @@ grep -q '"description":"Exercise feature allocation"' feature.json \
 grep -q '"milestone_id":"M-000"' feature.json \
   || fail "feature JSON omitted its owning Milestone"
 rm -f feature.json
+
+# Task-specific mapping stops on invalid identity metadata before a real mapping change.
+cp dev-docs/active/sample/.ai-task.json dev-docs/active/sample/.ai-task.tmp
+node -e "const fs=require('fs');const p='dev-docs/active/sample/.ai-task.json';const m=JSON.parse(fs.readFileSync(p,'utf8'));m.status='in-progress';fs.writeFileSync(p,JSON.stringify(m,null,2)+'\n')"
+registry_hash_before="$(git hash-object .ai/project/registry.json)"
+if node .ai/scripts/ctl-project-governance.mjs map --task T-001 --feature F-001 --apply >/dev/null 2>&1; then
+  fail "map accepted invalid task metadata"
+fi
+[ "$registry_hash_before" = "$(git hash-object .ai/project/registry.json)" ] \
+  || fail "invalid task metadata allowed a registry mapping change"
+mv dev-docs/active/sample/.ai-task.tmp dev-docs/active/sample/.ai-task.json
 
 map_dry_run_before="$(git status --porcelain=v1 --untracked-files=all; git hash-object \
   .ai/project/registry.json)"
@@ -608,18 +641,27 @@ rm -f feature-lint.txt
 node .ai/scripts/ctl-project-governance.mjs lint --strict >/dev/null \
   || fail "lint failed after restoring consistent Milestone status"
 
-# Removed project-graph fields are rejected instead of being interpreted as a second mapping model.
+# Task projections have one generated shape; lint rejects drift and sync rebuilds it canonically.
 cp .ai/project/registry.json registry.tmp
-node -e "const fs=require('fs');const p='.ai/project/registry.json';const r=JSON.parse(fs.readFileSync(p,'utf8'));r.tasks.find(x=>x.id==='T-001').requirement_ids=[];fs.writeFileSync(p,JSON.stringify(r,null,2)+'\n')"
-registry_hash_before="$(git hash-object .ai/project/registry.json)"
+node -e "const fs=require('fs');const p='.ai/project/registry.json';const r=JSON.parse(fs.readFileSync(p,'utf8'));r.tasks.find(x=>x.id==='T-001').unexpected=[];fs.writeFileSync(p,JSON.stringify(r,null,2)+'\n')"
 if node .ai/scripts/ctl-project-governance.mjs lint >/dev/null 2>&1; then
-  fail "lint accepted the removed task requirement_ids field"
+  fail "lint accepted an unknown task projection field"
 fi
+node .ai/scripts/ctl-project-governance.mjs sync --apply >/dev/null \
+  || fail "sync could not rebuild a drifted task projection"
+node -e "const r=require('./.ai/project/registry.json');process.exit(Object.hasOwn(r.tasks.find(x=>x.id==='T-001'),'unexpected')?1:0)" \
+  || fail "sync retained an unknown task projection field"
+rm registry.tmp
+
+# Sync may rebuild derived task fields, but it must not choose between duplicate semantic mappings.
+cp .ai/project/registry.json registry.tmp
+node -e "const fs=require('fs');const p='.ai/project/registry.json';const r=JSON.parse(fs.readFileSync(p,'utf8'));r.tasks.push({...r.tasks.find(x=>x.id==='T-001'),feature_id:'F-000'});fs.writeFileSync(p,JSON.stringify(r,null,2)+'\n')"
+registry_hash_before="$(git hash-object .ai/project/registry.json)"
 if node .ai/scripts/ctl-project-governance.mjs sync --apply >/dev/null 2>&1; then
-  fail "sync accepted the removed task requirement_ids field"
+  fail "sync selected one of two task mappings with the same ID"
 fi
 [ "$registry_hash_before" = "$(git hash-object .ai/project/registry.json)" ] \
-  || fail "a rejected removed-field write changed the registry"
+  || fail "duplicate task mapping failure changed the registry"
 mv registry.tmp .ai/project/registry.json
 
 # Registry IDs and references are integrity constraints, not advisory metadata.
@@ -709,6 +751,44 @@ ID_B=$(grep -oE 'T-[0-9]{3}' "$WT_B/dev-docs/active/beta/.ai-task.json")
 [ "$ID_A" != "$ID_B" ] || fail "parallel worktrees both allocated $ID_A"
 IDS=$(printf '%s\n%s\n' "$ID_A" "$ID_B" | sort | tr '\n' ' ')
 [ "$IDS" = "T-002 T-003 " ] || fail "parallel worktrees allocated '$IDS', expected T-002 and T-003"
+cp "$WT_A/dev-docs/active/alpha/.ai-task.json" "$WT_A/task-meta.tmp"
+( cd "$WT_A" && node -e "const fs=require('fs');const p='dev-docs/active/alpha/.ai-task.json';const m=JSON.parse(fs.readFileSync(p,'utf8'));m.status='planned';fs.writeFileSync(p,JSON.stringify(m,null,2)+'\n')" )
+node .ai/scripts/ctl-project-governance.mjs query --id "$ID_A" --json > invalid-meta-query.json
+node -e "const q=require('./invalid-meta-query.json');process.exit(q.length===1&&q[0].id==='$ID_A'&&q[0].invalid&&q[0].metadata_errors.length===1?0:1)" \
+  || fail "query hid a valid task ID carried by invalid metadata"
+set +e
+node .ai/scripts/ctl-project-governance.mjs resume --task "$ID_A" > invalid-meta-resume.json
+resume_exit=$?
+set -e
+[ "$resume_exit" -eq 2 ] || fail "resume did not stop on invalid linked-worktree metadata"
+node -e "const r=require('./invalid-meta-resume.json');process.exit(r.error.reason==='invalid-metadata'?0:1)" \
+  || fail "resume did not explain the invalid metadata stop"
+rm invalid-meta-query.json invalid-meta-resume.json
+registry_hash_before="$(git hash-object .ai/project/registry.json)"
+if invalid_meta_output="$(node .ai/scripts/ctl-project-governance.mjs sync --apply 2>&1)"; then
+  fail "sync accepted invalid task metadata from a linked worktree"
+fi
+printf '%s\n' "$invalid_meta_output" | grep -q 'Invalid cross-worktree task metadata' \
+  || fail "sync did not identify invalid linked-worktree task metadata"
+[ "$registry_hash_before" = "$(git hash-object .ai/project/registry.json)" ] \
+  || fail "linked-worktree metadata failure changed the current registry"
+mv "$WT_A/task-meta.tmp" "$WT_A/dev-docs/active/alpha/.ai-task.json"
+cp "$WT_A/dev-docs/active/alpha/.ai-task.json" "$WT_A/task-meta.tmp"
+: > "$WT_A/dev-docs/active/alpha/.ai-task.json"
+if empty_meta_output="$(node .ai/scripts/ctl-project-governance.mjs sync --apply 2>&1)"; then
+  fail "sync treated empty linked-worktree task metadata as missing"
+fi
+printf '%s\n' "$empty_meta_output" | grep -q 'Invalid cross-worktree task metadata' \
+  || fail "sync did not report empty linked-worktree task metadata"
+mv "$WT_A/task-meta.tmp" "$WT_A/dev-docs/active/alpha/.ai-task.json"
+set +e
+node .ai/scripts/ctl-project-governance.mjs resume --task "$ID_A" > other-worktree-resume.json
+resume_exit=$?
+set -e
+[ "$resume_exit" -eq 4 ] || fail "resume used the wrong exit code for a task in another worktree"
+node -e "const r=require('./other-worktree-resume.json');process.exit(r.version===4&&r.error.reason==='other-worktree'&&r.error.candidates[0].id==='$ID_A'&&r.error.candidates[0].worktree_path?0:1)" \
+  || fail "resume did not identify the task's owning worktree"
+rm other-worktree-resume.json
 
 ( cd "$WT_A" && node .ai/scripts/ctl-project-governance.mjs feature \
     --title "Alpha feature" --description "Parallel feature allocation" --apply --json > feature.json ) &
@@ -779,6 +859,13 @@ node -e "const q=require('./conflicted-task.json');const t=q[0];const c=t.confli
 node .ai/scripts/ctl-project-governance.mjs query --status blocked --json > conflicted-filter.json
 node -e "const q=require('./conflicted-filter.json');process.exit(q.some(x=>x.id==='T-001'&&x.conflict)?0:1)" \
   || fail "status filter hid a matching conflicted occurrence"
+set +e
+node .ai/scripts/ctl-project-governance.mjs resume --task T-001 > conflicted-resume.json
+resume_exit=$?
+set -e
+[ "$resume_exit" -eq 2 ] || fail "resume used the wrong exit code for a conflicted task"
+node -e "const r=require('./conflicted-resume.json');const c=r.error.candidates[0];process.exit(r.version===4&&r.error.reason==='conflict'&&c.id==='T-001'&&c.conflicts.some(x=>x.field==='status')?0:1)" \
+  || fail "resume did not return bounded cross-worktree conflict evidence"
 
 conflict_state_before="$(git status --porcelain=v1 --untracked-files=all; git hash-object \
   .ai/project/registry.json .ai/project/dashboard.md .ai/project/feature-map.md \
@@ -800,7 +887,7 @@ conflict_state_after="$(git status --porcelain=v1 --untracked-files=all; git has
 
 sed -i 's/State: blocked/State: in-progress/' "$WT_A/dev-docs/active/sample/01-status.md"
 mv registry.worktree.tmp .ai/project/registry.json
-rm -f shared-task.json conflicted-task.json conflicted-filter.json
+rm -f shared-task.json conflicted-task.json conflicted-filter.json conflicted-resume.json
 
 node .ai/scripts/ctl-project-governance.mjs query --text alpha --json > worktrees.json
 grep -q "\"id\":\"$ID_A\"" worktrees.json || fail "cross-worktree query missed uncommitted task metadata"

@@ -31,7 +31,7 @@ Pick by what was asked, then follow that reference's **Data Source** commands:
 1. **Classify the question.** Read `dev-docs/AGENTS.md` for task semantics, then open the matching reference.
 
 2. **Gather from task bundles across linked worktrees.** Run the reference's data-source commands — usually
-   `ctl-project-governance.mjs query` with a `--status` or `--text` filter. Query already includes every linked worktree and returns one logical row per valid task ID. Never guess task details; open the returned `status_doc_path` when the query output is not enough. A row with `conflict: true` has no selected fact source: list its occurrences and differences separately, and do not use its unset top-level facts or run a worktree-specific follow-up until the disagreement is resolved.
+   `ctl-project-governance.mjs query` with a `--status` or `--text` filter. Query already includes every linked worktree and returns one logical row per valid task ID. Never guess task details; open the returned `status_doc_path` when the query output is not enough. A row with `conflict: true` has no selected fact source: list its occurrences and differences separately, and do not use its unset top-level facts or run a worktree-specific follow-up until the disagreement is resolved. A row with `invalid: true` is diagnostic evidence only; report its `metadata_errors`, exclude it from status facts and counts, and do not resume it.
 
 3. **Check consistency, do not fix it.** `lint` reveals drift between the registry and the task bundles. Report the drift and the appropriate maintenance action; do not run write-mode repair.
 
@@ -52,8 +52,8 @@ Pick by what was asked, then follow that reference's **Data Source** commands:
 - Never modify files. No `sync --apply`, no edits under `dev-docs/**` or `.ai/project/**`.
 - Never invent a task detail, a blocker reason, or a semantic intent. Undocumented means `unknown`.
 - Never present a claim about landed work the `resume` packet does not support; state the gap.
-- Account for every non-conflicting query row in status counts. List conflicting rows separately
-  instead of assigning them a status or counting their occurrences as separate tasks.
+- Account for every valid, non-conflicting query row in status counts. List conflicting or invalid
+  rows separately instead of assigning them a status or counting their occurrences as tasks.
 
 ## Authority
 

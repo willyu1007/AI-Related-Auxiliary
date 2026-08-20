@@ -38,7 +38,8 @@ and evidence; the active working files do not survive the archive transition.
 
 ## Document responsibilities
 
-- **`.ai-task.json`** — Stable task identity and non-authoritative display metadata.
+- **`.ai-task.json`** — Stable task identity and lookup metadata. It contains exactly schema
+  version, `task_id`, directory `slug`, and `keywords`; progress and timestamps live elsewhere.
 - **`00-roadmap.md`** — Decision alignment and rationale, working assumptions, relationships
   touching this task, the implementation kickoff gate, phased route, phase closeout, and recovery
   strategy.

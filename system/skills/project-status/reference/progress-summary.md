@@ -31,8 +31,8 @@ node .ai/scripts/ctl-project-governance.mjs query --json
 ```
 
 ## Rules
-- Calculate percentages from every non-conflicting logical row returned by query, including archived tasks
-- Exclude conflicted logical rows from status percentages and report them separately as unresolved evidence
+- Calculate percentages from every valid, non-conflicting logical row returned by query, including archived tasks
+- Exclude conflicted or invalid logical rows from status percentages and report them separately as unresolved evidence
 - Only show "Blocked" section if blockers exist
 - Next step follows documented selection evidence and action rules (see next-action.md)
 - Separate kickoff-pending alignment/replanning from kickoff-ready implementation

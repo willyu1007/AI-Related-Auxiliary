@@ -15,7 +15,8 @@ Converge one living roadmap without creating a second planning authority.
 1. **Recover the task and evidence.** Read `dev-docs/AGENTS.md`, then resolve exactly one existing
    task across linked worktrees with an exact ID query or request-text query. A result with
    `conflict: true` is a stop condition: show its occurrences and differing facts instead of
-   choosing a source. Continue in another worktree only when the environment can target it safely
+   choosing a source. `invalid: true` also stops planning until the reported task metadata is
+   repaired. Continue in another worktree only when the environment can target it safely
    and the request clearly identifies it. Inspect the resolved status, roadmap, settled
    architecture, linked commits, relevant worktree changes, and repository evidence. If no
    tracked task exists, stop; this workflow does not create one.

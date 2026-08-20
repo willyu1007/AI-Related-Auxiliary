@@ -1,15 +1,17 @@
 ---
 name: task-resume
 description: >-
-  Use when the user asks to continue, pick up, or recover context for an existing
-  tracked task, or when the current branch identifies the task being resumed.
+  Use when the user asks to continue, pick up, or recover context for a specific
+  existing tracked task, including when the current branch identifies that task.
+  Do not use for portfolio-wide status questions or task creation.
 ---
 
 ## Fast path
 
 Read `dev-docs/AGENTS.md` before interpreting a task bundle.
 
-Resolve a named task ID directly:
+Resolve a named task ID directly. The command stops if linked worktrees disagree or the task is
+only available in another worktree:
 
 ```bash
 node .ai/scripts/ctl-project-governance.mjs resume --task T-###
@@ -22,6 +24,7 @@ node .ai/scripts/ctl-project-governance.mjs query --text "<request terms>" --jso
 ```
 
 - A candidate with `conflict: true`: show its `worktrees` and differing facts from `conflicts`. Do not choose a worktree or resume the task until the disagreement is resolved.
+- A candidate with `invalid: true`: show `metadata_errors` and stop until the identity record is repaired.
 - One relevant candidate in the current worktree: pass its ID to `resume`.
 - One relevant candidate in another worktree: do not create a duplicate task. Read it there; continue there only when the execution environment can safely target that worktree and the request clearly refers to it. Otherwise report its path and ask before changing worktrees.
 - Multiple plausible candidates: show the compact candidates and ask which one.
@@ -33,7 +36,7 @@ When neither the request nor the branch identifies a task, this command may reso
 node .ai/scripts/ctl-project-governance.mjs resume
 ```
 
-A non-zero exit means absent or ambiguous. Do not guess.
+A non-zero exit carries `error.reason`; report that reason and do not guess or continue recovery.
 
 ## Recovery order
 
@@ -62,6 +65,7 @@ Report disagreements instead of silently selecting one source. If the user asked
 
 - Task ID, slug, docs path, and how it was resolved
 - Current goal, `State:`, and next step
+- Current phase, blocker, and completion conditions
 - Kickoff status and any gate that prevents implementation
 - What the linked commits prove landed
 - Relevant uncommitted changes and any disagreement with the record

@@ -38,7 +38,7 @@ Open and register a durable task bundle before implementation begins.
    node .ai/scripts/ctl-project-governance.mjs query --status blocked
    ```
 
-   Read the goal of plausible matches. If one already covers the requested outcome, continue it instead of creating a duplicate. Multiple checkouts of the same task ID appear as one logical result with their occurrences in `worktrees`. If `conflict` is true, inspect `conflicts` and stop rather than choosing a worktree or fact source.
+   Read the goal of plausible matches. If one already covers the requested outcome, continue it instead of creating a duplicate. Multiple checkouts of the same task ID appear as one logical result with their occurrences in `worktrees`. If `conflict` is true, inspect `conflicts` and stop rather than choosing a worktree or fact source. If `invalid` is true, repair the reported task metadata before deduplication or allocation.
 
 4. **Define the task head.** Infer a one-sentence goal, high-level completion conditions, and a kebab-case slug. Ask only when an unresolved choice would materially change the goal, boundaries, or success conditions. Otherwise state the inferred values and proceed. Keep sequential work as phases when it serves the same goal and completion conditions. Split work only when it needs its own observable outcome, state, owner, handoff, verification, archive, separate worktree, or independently managed interface.
 

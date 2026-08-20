@@ -39,12 +39,16 @@ Render one pasteable block:
 ````markdown
 ## T-012 · oauth-provider-integration
 State: in-progress · HEAD: a3f9c21
+Phase: provider adapter verification · Blocker: none
 Kickoff: pending / ready
 > Stale check: if `git rev-parse --short HEAD` is not `a3f9c21`, discard this
 > block and recover from the repository.
 
 ### Goal
-One sentence describing the completed outcome.
+One sentence describing the intended outcome.
+
+### Done when
+- [ ] Current observable completion condition.
 
 ### Landed
 - Committed result and short SHA.
@@ -68,7 +72,10 @@ The stale check validates the block against repository movement. The receiving s
 
 ## Delivery
 
-Default to returning the block in the conversation. If the environment can create the destination session and set its first message, send the same block there and report the destination instead. Produce one block for one destination, never both.
+Default to returning the block in the conversation. If the environment can create a destination
+session and set its first message, ask whether the user wants that delivery after the checkpoint is
+stable. Create and send only after an explicit yes; otherwise return the pasteable block here.
+Produce one block for one destination, never both.
 
 ## Rules
 
@@ -77,6 +84,7 @@ Default to returning the block in the conversation. If the environment can creat
 - Never omit foreign worktree changes, unresolved blockers, or a known failed path.
 - Never hand off decision-dependent implementation as runnable when kickoff is `pending`; make alignment or replanning the first action.
 - Never write the handoff block into the repository; durable task facts belong in the bundle, and the transfer block belongs in the session channel.
+- Never create or message a destination session without the user's explicit confirmation.
 - If bundle synchronization or verification cannot complete, say exactly what failed and make that the first recovery action.
 
 ## Contract
