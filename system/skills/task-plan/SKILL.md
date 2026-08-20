@@ -46,7 +46,7 @@ Converge one living roadmap without creating a second planning authority.
 
    ```bash
    node .ai/scripts/ctl-project-governance.mjs sync --apply
-   node .ai/scripts/ctl-project-governance.mjs lint --check
+   node .ai/scripts/ctl-project-governance.mjs lint
    git commit -m "docs(task): plan T-### <slug>" -m "Task: T-###"
    ```
 

@@ -22,6 +22,7 @@ node "$INSTALLER" --repo-root . >/dev/null
 for f in .ai/scripts/install-project-governance.mjs \
          .ai/scripts/ctl-project-governance.mjs \
          .ai/scripts/lib/governance-read.mjs \
+         .ai/scripts/lib/governance-lint.mjs \
          .ai/project/AGENTS.md .ai/project/CLAUDE.md .ai/project/templates/registry.json; do
   [ -f "$f" ] || fail "install did not place $f"
 done
@@ -122,7 +123,7 @@ mv registry.invalid-root.tmp .ai/project/registry.json
 # Empty governance data and task roots outside the repository are hard errors.
 cp .ai/project/registry.json registry.tmp
 : > .ai/project/registry.json
-if node .ai/scripts/ctl-project-governance.mjs lint --check >/dev/null 2>&1; then
+if node .ai/scripts/ctl-project-governance.mjs lint >/dev/null 2>&1; then
   fail "lint accepted an empty registry"
 fi
 if node .ai/scripts/ctl-project-governance.mjs sync --apply >/dev/null 2>&1; then
@@ -132,7 +133,7 @@ mv registry.tmp .ai/project/registry.json
 
 cp .ai/project/registry.json registry.tmp
 node -e "const fs=require('fs');const p='.ai/project/registry.json';const r=JSON.parse(fs.readFileSync(p,'utf8'));r.task_doc_roots=['../outside/dev-docs'];fs.writeFileSync(p,JSON.stringify(r,null,2)+'\n')"
-if node .ai/scripts/ctl-project-governance.mjs lint --check >/dev/null 2>&1; then
+if node .ai/scripts/ctl-project-governance.mjs lint >/dev/null 2>&1; then
   fail "lint accepted a task root outside the repository"
 fi
 if node .ai/scripts/ctl-project-governance.mjs sync --apply >/dev/null 2>&1; then
@@ -145,7 +146,7 @@ mv registry.tmp .ai/project/registry.json
 
 cp .ai/project/registry.json registry.tmp
 node -e "const fs=require('fs');const p='.ai/project/registry.json';const r=JSON.parse(fs.readFileSync(p,'utf8'));delete r.milestones[0].status;fs.writeFileSync(p,JSON.stringify(r,null,2)+'\n')"
-if node .ai/scripts/ctl-project-governance.mjs lint --check >/dev/null 2>&1; then
+if node .ai/scripts/ctl-project-governance.mjs lint >/dev/null 2>&1; then
   fail "lint accepted a Milestone without status"
 fi
 mv registry.tmp .ai/project/registry.json
@@ -228,12 +229,15 @@ node -e "const r=require('./.ai/project/registry.json');process.exit(r.tasks.som
 git log -1 --format='%B' | git interpret-trailers --parse | grep -q '^Task: T-001$' \
   || fail "trailer missing on the task branch"
 
+lint_status_before="$(git status --porcelain=v1 --untracked-files=all)"
 node .ai/scripts/ctl-project-governance.mjs lint --strict >/dev/null || fail "lint --strict failed"
+lint_status_after="$(git status --porcelain=v1 --untracked-files=all)"
+[ "$lint_status_before" = "$lint_status_after" ] || fail "lint modified repository state"
 
 # Malformed JSON is reported as task data corruption; lint and sync must fail cleanly.
 cp dev-docs/active/sample/.ai-task.json dev-docs/active/sample/.ai-task.tmp
 printf '{ invalid json\n' > dev-docs/active/sample/.ai-task.json
-if node .ai/scripts/ctl-project-governance.mjs lint --check >/dev/null 2>&1; then
+if node .ai/scripts/ctl-project-governance.mjs lint >/dev/null 2>&1; then
   fail "lint accepted malformed task metadata"
 fi
 if node .ai/scripts/ctl-project-governance.mjs sync --apply >/dev/null 2>&1; then
@@ -244,7 +248,7 @@ mv dev-docs/active/sample/.ai-task.tmp dev-docs/active/sample/.ai-task.json
 # Empty required task documents are invalid content, not valid placeholders.
 cp dev-docs/active/sample/01-status.md dev-docs/active/sample/01-status.tmp
 : > dev-docs/active/sample/01-status.md
-if node .ai/scripts/ctl-project-governance.mjs lint --check >/dev/null 2>&1; then
+if node .ai/scripts/ctl-project-governance.mjs lint >/dev/null 2>&1; then
   fail "lint accepted an empty status document"
 fi
 if node .ai/scripts/ctl-project-governance.mjs sync --apply >/dev/null 2>&1; then
@@ -279,14 +283,14 @@ rm -f registry.atomic.tmp dashboard.atomic.tmp feature-map.atomic.tmp
 
 cp dev-docs/active/sample/00-roadmap.md dev-docs/active/sample/00-roadmap.tmp
 : > dev-docs/active/sample/00-roadmap.md
-if node .ai/scripts/ctl-project-governance.mjs lint --check >/dev/null 2>&1; then
+if node .ai/scripts/ctl-project-governance.mjs lint >/dev/null 2>&1; then
   fail "lint accepted an empty roadmap"
 fi
 mv dev-docs/active/sample/00-roadmap.tmp dev-docs/active/sample/00-roadmap.md
 
 cp .ai/project/registry.json registry.tmp
 node -e "const fs=require('fs');const p='.ai/project/registry.json';const r=JSON.parse(fs.readFileSync(p,'utf8'));delete r.tasks.find(x=>x.id==='T-001').status;fs.writeFileSync(p,JSON.stringify(r,null,2)+'\n')"
-if node .ai/scripts/ctl-project-governance.mjs lint --check >/dev/null 2>&1; then
+if node .ai/scripts/ctl-project-governance.mjs lint >/dev/null 2>&1; then
   fail "lint accepted a registry Task without status"
 fi
 mv registry.tmp .ai/project/registry.json
@@ -294,7 +298,7 @@ mv registry.tmp .ai/project/registry.json
 # A task cannot claim completion while its completion conditions remain unchecked.
 cp dev-docs/active/sample/01-status.md dev-docs/active/sample/01-status.tmp
 sed -i 's/State: in-progress/State: done/' dev-docs/active/sample/01-status.md
-if node .ai/scripts/ctl-project-governance.mjs lint --check >/dev/null 2>&1; then
+if node .ai/scripts/ctl-project-governance.mjs lint >/dev/null 2>&1; then
   fail "lint accepted a done task with unchecked completion conditions"
 fi
 mv dev-docs/active/sample/01-status.tmp dev-docs/active/sample/01-status.md
@@ -302,7 +306,7 @@ mv dev-docs/active/sample/01-status.tmp dev-docs/active/sample/01-status.md
 # A pending seed is valid before kickoff, but ready requires every gate item.
 cp dev-docs/active/sample/00-roadmap.md dev-docs/active/sample/00-roadmap.tmp
 sed -i 's/Status: ready/Status: pending/; s/\[x\]/[ ]/g' dev-docs/active/sample/00-roadmap.md
-node .ai/scripts/ctl-project-governance.mjs lint --check >/dev/null \
+node .ai/scripts/ctl-project-governance.mjs lint >/dev/null \
   || fail "lint rejected a valid pending kickoff seed"
 mv dev-docs/active/sample/00-roadmap.tmp dev-docs/active/sample/00-roadmap.md
 
@@ -310,7 +314,7 @@ mv dev-docs/active/sample/00-roadmap.tmp dev-docs/active/sample/00-roadmap.md
 cp dev-docs/active/sample/00-roadmap.md dev-docs/active/sample/00-roadmap.tmp
 cp "$AUX_ROOT/system/skills/task-start/examples/sample-roadmap-seed.md" \
   dev-docs/active/sample/00-roadmap.md
-node .ai/scripts/ctl-project-governance.mjs lint --check >/dev/null \
+node .ai/scripts/ctl-project-governance.mjs lint >/dev/null \
   || fail "lint rejected the worked pending roadmap seed"
 node .ai/scripts/ctl-project-governance.mjs resume > seed-resume.json
 grep -q '"kickoff_status":"pending"' seed-resume.json \
@@ -320,7 +324,7 @@ mv dev-docs/active/sample/00-roadmap.tmp dev-docs/active/sample/00-roadmap.md
 
 cp dev-docs/active/sample/00-roadmap.md dev-docs/active/sample/00-roadmap.tmp
 sed -i '0,/\[x\]/{s/\[x\]/[ ]/}' dev-docs/active/sample/00-roadmap.md
-if node .ai/scripts/ctl-project-governance.mjs lint --check >/dev/null 2>&1; then
+if node .ai/scripts/ctl-project-governance.mjs lint >/dev/null 2>&1; then
   fail "lint accepted ready kickoff with an unchecked gate"
 fi
 mv dev-docs/active/sample/00-roadmap.tmp dev-docs/active/sample/00-roadmap.md
@@ -328,7 +332,7 @@ mv dev-docs/active/sample/00-roadmap.tmp dev-docs/active/sample/00-roadmap.md
 # A roadmap must be usable, not a copied template with unresolved placeholders.
 cp dev-docs/active/sample/00-roadmap.md dev-docs/active/sample/00-roadmap.tmp
 printf '\n<!-- unfinished -->\n' >> dev-docs/active/sample/00-roadmap.md
-if node .ai/scripts/ctl-project-governance.mjs lint --check >/dev/null 2>&1; then
+if node .ai/scripts/ctl-project-governance.mjs lint >/dev/null 2>&1; then
   fail "lint accepted an unfilled roadmap template placeholder"
 fi
 mv dev-docs/active/sample/00-roadmap.tmp dev-docs/active/sample/00-roadmap.md
@@ -353,7 +357,7 @@ node .ai/scripts/ctl-project-governance.mjs lint --strict >/dev/null \
 printf '# Pitfalls\n\n| Hazard | Evidence | Prevention | Applies until |\n|---|---|---|---|\n| Repeating a stale path | failed run | use the supported path | guard is encoded |\n' \
   > dev-docs/active/sample/pitfalls.md
 mv dev-docs/active/sample/verification.md dev-docs/active/sample/verification.tmp
-if node .ai/scripts/ctl-project-governance.mjs lint --check >/dev/null 2>&1; then
+if node .ai/scripts/ctl-project-governance.mjs lint >/dev/null 2>&1; then
   fail "lint accepted an active bundle without verification.md"
 fi
 mv dev-docs/active/sample/verification.tmp dev-docs/active/sample/verification.md
@@ -388,7 +392,7 @@ node -e "const r=require('./.ai/project/registry.json');process.exit(r.tasks.som
 
 # A task derives its Milestone through its Feature; task projections never own milestone_id.
 node -e "const fs=require('fs');const p='.ai/project/registry.json';const r=JSON.parse(fs.readFileSync(p,'utf8'));r.milestones.push({id:'M-001',title:'Smoke milestone',status:'planned',description:'Exercise derived milestone mapping.'});r.features.find(x=>x.id==='F-001').milestone_id='M-001';r.tasks.find(x=>x.id==='T-001').milestone_id='M-999';fs.writeFileSync(p,JSON.stringify(r,null,2)+'\n')"
-if node .ai/scripts/ctl-project-governance.mjs lint --check >/dev/null 2>&1; then
+if node .ai/scripts/ctl-project-governance.mjs lint >/dev/null 2>&1; then
   fail "lint accepted task-owned milestone_id"
 fi
 node .ai/scripts/ctl-project-governance.mjs sync --apply >/dev/null
@@ -399,7 +403,7 @@ rm -f milestone-query.json
 
 # Declared project status remains manual, but lint must expose obvious contradictions.
 node -e "const fs=require('fs');const p='.ai/project/registry.json';const r=JSON.parse(fs.readFileSync(p,'utf8'));r.milestones.find(x=>x.id==='M-001').status='done';fs.writeFileSync(p,JSON.stringify(r,null,2)+'\n')"
-node .ai/scripts/ctl-project-governance.mjs lint --check > milestone-lint.txt \
+node .ai/scripts/ctl-project-governance.mjs lint > milestone-lint.txt \
   || fail "Milestone contradiction was treated as a structural error"
 grep -q 'Milestone M-001 is done but has non-terminal Features: F-001' milestone-lint.txt \
   || fail "lint did not report the Milestone/Feature status contradiction"
@@ -410,7 +414,7 @@ node -e "const fs=require('fs');const p='.ai/project/registry.json';const r=JSON
 rm -f milestone-lint.txt
 
 node -e "const fs=require('fs');const p='.ai/project/registry.json';const r=JSON.parse(fs.readFileSync(p,'utf8'));r.features.find(x=>x.id==='F-001').status='done';fs.writeFileSync(p,JSON.stringify(r,null,2)+'\n')"
-node .ai/scripts/ctl-project-governance.mjs lint --check > feature-lint.txt \
+node .ai/scripts/ctl-project-governance.mjs lint > feature-lint.txt \
   || fail "Feature contradiction was treated as a structural error"
 grep -q 'Feature F-001 is done but has active mapped Tasks: T-001' feature-lint.txt \
   || fail "lint did not report the Feature/Task status contradiction"
@@ -440,13 +444,13 @@ fi
 # Registry IDs and references are integrity constraints, not advisory metadata.
 cp .ai/project/registry.json registry.tmp
 node -e "const fs=require('fs');const p='.ai/project/registry.json';const r=JSON.parse(fs.readFileSync(p,'utf8'));r.features.find(x=>x.id==='F-002').id='F-001';fs.writeFileSync(p,JSON.stringify(r,null,2)+'\n')"
-if node .ai/scripts/ctl-project-governance.mjs lint --check >/dev/null 2>&1; then
+if node .ai/scripts/ctl-project-governance.mjs lint >/dev/null 2>&1; then
   fail "lint accepted duplicate feature IDs"
 fi
 mv registry.tmp .ai/project/registry.json
 cp .ai/project/registry.json registry.tmp
 node -e "const fs=require('fs');const p='.ai/project/registry.json';const r=JSON.parse(fs.readFileSync(p,'utf8'));r.tasks.find(x=>x.id==='T-001').feature_id='F-999';fs.writeFileSync(p,JSON.stringify(r,null,2)+'\n')"
-if node .ai/scripts/ctl-project-governance.mjs lint --check >/dev/null 2>&1; then
+if node .ai/scripts/ctl-project-governance.mjs lint >/dev/null 2>&1; then
   fail "lint accepted a dangling task feature mapping"
 fi
 mv registry.tmp .ai/project/registry.json

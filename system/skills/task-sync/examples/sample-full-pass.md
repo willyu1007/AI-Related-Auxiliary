@@ -26,5 +26,5 @@
 
 ## Governance and commit
 - `sync --apply`: passed; allocated/refreshed task metadata
-- `lint --check`: passed
+- `lint`: passed
 - Checkpoint commit: `<sha>` with `Task: T-###`

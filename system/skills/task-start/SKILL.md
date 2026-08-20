@@ -81,7 +81,7 @@ Open and register a durable task bundle before implementation begins.
 
    ```bash
    node .ai/scripts/ctl-project-governance.mjs query --text "<slug>"
-   node .ai/scripts/ctl-project-governance.mjs lint --check
+   node .ai/scripts/ctl-project-governance.mjs lint
    ```
 
    Stop if distinct task IDs represent the same goal, the same ID has divergent uncommitted bundles, or lint reports an error.

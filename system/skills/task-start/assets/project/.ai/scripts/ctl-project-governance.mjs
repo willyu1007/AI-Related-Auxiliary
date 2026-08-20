@@ -18,12 +18,10 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
+import { cmdLint } from './lib/governance-lint.mjs';
 import {
-  DATE_RE,
   FEATURE_ID_RE,
   FEATURE_STATUS,
-  MILESTONE_ID_RE,
-  MILESTONE_STATUS,
   REQUIREMENT_ID_RE,
   REQUIREMENT_STATUS,
   RESUME_DEFAULT_COMMIT_LIMIT,
@@ -32,20 +30,15 @@ import {
   RESUME_MAX_SCAN_LIMIT,
   TASK_ID_RE,
   TASK_STATUS,
-  cleanMarkdownValue,
   cmdQuery,
   cmdResume,
   cmdTaskExists,
   discoverDevDocsRoots,
   exists,
   findRepoRoot,
-  formatTaskRef,
   getBundleStatusFromStatusDoc,
-  getCompletionCriteriaStats,
   getHubDir,
-  getMarkdownSectionLines,
   getRegistryPath,
-  getRoadmapKickoff,
   listGitWorktrees,
   loadRegistry,
   normalizeEol,
@@ -54,7 +47,6 @@ import {
   resolveConfiguredRoots,
   runGit,
   scanTasks,
-  statusRank,
   taskIdsFromAllBranches,
   taskIdsFromAllWorktrees,
   toPosix,
@@ -89,8 +81,8 @@ Usage:
 Commands:
   lint
     --repo-root <path>        Repo root (default: auto-detect; fallback: cwd)
-    --check                   (default) Exit non-zero only on errors (warnings do not fail)
     --strict                  Treat warnings as errors
+    Exit non-zero on errors; warnings fail only in strict mode.
     Validate repository state against the project governance rules.
 
   sync
@@ -151,7 +143,7 @@ Commands:
     Resolve an existing requirement by Feature/title or allocate one across linked worktrees.
 
 Examples:
-  node .ai/scripts/ctl-project-governance.mjs lint --check
+  node .ai/scripts/ctl-project-governance.mjs lint
   node .ai/scripts/ctl-project-governance.mjs sync --dry-run
   node .ai/scripts/ctl-project-governance.mjs sync --apply
   node .ai/scripts/ctl-project-governance.mjs feature --title "OAuth providers" --apply --json
@@ -165,7 +157,7 @@ Examples:
 }
 
 const COMMAND_OPTIONS = Object.freeze({
-  lint: { values: ['repo-root'], flags: ['check', 'strict'], conflicts: [['check', 'strict']] },
+  lint: { values: ['repo-root'], flags: ['strict'] },
   sync: { values: ['repo-root'], flags: ['dry-run', 'apply'], conflicts: [['dry-run', 'apply']] },
   query: { values: ['repo-root', 'id', 'status', 'text'], flags: ['json'] },
   'task-exists': { values: ['repo-root', 'task'], flags: [] },
@@ -293,89 +285,6 @@ function renderJson(value) {
   return `${JSON.stringify(value, null, 2)}\n`;
 }
 
-function validateRoadmap(roadmapRaw) {
-  const raw = normalizeEol(roadmapRaw);
-  const errors = [];
-  const requiredHeadings = [
-    'scope and constraints',
-    'decision alignment',
-    'task relationships',
-    'implementation plan',
-    'kickoff gate',
-    'risks and recovery',
-    'phase closeout',
-  ];
-  const headings = new Set();
-
-  for (const line of raw.split('\n')) {
-    const match = line.trim().match(/^##\s+(.+?)\s*$/);
-    if (match) headings.add(String(match[1] || '').trim().toLowerCase());
-  }
-
-  const missingHeadings = requiredHeadings.filter((heading) => !headings.has(heading));
-  if (missingHeadings.length > 0) {
-    errors.push(`Roadmap is missing required sections: ${missingHeadings.join(', ')}.`);
-  }
-
-  if (/<!--[\s\S]*?-->/.test(raw)) {
-    errors.push('Roadmap contains unfilled template placeholder comments.');
-  }
-
-  const kickoff = getRoadmapKickoff(raw);
-  if (!kickoff.status) {
-    errors.push('Kickoff gate must contain "- Status: pending" or "- Status: ready".');
-  }
-  if (kickoff.total < 4) {
-    errors.push(`Kickoff gate must contain the four readiness checks (found ${kickoff.total}).`);
-  } else if (kickoff.status === 'ready' && kickoff.checked !== kickoff.total) {
-    errors.push(`Kickoff is ready but only ${kickoff.checked}/${kickoff.total} gate items are checked.`);
-  } else if (kickoff.status === 'pending' && kickoff.checked === kickoff.total) {
-    errors.push('Kickoff is pending even though every gate item is checked.');
-  }
-
-  const implementationPlan = getMarkdownSectionLines(raw, 'Implementation plan').join('\n');
-  const phaseMatches = [
-    ...implementationPlan.matchAll(/^###\s+Phase\s+\d+\s+[—-]\s+.+$/gim),
-  ];
-  if (phaseMatches.length === 0) {
-    errors.push('Implementation plan must contain at least one named phase.');
-    return errors;
-  }
-
-  const requiredFields = [
-    'Outcome',
-    'Approach',
-    'Affected boundaries / entry points',
-    'Dependencies',
-    'Exit criteria',
-    'Verification',
-    'Recovery',
-  ];
-
-  for (let index = 0; index < phaseMatches.length; index++) {
-    const start = phaseMatches[index].index;
-    const end = phaseMatches[index + 1]?.index ?? implementationPlan.length;
-    const phaseRaw = implementationPlan.slice(start, end);
-    const phaseName = String(phaseMatches[index][0] || `Phase ${index + 1}`).trim();
-
-    for (const field of requiredFields) {
-      const escaped = field.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      const match = phaseRaw.match(new RegExp(`^\\s*-\\s+${escaped}:\\s*(.+)$`, 'mi'));
-      if (!match || !cleanMarkdownValue(match[1])) {
-        errors.push(`${phaseName} is missing a populated "${field}" field.`);
-      }
-    }
-
-    if (!/^\s*-\s+Planned changes:\s*$/im.test(phaseRaw)) {
-      errors.push(`${phaseName} is missing "Planned changes".`);
-    } else if (!/^\s*\d+\.\s+\S.+$/m.test(phaseRaw)) {
-      errors.push(`${phaseName} needs at least one ordered planned change.`);
-    }
-  }
-
-  return errors;
-}
-
 function renderTaskMetaJson(meta) {
   return renderJson({
     version: 1,
@@ -385,412 +294,6 @@ function renderTaskMetaJson(meta) {
     updated: meta.updated,
     keywords: Array.isArray(meta.keywords) ? meta.keywords : [],
   });
-}
-
-function collectRegistryIds(registry, key, label, idPattern, errors) {
-  const items = registry[key];
-  const ids = new Map();
-  if (!Array.isArray(items)) {
-    errors.push(`Registry "${key}" must be a list.`);
-    return ids;
-  }
-
-  for (const item of items) {
-    if (!item || typeof item !== 'object' || Array.isArray(item)) {
-      errors.push(`${label} entry must be a mapping.`);
-      continue;
-    }
-    const id = String(item.id || '').trim();
-    if (!id) {
-      errors.push(`${label} is missing required "id" field.`);
-      continue;
-    }
-    if (!idPattern.test(id)) {
-      errors.push(`${label} ID "${id}" does not match the required format.`);
-      continue;
-    }
-    if (ids.has(id)) {
-      errors.push(`Duplicate ${label} ID "${id}" in registry.`);
-      continue;
-    }
-    ids.set(id, item);
-  }
-  return ids;
-}
-
-function validateRegistryGraph(registry, errors) {
-  if (registry.version !== 1) {
-    errors.push('Registry version must be 1.');
-  }
-
-  const milestones = collectRegistryIds(
-    registry,
-    'milestones',
-    'Milestone',
-    MILESTONE_ID_RE,
-    errors
-  );
-  const features = collectRegistryIds(registry, 'features', 'Feature', FEATURE_ID_RE, errors);
-  const requirements = collectRegistryIds(
-    registry,
-    'requirements',
-    'Requirement',
-    REQUIREMENT_ID_RE,
-    errors
-  );
-  const tasks = collectRegistryIds(registry, 'tasks', 'Task', TASK_ID_RE, errors);
-  if (registry.ideas !== undefined && !Array.isArray(registry.ideas)) {
-    errors.push('Registry "ideas" must be a list when present.');
-  }
-
-  if (!milestones.has('M-000')) errors.push('Registry is missing reserved Milestone M-000.');
-  if (!features.has('F-000')) errors.push('Registry is missing reserved Feature F-000.');
-  if (features.has('F-000') && String(features.get('F-000').milestone_id || '') !== 'M-000') {
-    errors.push('Reserved Feature F-000 must belong to Milestone M-000.');
-  }
-
-  for (const [id, feature] of features) {
-    const milestoneId = String(feature.milestone_id || '').trim();
-    if (!milestoneId) errors.push(`Feature ${id} is missing milestone_id.`);
-    else if (!milestones.has(milestoneId)) {
-      errors.push(`Feature ${id} references missing Milestone ${milestoneId}.`);
-    }
-  }
-
-  for (const [id, requirement] of requirements) {
-    const featureId = String(requirement.feature_id || '').trim();
-    if (!featureId) errors.push(`Requirement ${id} is missing feature_id.`);
-    else if (!features.has(featureId)) {
-      errors.push(`Requirement ${id} references missing Feature ${featureId}.`);
-    }
-  }
-
-  for (const [id, task] of tasks) {
-    const featureId = String(task.feature_id || '').trim();
-    if (!featureId) errors.push(`Task ${id} is missing feature_id.`);
-    else if (!features.has(featureId)) errors.push(`Task ${id} references missing Feature ${featureId}.`);
-    if (Object.hasOwn(task, 'milestone_id')) {
-      errors.push(`Task ${id} must not store milestone_id; its Milestone is derived from Feature ${featureId || '(missing)'}.`);
-    }
-
-    if (task.requirement_ids !== undefined && !Array.isArray(task.requirement_ids)) {
-      errors.push(`Task ${id} requirement_ids must be a list.`);
-      continue;
-    }
-    for (const requirementId of task.requirement_ids || []) {
-      const normalized = String(requirementId || '').trim();
-      if (!requirements.has(normalized)) {
-        errors.push(`Task ${id} references missing Requirement ${normalized || '(empty)'}.`);
-      } else if (String(requirements.get(normalized).feature_id || '').trim() !== featureId) {
-        errors.push(`Task ${id} references Requirement ${normalized} from a different Feature.`);
-      }
-    }
-  }
-}
-
-function validateRegistryStatuses(items, label, allowed, errors, projection = false) {
-  if (!Array.isArray(items)) return;
-  const field = projection ? 'registry status' : 'status';
-  for (const item of items) {
-    if (!item || typeof item !== 'object') continue;
-    const id = String(item.id || '');
-    const status = String(item.status || '').trim();
-    if (!status) errors.push(`${label} ${id}: Missing ${field}.`);
-    else if (!allowed.has(status)) {
-      errors.push(`${label} ${id}: Invalid ${field} "${status}". Allowed: ${[...allowed].join(', ')}`);
-    }
-  }
-}
-
-function cmdLint({ repoRoot, strict }) {
-  const errors = [];
-  const warnings = [];
-
-  for (const file of ['AGENTS.md', 'CLAUDE.md']) {
-    const guidancePath = path.join(repoRoot, '.ai', 'project', file);
-    if (!exists(guidancePath)) errors.push(`Missing .ai/project/${file} (required).`);
-  }
-
-  const { registry, error: registryParseError } = loadRegistry(repoRoot);
-
-  let devDocsRoots = [];
-  if (registryParseError) {
-    errors.push(`Failed to parse registry.json: ${registryParseError}`);
-  }
-
-  if (!registry && !registryParseError) {
-    warnings.push(
-      'Project hub is not initialized. Run: node .ai/scripts/install-project-governance.mjs --repo-root .'
-    );
-    devDocsRoots = discoverDevDocsRoots(repoRoot);
-  } else if (registry) {
-    const REQUIRED_REGISTRY_KEYS = [
-      'version',
-      'milestones',
-      'features',
-      'requirements',
-      'tasks',
-    ];
-    for (const key of REQUIRED_REGISTRY_KEYS) {
-      if (!(key in registry) || registry[key] === undefined) {
-        errors.push(`Registry missing required top-level key: "${key}".`);
-      }
-    }
-    validateRegistryGraph(registry, errors);
-
-    const configured = resolveConfiguredRoots(repoRoot, registry);
-    errors.push(...configured.errors);
-    devDocsRoots = configured.configured ? configured.roots : discoverDevDocsRoots(repoRoot);
-  }
-
-  if (devDocsRoots.length === 0) {
-    warnings.push('No dev-docs roots discovered.');
-  }
-
-  const tasks = scanTasks(repoRoot, devDocsRoots);
-
-  // Collect IDs and slug-to-ids mapping for cross-root checks
-  const taskIdToTask = new Map();
-  const slugToIds = new Map();
-
-  const registryTaskById = new Map();
-  if (registry && Array.isArray(registry.tasks)) {
-    for (const t of registry.tasks) {
-      if (!t || typeof t !== 'object') continue;
-      const id = String(t.id || '').trim();
-      if (id) registryTaskById.set(id, t);
-    }
-  }
-
-  for (const task of tasks) {
-    const metaRaw = readText(task.metaPath);
-    const statusRaw = readText(task.statusPath);
-    const roadmapRaw = readText(task.roadmapPath);
-    const kickoff = roadmapRaw ? getRoadmapKickoff(roadmapRaw) : null;
-
-    task.taskId = null;
-    task.bundleStatus = null;
-    task.effectiveStatus = task.phase === 'archive' ? 'archived' : null;
-
-    if (task.phase === 'archive') {
-      const names = fs.readdirSync(task.absPath).sort();
-      const hasSummary = names.includes('summary.md');
-      const hasMeta = names.includes('.ai-task.json');
-      const allowed = new Set(['.ai-task.json', 'summary.md']);
-      const extras = names.filter((name) => !allowed.has(name));
-      if (!hasSummary || !hasMeta || extras.length > 0 || names.length !== 2) {
-        const details = [];
-        if (!hasMeta) details.push('missing .ai-task.json');
-        if (!hasSummary) details.push('missing summary.md');
-        if (extras.length > 0) details.push(`extra entries: ${extras.join(', ')}`);
-        errors.push(
-          `${formatTaskRef(task)}: Archived bundle must contain exactly .ai-task.json and summary.md` +
-            `${details.length > 0 ? `; ${details.join('; ')}` : ''}.`
-        );
-      }
-    }
-
-    if (task.phase === 'active') {
-      const requiredFiles = [
-        '00-roadmap.md',
-        '01-status.md',
-        '02-architecture.md',
-        'verification.md',
-      ];
-      const missingFiles = requiredFiles.filter((name) => !exists(path.join(task.absPath, name)));
-      if (missingFiles.length > 0) {
-        errors.push(
-          `${formatTaskRef(task)}: Active bundle is incomplete; missing: ${missingFiles.join(', ')}.`
-        );
-      }
-
-      if (roadmapRaw !== null) {
-        for (const roadmapError of validateRoadmap(roadmapRaw)) {
-          errors.push(`${formatTaskRef(task)}: ${roadmapError}`);
-        }
-      }
-    }
-
-    if (task.phase === 'active' && statusRaw !== null) {
-      const { status, error: stateError } = getBundleStatusFromStatusDoc(
-        statusRaw,
-        path.basename(task.statusPath)
-      );
-      if (stateError) errors.push(`${formatTaskRef(task)}: ${stateError}`);
-      task.bundleStatus = status;
-      if (status) task.effectiveStatus = status;
-    }
-
-    if (task.phase === 'active' && task.effectiveStatus === 'done' && kickoff?.status !== 'ready') {
-      errors.push(`${formatTaskRef(task)}: State is done but roadmap kickoff is not ready.`);
-    }
-
-    if (metaRaw === null) {
-      errors.push(`${formatTaskRef(task)}: Missing .ai-task.json.`);
-      continue;
-    }
-
-    const meta = parseTaskMeta(metaRaw);
-
-    if (meta.parse_error) {
-      errors.push(`${formatTaskRef(task)}: Failed to parse .ai-task.json: ${meta.parse_error}`);
-      continue;
-    }
-
-    if (meta.version !== 1) {
-      errors.push(`${formatTaskRef(task)}: Invalid meta version (expected 1).`);
-    }
-
-    if (!TASK_ID_RE.test(meta.task_id)) {
-      errors.push(`${formatTaskRef(task)}: Invalid task_id "${meta.task_id}" (expected T-###).`);
-    } else {
-      task.taskId = meta.task_id;
-      if (taskIdToTask.has(meta.task_id)) {
-        const other = taskIdToTask.get(meta.task_id);
-        errors.push(
-          `Duplicate task_id "${meta.task_id}" across repo:\n  - ${toPosix(other.relPath)}\n  - ${toPosix(task.relPath)}`
-        );
-      } else {
-        taskIdToTask.set(meta.task_id, task);
-      }
-
-      const ids = slugToIds.get(task.slug) || new Set();
-      ids.add(meta.task_id);
-      slugToIds.set(task.slug, ids);
-    }
-
-    if (meta.slug && meta.slug !== task.slug) {
-      errors.push(`${formatTaskRef(task)}: meta.slug="${meta.slug}" does not match directory slug "${task.slug}".`);
-    }
-
-    if (meta.status && !TASK_STATUS.has(meta.status)) {
-      errors.push(`${formatTaskRef(task)}: Invalid meta.status "${meta.status}".`);
-    }
-
-    if (meta.updated && !DATE_RE.test(meta.updated)) {
-      errors.push(`${formatTaskRef(task)}: Invalid meta.updated "${meta.updated}" (expected YYYY-MM-DD).`);
-    }
-
-    // Special drift warning: meta status ahead of bundle status (not authoritative)
-    if (meta.status && task.effectiveStatus) {
-      if (statusRank(meta.status) > statusRank(task.effectiveStatus)) {
-        warnings.push(
-          `${formatTaskRef(task)}: meta.status="${meta.status}" is ahead of bundle status "${task.effectiveStatus}".`
-        );
-      }
-    }
-
-    if (task.effectiveStatus === 'done' && statusRaw !== null) {
-      const ac = getCompletionCriteriaStats(statusRaw);
-      if (ac.total === 0) {
-        errors.push(`${formatTaskRef(task)}: State is done but no Done when checkboxes were found.`);
-      } else if (ac.checked < ac.total) {
-        errors.push(
-          `${formatTaskRef(task)}: State is done but Done when is not fully checked (${ac.checked}/${ac.total}).`
-        );
-      }
-    }
-
-    // Registry consistency checks (strict for tasks with meta)
-    if (registry) {
-      if (!registryTaskById.has(meta.task_id)) {
-        errors.push(`${formatTaskRef(task)}: Missing registry entry for task_id "${meta.task_id}".`);
-      } else {
-        const entry = registryTaskById.get(meta.task_id);
-        const expectedPath = toPosix(task.relPath);
-        const actualPath = toPosix(String(entry.dev_docs_path || ''));
-        if (actualPath !== expectedPath) {
-          errors.push(
-            `${formatTaskRef(task)}: registry dev_docs_path mismatch (registry="${actualPath}", expected="${expectedPath}").`
-          );
-        }
-        const expectedStatus = task.effectiveStatus;
-        const actualStatus = String(entry.status || '');
-        if (expectedStatus && actualStatus && expectedStatus !== actualStatus) {
-          errors.push(
-            `${formatTaskRef(task)}: registry status mismatch (registry="${actualStatus}", expected="${expectedStatus}").`
-          );
-        }
-      }
-    }
-  }
-
-  // Slug conflicts across roots (error only when multiple distinct IDs exist)
-  for (const [slug, ids] of slugToIds.entries()) {
-    if (ids.size <= 1) continue;
-    errors.push(`Slug "${slug}" appears with multiple task_ids: ${[...ids].sort().join(', ')}`);
-  }
-
-  // Orphaned registry entries (task deleted from filesystem but still in registry)
-  if (registry && Array.isArray(registry.tasks)) {
-    for (const regTask of registry.tasks) {
-      if (!regTask || typeof regTask !== 'object') continue;
-      const id = String(regTask.id || '').trim();
-      if (!id) continue;
-      // Skip tasks that were found on disk
-      if (taskIdToTask.has(id)) continue;
-      const devDocsPath = String(regTask.dev_docs_path || '');
-      warnings.push(
-        `Registry task ${id} (slug="${regTask.slug || ''}"): dev_docs_path "${devDocsPath}" not found on disk. Consider removing from registry or re-creating the task bundle.`
-      );
-    }
-  }
-
-  // Validate Milestone/Feature/Requirement status enums.
-  if (registry) {
-    validateRegistryStatuses(registry.milestones, 'Milestone', MILESTONE_STATUS, errors);
-    validateRegistryStatuses(registry.features, 'Feature', FEATURE_STATUS, errors);
-    validateRegistryStatuses(registry.requirements, 'Requirement', REQUIREMENT_STATUS, errors);
-    validateRegistryStatuses(registry.tasks, 'Task', TASK_STATUS, errors, true);
-
-    const features = Array.isArray(registry.features) ? registry.features : [];
-    const tasks = Array.isArray(registry.tasks) ? registry.tasks : [];
-    for (const milestone of Array.isArray(registry.milestones) ? registry.milestones : []) {
-      if (!milestone || typeof milestone !== 'object' || milestone.status !== 'done') continue;
-      const milestoneId = String(milestone.id || '');
-      const incomplete = features
-        .filter((feature) => feature && String(feature.milestone_id || '') === milestoneId)
-        .filter((feature) => !['done', 'cut'].includes(String(feature.status || '')))
-        .map((feature) => String(feature.id || '(missing ID)'));
-      if (incomplete.length > 0) {
-        warnings.push(
-          `Milestone ${milestoneId} is done but has non-terminal Features: ${incomplete.join(', ')}.`
-        );
-      }
-    }
-
-    for (const feature of features) {
-      if (!feature || typeof feature !== 'object' || !['done', 'cut'].includes(feature.status)) continue;
-      const featureId = String(feature.id || '');
-      const activeTasks = tasks
-        .filter((task) => task && String(task.feature_id || '') === featureId)
-        .filter((task) => ['planned', 'in-progress', 'blocked'].includes(String(task.status || '')))
-        .map((task) => String(task.id || '(missing ID)'));
-      if (activeTasks.length > 0) {
-        warnings.push(
-          `Feature ${featureId} is ${feature.status} but has active mapped Tasks: ${activeTasks.join(', ')}.`
-        );
-      }
-    }
-  }
-
-  if (strict && warnings.length > 0) {
-    for (const warning of warnings) errors.push(`[strict] ${warning}`);
-  }
-
-  if (errors.length > 0) {
-    header('Errors:');
-    for (const e of errors) console.log(`- ${e}`);
-  }
-
-  if (warnings.length > 0) {
-    header('Warnings:');
-    for (const w of warnings) console.log(`- ${w}`);
-  }
-
-  const okExit = errors.length === 0;
-  console.log(okExit ? '[ok] Lint passed.' : '[error] Lint failed.');
-  return { ok: okExit, errors, warnings };
 }
 
 function withGovernanceWriteLock(repoRoot, fn) {
@@ -1589,11 +1092,6 @@ function main() {
   switch (command) {
     case 'lint': {
       const strict = !!opts.strict;
-      // --check is the default behavior (exit non-zero only on errors; warnings do not fail).
-      // It is accepted for explicitness but does not change behavior.
-      // --strict promotes every warning to an error.
-      const _check = opts.check; // consumed to avoid "unknown flag" warnings
-      void _check;
       const { ok: okLint } = cmdLint({ repoRoot, strict });
       process.exit(okLint ? 0 : 1);
       break;

@@ -6,7 +6,7 @@ Use this response when the user asks which tasks can be closed or archived. This
 
 ```bash
 node .ai/scripts/ctl-project-governance.mjs query --json
-node .ai/scripts/ctl-project-governance.mjs lint --check
+node .ai/scripts/ctl-project-governance.mjs lint
 ```
 
 For each plausible candidate, open its returned `status_doc_path` and run:

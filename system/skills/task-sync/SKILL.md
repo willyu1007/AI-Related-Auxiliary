@@ -45,7 +45,7 @@ description: >-
 
    ```bash
    node .ai/scripts/ctl-project-governance.mjs sync --apply
-   node .ai/scripts/ctl-project-governance.mjs lint --check
+   node .ai/scripts/ctl-project-governance.mjs lint
    ```
 
    Sync calculates and validates its complete governance change set before writing, then allocates missing task IDs under a cross-worktree lock and refreshes `.ai-task.json`, registry entries, and derived views. A validation error leaves that planned change set unapplied. Lint validates the resulting cross-document semantics. Inspect the generated diff. If it exposes unrelated pre-existing hub drift that cannot be separated safely from this checkpoint, do not attach that drift to the task commit; report it for the hub-maintenance workflow.

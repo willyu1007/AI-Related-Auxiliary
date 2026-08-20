@@ -23,7 +23,7 @@ Task: `T-###` · slug: `<slug>`
 
 - [ ] Archived bundle is exactly `.ai-task.json` + `summary.md`
 - [ ] Semantic Feature Brief refreshed before hub generation if intent, scope, constraints, or risk changed
-- [ ] Hub `sync --apply` run after the move; `lint --check` passed
+- [ ] Hub `sync --apply` run after the move; `lint` passed
 - [ ] Registry shows `archived`
 - [ ] `dashboard.md` not used as the brief body
 - [ ] Archive, metadata, feature brief, registry, and derived views committed together with `Task: T-###`

@@ -5,7 +5,7 @@ Use this response when the user asks whether task bundles, registry mappings, or
 ## Data source
 
 ```bash
-node .ai/scripts/ctl-project-governance.mjs lint --check
+node .ai/scripts/ctl-project-governance.mjs lint
 node .ai/scripts/ctl-project-governance.mjs sync --dry-run
 node .ai/scripts/ctl-project-governance.mjs query --json
 ```
@@ -22,6 +22,6 @@ Separate current-worktree generated drift from another worktree's uncommitted ta
 
 ## Rules
 
-- `lint --check`, `sync --dry-run`, and queries are read-only here.
+- `lint`, `sync --dry-run`, and queries are read-only here.
 - Never run `sync --apply`, edit an AUTO block, change task state, or repair a mapping.
 - A task bundle owns progress and identity; registry task entries and generated views are projections.

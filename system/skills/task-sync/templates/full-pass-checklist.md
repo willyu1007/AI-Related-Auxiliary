@@ -7,5 +7,5 @@
 - [ ] `verification.md` contains the latest decisive evidence for each completion condition; superseded or bulky logs are absent or moved to `artifacts/`.
 - [ ] Optional `implementation.md` exists only when non-obvious current implementation context warrants it, and contains no status, decision history, routine TODOs, or verification.
 - [ ] Optional `pitfalls.md` contains only current evidence-backed recurring hazards; obsolete entries are removed.
-- [ ] `sync --apply` and `lint --check` completed; generated changes were inspected for unrelated drift.
+- [ ] `sync --apply` and `lint` completed; generated changes were inspected for unrelated drift.
 - [ ] The verified unit is committed with the exact `Task: T-###` trailer; remaining dirty paths are reported.

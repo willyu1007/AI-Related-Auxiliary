@@ -58,7 +58,7 @@ Archiving is an approved destructive transition from a working record to a compa
 
    ```bash
    node .ai/scripts/ctl-project-governance.mjs sync --apply
-   node .ai/scripts/ctl-project-governance.mjs lint --check
+   node .ai/scripts/ctl-project-governance.mjs lint
    ```
 
    A failure stops the commit. Restore the clean active layout from the pre-archive checkpoint or correct the approved transition; never leave a half-archived bundle.
@@ -95,7 +95,7 @@ decision; it does not decide product scope.
 
    ```bash
    node .ai/scripts/ctl-project-governance.mjs sync --apply
-   node .ai/scripts/ctl-project-governance.mjs lint --check
+   node .ai/scripts/ctl-project-governance.mjs lint
    ```
 
 Report the stage outcome, affected Features, progress contradictions, and exact files changed.
@@ -105,11 +105,11 @@ Report the stage outcome, affected Features, progress contradictions, and exact 
 Inspect first, apply second:
 
 ```bash
-node .ai/scripts/ctl-project-governance.mjs lint --check
+node .ai/scripts/ctl-project-governance.mjs lint
 node .ai/scripts/ctl-project-governance.mjs sync --dry-run
 node .ai/scripts/ctl-project-governance.mjs query --json
 node .ai/scripts/ctl-project-governance.mjs sync --apply
-node .ai/scripts/ctl-project-governance.mjs lint --check
+node .ai/scripts/ctl-project-governance.mjs lint
 ```
 
 - Active `in-progress` or `blocked` work remains on `F-000` only when the triage choice is explicit in the Semantic Feature Brief.

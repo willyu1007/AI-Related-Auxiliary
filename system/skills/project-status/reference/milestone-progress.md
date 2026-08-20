@@ -7,7 +7,7 @@ current stage.
 
 ```bash
 node .ai/scripts/ctl-project-governance.mjs query --json
-node .ai/scripts/ctl-project-governance.mjs lint --check
+node .ai/scripts/ctl-project-governance.mjs lint
 cat .ai/project/registry.json
 ```
 

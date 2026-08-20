@@ -33,7 +33,7 @@ Pick by what was asked, then follow that reference's **Data Source** commands:
 2. **Gather from task bundles across linked worktrees.** Run the reference's data-source commands — usually
    `ctl-project-governance.mjs query` with a `--status` or `--text` filter. Query already includes every linked worktree and returns one logical row per valid task ID. Never guess task details; open the returned `status_doc_path` when the query output is not enough. A row with `conflict: true` has no selected fact source: list its occurrences and differences separately, and do not use its unset top-level facts or run a worktree-specific follow-up until the disagreement is resolved.
 
-3. **Check consistency, do not fix it.** `lint --check` reveals drift between the registry and the task bundles. Report the drift and the appropriate maintenance action; do not run write-mode repair.
+3. **Check consistency, do not fix it.** `lint` reveals drift between the registry and the task bundles. Report the drift and the appropriate maintenance action; do not run write-mode repair.
 
 4. **Ground claims about active work.** For any `in-progress` or `blocked` task, run:
 
