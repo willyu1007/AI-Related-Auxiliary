@@ -34,13 +34,12 @@ grep -q 'Follow `AGENTS.md`' .ai/project/CLAUDE.md \
 for d in dev-docs/active dev-docs/archive; do
   [ -d "$d" ] || fail "install did not create $d"
 done
-for f in dev-docs/README.md dev-docs/CLAUDE.md dev-docs/AGENTS.md; do
+for f in dev-docs/CLAUDE.md dev-docs/AGENTS.md; do
   [ -f "$f" ] || fail "install did not place $f"
 done
-cmp -s dev-docs/CLAUDE.md dev-docs/AGENTS.md \
-  || fail "Claude and Agent task-doc pointers drifted"
-grep -q 'README.md.*sole authority' dev-docs/CLAUDE.md \
-  || fail "task-doc pointer does not route to README.md"
+[ ! -e dev-docs/README.md ] || fail "install retained a redundant task-document README"
+grep -q 'Follow `AGENTS.md`' dev-docs/CLAUDE.md \
+  || fail "task-doc Claude entry does not route to AGENTS.md"
 for f in registry.json dashboard.md feature-map.md; do
   [ -f ".ai/project/$f" ] || fail "install did not initialize .ai/project/$f"
 done
@@ -48,8 +47,46 @@ for f in task-index.md changelog.md; do
   [ ! -e ".ai/project/$f" ] || fail "install retained redundant view $f"
   [ ! -e ".ai/project/templates/$f" ] || fail "install retained redundant template $f"
 done
-node -e "const r=require('./.ai/project/registry.json');process.exit(Array.isArray(r.task_doc_roots)&&r.task_doc_roots.length===0?0:1)" \
-  || fail "registry template disabled task-root discovery"
+node -e "const r=require('./.ai/project/registry.json');process.exit(Object.hasOwn(r,'task_doc_roots')?1:0)" \
+  || fail "registry retained configurable task roots"
+
+# Only the repository's top-level dev-docs directory is a task root.
+mkdir -p modules/foo/dev-docs/active/ignored
+node .ai/scripts/ctl-project-governance.mjs query --json \
+  | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>process.exit(JSON.parse(s).length===0?0:1))" \
+  || fail "query treated a nested dev-docs directory as a task root"
+node .ai/scripts/ctl-project-governance.mjs sync --apply >/dev/null
+[ ! -e modules/foo/dev-docs/active/ignored/.ai-task.json ] \
+  || fail "sync wrote task metadata outside the top-level dev-docs root"
+rm -rf modules
+
+printf '# Conflicting task-document entry\n' > dev-docs/README.md
+if node .ai/scripts/ctl-project-governance.mjs lint >/dev/null 2>&1; then
+  fail "lint accepted a second task-document authority"
+fi
+if node "$INSTALLER" --repo-root . >/dev/null 2>&1; then
+  fail "installer accepted a second task-document authority"
+fi
+rm dev-docs/README.md
+
+cp dev-docs/CLAUDE.md dev-docs/CLAUDE.tmp
+printf '# Task documentation\n\nAGENTS.md is also relevant.\n' > dev-docs/CLAUDE.md
+if node .ai/scripts/ctl-project-governance.mjs lint >/dev/null 2>&1; then
+  fail "lint accepted a non-pointer task-document CLAUDE entry"
+fi
+mv dev-docs/CLAUDE.tmp dev-docs/CLAUDE.md
+
+mv dev-docs/active dev-docs/active.tmp
+if node .ai/scripts/ctl-project-governance.mjs lint >/dev/null 2>&1; then
+  fail "lint accepted a missing active task directory"
+fi
+mv dev-docs/active.tmp dev-docs/active
+
+mv dev-docs/archive dev-docs/archive.tmp
+if node .ai/scripts/ctl-project-governance.mjs lint >/dev/null 2>&1; then
+  fail "lint accepted a missing archive task directory"
+fi
+mv dev-docs/archive.tmp dev-docs/archive
 
 mkdir installer-dry-run
 node "$INSTALLER" --repo-root installer-dry-run --dry-run >/dev/null
@@ -99,37 +136,16 @@ rm -rf fixtures
 
 mkdir -p dev-docs/active/yaml-task
 printf 'task_id: T-999\n' > dev-docs/active/yaml-task/.ai-task.yaml
-printf '\nyaml-guard-marker\n' >> dev-docs/README.md
+printf '\nyaml-guard-marker\n' >> dev-docs/AGENTS.md
 if node "$INSTALLER" --repo-root . >/dev/null 2>&1; then
   fail "installer accepted YAML metadata in a task bundle"
 fi
-grep -q 'yaml-guard-marker' dev-docs/README.md \
+grep -q 'yaml-guard-marker' dev-docs/AGENTS.md \
   || fail "failed installer partially refreshed fixed assets"
 rm -rf dev-docs/active/yaml-task
 node "$INSTALLER" --repo-root . >/dev/null
 
-cp .ai/project/registry.json registry.configured-root.tmp
-node -e "const fs=require('fs');const p='.ai/project/registry.json';const r=JSON.parse(fs.readFileSync(p,'utf8'));r.task_doc_roots=['docs/tasks'];fs.writeFileSync(p,JSON.stringify(r,null,2)+'\n')"
-mkdir -p docs/tasks/active/yaml-task docs/tasks/archive
-printf 'task_id: T-999\n' > docs/tasks/active/yaml-task/.ai-task.yaml
-printf '\nconfigured-yaml-guard-marker\n' >> dev-docs/README.md
-if node "$INSTALLER" --repo-root . >/dev/null 2>&1; then
-  fail "installer ignored YAML metadata under the configured task root"
-fi
-grep -q 'configured-yaml-guard-marker' dev-docs/README.md \
-  || fail "configured-root installer failure partially refreshed fixed assets"
-rm -rf docs
-mv registry.configured-root.tmp .ai/project/registry.json
-node "$INSTALLER" --repo-root . >/dev/null
-
-cp .ai/project/registry.json registry.invalid-root.tmp
-node -e "const fs=require('fs');const p='.ai/project/registry.json';const r=JSON.parse(fs.readFileSync(p,'utf8'));r.task_doc_roots=[123];fs.writeFileSync(p,JSON.stringify(r,null,2)+'\n')"
-if node "$INSTALLER" --repo-root . >/dev/null 2>&1; then
-  fail "installer accepted a non-string configured task root"
-fi
-mv registry.invalid-root.tmp .ai/project/registry.json
-
-# Empty governance data and task roots outside the repository are hard errors.
+# Empty governance data is a hard error.
 cp .ai/project/registry.json registry.tmp
 : > .ai/project/registry.json
 if node .ai/scripts/ctl-project-governance.mjs lint >/dev/null 2>&1; then
@@ -141,16 +157,35 @@ fi
 mv registry.tmp .ai/project/registry.json
 
 cp .ai/project/registry.json registry.tmp
-node -e "const fs=require('fs');const p='.ai/project/registry.json';const r=JSON.parse(fs.readFileSync(p,'utf8'));r.task_doc_roots=['../outside/dev-docs'];fs.writeFileSync(p,JSON.stringify(r,null,2)+'\n')"
+node -e "const fs=require('fs');const p='.ai/project/registry.json';const r=JSON.parse(fs.readFileSync(p,'utf8'));r.task_doc_roots=['dev-docs'];fs.writeFileSync(p,JSON.stringify(r,null,2)+'\n')"
+registry_hash_before="$(git hash-object .ai/project/registry.json)"
 if node .ai/scripts/ctl-project-governance.mjs lint >/dev/null 2>&1; then
-  fail "lint accepted a task root outside the repository"
+  fail "lint accepted configurable task roots"
 fi
 if node .ai/scripts/ctl-project-governance.mjs sync --apply >/dev/null 2>&1; then
-  fail "sync accepted a task root outside the repository"
+  fail "sync accepted configurable task roots"
 fi
-if node .ai/scripts/ctl-project-governance.mjs query --json >/dev/null 2>&1; then
-  fail "query silently ignored a task root outside the repository"
+if node .ai/scripts/ctl-project-governance.mjs milestone --title "Invalid root allocation" --apply >/dev/null 2>&1; then
+  fail "milestone allocation accepted configurable task roots"
 fi
+[ "$registry_hash_before" = "$(git hash-object .ai/project/registry.json)" ] \
+  || fail "a rejected project-graph write changed the registry"
+mv registry.tmp .ai/project/registry.json
+
+cp .ai/project/registry.json registry.tmp
+node -e "const fs=require('fs');const p='.ai/project/registry.json';const r=JSON.parse(fs.readFileSync(p,'utf8'));r.tasks.push({id:'T-999',slug:'nested',status:'planned',dev_docs_path:'modules/foo/dev-docs/active/nested',feature_id:'F-000'});fs.writeFileSync(p,JSON.stringify(r,null,2)+'\n')"
+registry_hash_before="$(git hash-object .ai/project/registry.json)"
+if node .ai/scripts/ctl-project-governance.mjs lint >/dev/null 2>&1; then
+  fail "lint accepted a task projection outside the top-level task root"
+fi
+if node .ai/scripts/ctl-project-governance.mjs sync --apply >/dev/null 2>&1; then
+  fail "sync accepted a task projection outside the top-level task root"
+fi
+if node .ai/scripts/ctl-project-governance.mjs map --task T-999 --feature F-000 --apply >/dev/null 2>&1; then
+  fail "mapping accepted a registry-only task projection outside the top-level task root"
+fi
+[ "$registry_hash_before" = "$(git hash-object .ai/project/registry.json)" ] \
+  || fail "a rejected registry-only mapping changed the registry"
 mv registry.tmp .ai/project/registry.json
 
 cp .ai/project/registry.json registry.tmp
@@ -164,7 +199,7 @@ mv registry.tmp .ai/project/registry.json
 # hub files are project data and stay. A second install that resets the registry would silently
 # discard every task the repository has.
 node -e "const fs=require('fs');const p='.ai/project/registry.json';const r=JSON.parse(fs.readFileSync(p,'utf8'));r.smoke_marker=true;fs.writeFileSync(p,JSON.stringify(r,null,2)+'\n')"
-printf '\nshipped-doc-drift\n' >> dev-docs/README.md
+printf '\nshipped-doc-drift\n' >> dev-docs/AGENTS.md
 printf '# Superseded contract\n' > .ai/project/CONTRACT.md
 printf '# Redundant task index\n' > .ai/project/task-index.md
 printf '# Redundant changelog\n' > .ai/project/changelog.md
@@ -176,7 +211,7 @@ printf 'retired\n' > .ai/scripts/lib/yaml-lite.mjs
 node "$INSTALLER" --repo-root . >/dev/null
 node -e "const r=require('./.ai/project/registry.json');process.exit(r.smoke_marker===true?0:1)" \
   || fail "re-install overwrote hub data"
-if grep -q 'shipped-doc-drift' dev-docs/README.md; then
+if grep -q 'shipped-doc-drift' dev-docs/AGENTS.md; then
   fail "re-install did not refresh the task-document guidance"
 fi
 [ ! -e .ai/project/CONTRACT.md ] || fail "re-install did not remove the superseded hub contract"
@@ -192,18 +227,6 @@ node .ai/scripts/install-project-governance.mjs --repo-root . >/dev/null
 [ -f .ai/project/dashboard.md ] || fail "installed installer did not restore missing hub data"
 node -e "const r=require('./.ai/project/registry.json');process.exit(r.smoke_marker===true?0:1)" \
   || fail "installed installer overwrote existing hub data"
-
-# Hooks ship with the skill that installs them. AUX_ROOT is set by checks/run.mjs.
-mkdir -p .githooks
-cp -R "$AUX_ROOT/system/skills/task-sync/assets/githooks/." .githooks/
-[ -x .githooks/pre-commit ] || fail ".githooks/pre-commit is not executable"
-
-node .githooks/install.mjs >/dev/null
-
-mkdir -p modules/foo/dev-docs/active modules/foo/dev-docs/archive
-node .ai/scripts/ctl-project-governance.mjs sync --apply >/dev/null
-node -e "const r=require('./.ai/project/registry.json');process.exit(r.task_doc_roots.includes('modules/foo/dev-docs')?0:1)" \
-  || fail "sync did not discover the additional task-document root"
 
 # Single-project layout: no per-project subdirectory, no project key in the registry.
 if [ -d .ai/project/main ]; then fail "installer created a per-project subdirectory"; fi
@@ -227,11 +250,12 @@ printf '# Verification\n\n## Completion matrix\n\n| Completion condition | Check
 printf '# Pitfalls\n\n| Hazard | Evidence | Prevention | Applies until |\n|---|---|---|---|\n| Repeating a stale path | failed run | use the supported path | guard is encoded |\n' > dev-docs/active/sample/pitfalls.md
 
 git checkout -q -b feat/T-001-sample
+node .ai/scripts/ctl-project-governance.mjs sync --apply >/dev/null
 git add -A
-git -c user.email=ci@local -c user.name=ci commit -qm "feat(sample): add task bundle" >/dev/null
+git -c user.email=ci@local -c user.name=ci commit -qm "feat(sample): add task bundle" -m "Task: T-001" >/dev/null
 
-# pre-commit should have allocated the ID and synced the hub before the commit landed.
-[ -f dev-docs/active/sample/.ai-task.json ] || fail "pre-commit did not allocate .ai-task.json"
+# Explicit synchronization allocates the ID and updates the hub before staging.
+[ -f dev-docs/active/sample/.ai-task.json ] || fail "sync did not allocate .ai-task.json"
 node -e "const m=require('./dev-docs/active/sample/.ai-task.json');process.exit(m.task_id==='T-001'&&!Object.hasOwn(m,'project')?0:1)" \
   || fail "unexpected task metadata"
 node -e "const r=require('./.ai/project/registry.json');process.exit(r.tasks.some(x=>x.id==='T-001'&&!Object.hasOwn(x,'milestone_id'))?0:1)" \
@@ -244,12 +268,12 @@ node .ai/scripts/ctl-project-governance.mjs lint --strict >/dev/null || fail "li
 lint_status_after="$(git status --porcelain=v1 --untracked-files=all)"
 [ "$lint_status_before" = "$lint_status_after" ] || fail "lint modified repository state"
 
-# The canonical top-level entry points remain the one semantic authority for every task root.
-mv dev-docs/README.md dev-docs/README.tmp
+# The top-level AGENTS entry remains the task-document semantic authority.
+mv dev-docs/AGENTS.md dev-docs/AGENTS.tmp
 missing_root_doc_output="$(node .ai/scripts/ctl-project-governance.mjs lint 2>&1 || true)"
-printf '%s\n' "$missing_root_doc_output" | grep -q 'Canonical task-document entry point dev-docs/README.md is missing' \
-  || fail "lint did not report a missing canonical README"
-mv dev-docs/README.tmp dev-docs/README.md
+printf '%s\n' "$missing_root_doc_output" | grep -q 'Required task-document entry point dev-docs/AGENTS.md is missing' \
+  || fail "lint did not report a missing task-document authority"
+mv dev-docs/AGENTS.tmp dev-docs/AGENTS.md
 
 # Malformed JSON is reported as task data corruption; lint and sync must fail cleanly.
 cp dev-docs/active/sample/.ai-task.json dev-docs/active/sample/.ai-task.tmp
@@ -749,4 +773,4 @@ node -e "const r=require('./.ai/project/registry.json');process.exit(r.tasks.som
   || fail "archive status not propagated"
 node .ai/scripts/ctl-project-governance.mjs lint --strict >/dev/null || fail "lint failed after archive"
 
-echo "install/guidance refresh, strict CLI/data guards, root discovery, pending seed example, kickoff/completion gates, roadmap and registry lint, resume, validation-atomic sync, Milestone progress and feature/requirement mapping, lightweight Ideas, JSON round-trip, worktree allocation and query reconciliation, archive"
+echo "install/guidance refresh, strict CLI/data guards, single task root, pending seed example, kickoff/completion gates, roadmap and registry lint, resume, validation-atomic sync, Milestone progress and feature/requirement mapping, lightweight Ideas, JSON round-trip, worktree allocation and query reconciliation, archive"

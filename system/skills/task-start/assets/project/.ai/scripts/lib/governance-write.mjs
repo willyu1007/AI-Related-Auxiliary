@@ -15,7 +15,6 @@ import {
   REQUIREMENT_ID_RE,
   REQUIREMENT_STATUS,
   TASK_ID_RE,
-  discoverDevDocsRoots,
   exists,
   getBundleStatusFromStatusDoc,
   getHubDir,
@@ -26,7 +25,6 @@ import {
   parseTaskMeta,
   queryTasks,
   readText,
-  resolveConfiguredRoots,
   runGit,
   scanTasks,
   taskIdsFromAllBranches,
@@ -56,6 +54,23 @@ function getTaskConflictErrorsFromRows(tasks) {
         `Resolve the divergent occurrences before writing: ${occurrences}.`
       );
     });
+}
+
+function getRegistryLayoutErrors(registry) {
+  const errors = [];
+  if (Object.hasOwn(registry, 'task_doc_roots')) {
+    errors.push('Registry contains unsupported top-level key: "task_doc_roots".');
+  }
+  for (const task of Array.isArray(registry.tasks) ? registry.tasks : []) {
+    if (!task || typeof task !== 'object') continue;
+    const devDocsPath = toPosix(String(task.dev_docs_path || ''));
+    if (!/^dev-docs\/(?:active|archive)\/[^/]+$/.test(devDocsPath)) {
+      errors.push(
+        `Registry task ${String(task.id || '(no-id)')} has unsupported dev_docs_path "${devDocsPath}"; task bundles must be immediate children of top-level dev-docs/active or dev-docs/archive.`
+      );
+    }
+  }
+  return errors;
 }
 
 function today() {
@@ -220,15 +235,10 @@ export function cmdSync({ repoRoot, dryRun, apply }) {
     return finish();
   }
   const reg = loaded.registry;
+  errors.push(...getRegistryLayoutErrors(reg));
+  if (errors.length > 0) return finish();
 
-  const configured = resolveConfiguredRoots(repoRoot, reg);
-  if (configured.errors.length > 0) {
-    errors.push(...configured.errors);
-    return finish();
-  }
-  const roots = configured.configured ? configured.roots : discoverDevDocsRoots(repoRoot);
-
-  const tasks = scanTasks(repoRoot, roots);
+  const tasks = scanTasks(repoRoot);
 
   // Allocate IDs for missing meta
   const existingIds = new Set();
@@ -383,10 +393,6 @@ export function cmdSync({ repoRoot, dryRun, apply }) {
   }
   if (!Array.isArray(reg.requirements)) reg.requirements = [];
   if (reg.ideas === undefined) reg.ideas = [];
-  if (!Array.isArray(reg.task_doc_roots) || reg.task_doc_roots.length === 0) {
-    reg.task_doc_roots = roots.map((r) => toPosix(path.relative(repoRoot, r)));
-  }
-
   // Write registry
   const registryOut = renderJson(reg);
   planWrite(registryPath, registryOut, { op: 'update', note: 'update registry' });
@@ -524,6 +530,11 @@ export function cmdMap({ repoRoot, taskId, featureId, requirementId, dryRun, app
     errors.push(...taskConflicts);
     return { ok: false, errors, actions };
   }
+  const logicalTask = taskRows.find((task) => task.id === taskId) || null;
+  if (!logicalTask) {
+    errors.push(`Task bundle "${taskId}" not found under top-level dev-docs/.`);
+    return { ok: false, errors, actions };
+  }
 
   if (!featureId && !requirementId) {
     errors.push('At least one of --feature or --requirement is required.');
@@ -547,6 +558,8 @@ export function cmdMap({ repoRoot, taskId, featureId, requirementId, dryRun, app
   }
 
   const reg = loaded.registry;
+  errors.push(...getRegistryLayoutErrors(reg));
+  if (errors.length > 0) return { ok: false, errors, actions };
   const registryPath = loaded.path;
 
   // Find the task in registry
@@ -586,7 +599,6 @@ export function cmdMap({ repoRoot, taskId, featureId, requirementId, dryRun, app
     }
   }
 
-  const logicalTask = taskRows[0] || null;
   const currentRequirements = Array.isArray(taskEntry.requirement_ids)
     ? taskEntry.requirement_ids.map((value) => String(value))
     : [];
@@ -685,6 +697,8 @@ export function cmdMilestone({ repoRoot, title, description, dryRun, apply, json
       actions,
     };
   }
+  errors.push(...getRegistryLayoutErrors(loaded.registry));
+  if (errors.length > 0) return { ok: false, errors, actions };
 
   const allMilestones = collectMilestonesFromAllWorktrees(repoRoot);
   const titlesById = new Map();
@@ -816,6 +830,8 @@ export function cmdFeature({ repoRoot, title, description, dryRun, apply, json }
       actions,
     };
   }
+  errors.push(...getRegistryLayoutErrors(loaded.registry));
+  if (errors.length > 0) return { ok: false, errors, actions };
 
   const allFeatures = collectFeaturesFromAllWorktrees(repoRoot);
   const titlesById = new Map();
@@ -955,6 +971,8 @@ export function cmdRequirement({ repoRoot, title, featureId, description, dryRun
       actions,
     };
   }
+  errors.push(...getRegistryLayoutErrors(loaded.registry));
+  if (errors.length > 0) return { ok: false, errors, actions };
 
   const registry = loaded.registry;
   const parentExists =

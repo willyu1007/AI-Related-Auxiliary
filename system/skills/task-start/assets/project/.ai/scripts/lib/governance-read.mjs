@@ -36,21 +36,6 @@ export const MILESTONE_STATUS = new Set(['planned', 'in-progress', 'blocked', 'd
 export const FEATURE_STATUS = new Set(['planned', 'in-progress', 'blocked', 'done', 'cut']);
 export const REQUIREMENT_STATUS = new Set(['planned', 'in-progress', 'blocked', 'done', 'cut']);
 
-const IGNORE_DIRS = new Set([
-  '.git',
-  '.hg',
-  '.svn',
-  'node_modules',
-  '.ai',
-  '.codex',
-  '.claude',
-  '.cursor',
-  '.next',
-  'dist',
-  'build',
-  'coverage',
-]);
-
 export function toPosix(value) {
   return String(value).replace(/\\/g, '/');
 }
@@ -285,40 +270,6 @@ export function formatTaskRef(task) {
   return `${task.taskId || '(no-id)'} ${task.slug} (${task.phase}) @ ${toPosix(task.relPath)}`;
 }
 
-export function discoverDevDocsRoots(repoRoot) {
-  const roots = [];
-  const stack = [repoRoot];
-
-  while (stack.length > 0) {
-    const dir = stack.pop();
-    const base = path.basename(dir);
-    if (IGNORE_DIRS.has(base)) continue;
-    if (base.startsWith('.') && dir !== repoRoot) continue;
-
-    let entries;
-    try {
-      entries = fs.readdirSync(dir, { withFileTypes: true });
-    } catch {
-      continue;
-    }
-
-    for (const entry of entries) {
-      if (!entry.isDirectory()) continue;
-      const full = path.join(dir, entry.name);
-      if (entry.name === 'dev-docs') {
-        if (exists(path.join(full, 'active')) || exists(path.join(full, 'archive'))) {
-          roots.push(full);
-          continue;
-        }
-      }
-      if (IGNORE_DIRS.has(entry.name) || entry.name.startsWith('.')) continue;
-      stack.push(full);
-    }
-  }
-
-  return [...new Set(roots.map((root) => path.resolve(root)))].sort((a, b) => a.localeCompare(b));
-}
-
 export function loadRegistry(repoRoot) {
   const registryPath = getRegistryPath(repoRoot);
   const raw = readText(registryPath);
@@ -336,72 +287,12 @@ export function loadRegistry(repoRoot) {
   }
 }
 
-function isPathInside(parent, candidate) {
-  const relative = path.relative(parent, candidate);
-  return relative === '' || (relative !== '..' && !relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative));
-}
-
-export function resolveConfiguredRoots(repoRoot, registry) {
-  const configured = registry?.task_doc_roots;
-  if (configured === undefined) return { configured: false, roots: [], errors: [] };
-  if (!Array.isArray(configured)) {
-    return { configured: true, roots: [], errors: ['Registry task_doc_roots must be a list.'] };
-  }
-  if (configured.length === 0) return { configured: false, roots: [], errors: [] };
-
-  const errors = [];
-  const roots = [];
-  let realRepoRoot = null;
-  try {
-    realRepoRoot = fs.realpathSync(repoRoot);
-  } catch {
-    // Lexical containment still protects a repository that cannot be resolved.
-  }
-
-  for (const entry of configured) {
-    if (typeof entry !== 'string' || !entry.trim()) {
-      errors.push('Registry task_doc_roots entries must be non-empty relative paths.');
-      continue;
-    }
-    const value = entry.trim();
-    if (path.isAbsolute(value)) {
-      errors.push(`Registry task_doc_root must be relative to the repository: "${value}".`);
-      continue;
-    }
-    const resolved = path.resolve(repoRoot, value);
-    if (!isPathInside(repoRoot, resolved)) {
-      errors.push(`Registry task_doc_root escapes the repository: "${value}".`);
-      continue;
-    }
-    if (realRepoRoot && exists(resolved)) {
-      try {
-        if (!isPathInside(realRepoRoot, fs.realpathSync(resolved))) {
-          errors.push(`Registry task_doc_root resolves outside the repository: "${value}".`);
-          continue;
-        }
-      } catch {
-        errors.push(`Registry task_doc_root cannot be resolved: "${value}".`);
-        continue;
-      }
-    }
-    roots.push(resolved);
-  }
-
-  return { configured: true, roots: [...new Set(roots)], errors };
-}
-
 function getFeatureMilestoneMap(registry) {
   return new Map(
     (Array.isArray(registry?.features) ? registry.features : [])
       .filter((feature) => feature && typeof feature === 'object')
       .map((feature) => [String(feature.id || ''), String(feature.milestone_id || '')])
   );
-}
-
-function resolveDevDocsRoots(repoRoot, registry = null) {
-  const resolved = resolveConfiguredRoots(repoRoot, registry);
-  if (resolved.errors.length > 0) throw new Error(resolved.errors.join(' '));
-  return resolved.configured ? resolved.roots : discoverDevDocsRoots(repoRoot);
 }
 
 function resolveTaskStatusDoc(taskDir) {
@@ -416,24 +307,23 @@ function resolveTaskPitfallsDoc(taskDir) {
   return path.join(taskDir, 'pitfalls.md');
 }
 
-export function scanTasks(repoRoot, devDocsRoots) {
+export function scanTasks(repoRoot) {
   const tasks = [];
-  for (const root of devDocsRoots) {
-    for (const phase of ['active', 'archive']) {
-      const phaseDir = path.join(root, phase);
-      for (const slug of listImmediateChildDirs(phaseDir)) {
-        const taskDir = path.join(phaseDir, slug);
-        tasks.push({
-          root,
-          phase,
-          slug,
-          absPath: taskDir,
-          relPath: path.relative(repoRoot, taskDir),
-          statusPath: resolveTaskStatusDoc(taskDir),
-          roadmapPath: resolveTaskRoadmapDoc(taskDir),
-          metaPath: path.join(taskDir, '.ai-task.json'),
-        });
-      }
+  const root = path.join(repoRoot, 'dev-docs');
+  for (const phase of ['active', 'archive']) {
+    const phaseDir = path.join(root, phase);
+    for (const slug of listImmediateChildDirs(phaseDir)) {
+      const taskDir = path.join(phaseDir, slug);
+      tasks.push({
+        root,
+        phase,
+        slug,
+        absPath: taskDir,
+        relPath: path.relative(repoRoot, taskDir),
+        statusPath: resolveTaskStatusDoc(taskDir),
+        roadmapPath: resolveTaskRoadmapDoc(taskDir),
+        metaPath: path.join(taskDir, '.ai-task.json'),
+      });
     }
   }
   return tasks.sort((a, b) => a.relPath.localeCompare(b.relPath));
@@ -470,12 +360,10 @@ function formatJsonLines(rows) {
   for (const row of rows) console.log(JSON.stringify(row));
 }
 
-function collectBundleTaskRows({ repoRoot, registry = undefined }) {
-  const resolvedRegistry = registry === undefined ? loadRegistry(repoRoot).registry : registry;
-  const roots = resolveDevDocsRoots(repoRoot, resolvedRegistry);
+function collectBundleTaskRows({ repoRoot }) {
   const rows = [];
 
-  for (const task of scanTasks(repoRoot, roots)) {
+  for (const task of scanTasks(repoRoot)) {
     const statusRaw = readText(task.statusPath);
     const roadmapRaw = readText(task.roadmapPath);
     const metaRaw = readText(task.metaPath);
@@ -524,7 +412,7 @@ function collectAllWorktreeTaskOccurrences(repoRoot) {
         .map((task) => [String(task.id), task])
     );
 
-    for (const task of collectBundleTaskRows({ repoRoot: worktree.path, registry })) {
+    for (const task of collectBundleTaskRows({ repoRoot: worktree.path })) {
       const projection = registryTasks.get(task.id) || {};
       rows.push({
         feature_id: String(projection.feature_id || ''),
@@ -760,9 +648,7 @@ export function listGitWorktrees(repoRoot) {
 export function taskIdsFromAllWorktrees(repoRoot) {
   const ids = new Set();
   for (const worktree of listGitWorktrees(repoRoot)) {
-    const registry = loadRegistry(worktree.path).registry;
-    const roots = resolveDevDocsRoots(worktree.path, registry);
-    for (const task of scanTasks(worktree.path, roots)) {
+    for (const task of scanTasks(worktree.path)) {
       const metaRaw = readText(task.metaPath);
       if (!metaRaw) continue;
       const taskId = parseTaskMeta(metaRaw).task_id;
@@ -841,20 +727,6 @@ function readWorktreeStatus(repoRoot, limit = 10) {
     entries: allEntries.slice(0, limit),
     truncated: allEntries.length > limit,
   };
-}
-
-export function cmdTaskExists({ repoRoot, taskId }) {
-  if (!TASK_ID_RE.test(taskId || '')) {
-    console.error(`[error] Invalid task ID: ${taskId || '(missing)'}`);
-    return { exitCode: 4 };
-  }
-  const result = resolveTaskContext({ repoRoot, taskId });
-  if (!result.ok) {
-    console.error(`[error] Task not found: ${taskId}`);
-    return { exitCode: 4 };
-  }
-  console.log(result.task.id);
-  return { exitCode: 0, task: result.task };
 }
 
 function resumeFailureExitCode(reason) {

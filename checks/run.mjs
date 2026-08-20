@@ -4,7 +4,7 @@
  *
  * Self-check for this library. Two parts:
  *
- *   static  - scan system/ for dangling references, missing hook exec bits, cross-linked skills,
+ *   static  - scan system/ for dangling references, cross-linked skills,
  *             drifted global docs, and hygiene problems
  *   smoke   - run each checks/skills/<skill>.sh inside a throwaway git repo
  *
@@ -16,7 +16,7 @@
  *   - A smoke test starts from an empty repository and provisions it by running the skill's own
  *     installer entry point, so the install path is the thing under test rather than a `cp -R` that only
  *     the test knows how to perform.
- *   - POSIX shell is required for the smoke tests (as it is for the shipped Git hooks).
+ *   - POSIX shell is required for the smoke tests.
  *
  * Usage:
  *   node checks/run.mjs                  # everything
@@ -78,20 +78,6 @@ function readTextOrNull(filePath) {
     return raw.includes(NUL) ? null : raw;
   } catch {
     return null;
-  }
-}
-
-function gitIndexMarksExecutable(filePath) {
-  const rel = path.relative(REPO_ROOT, filePath).split(path.sep).join('/');
-  try {
-    const row = execFileSync('git', ['ls-files', '--stage', '--', rel], {
-      cwd: REPO_ROOT,
-      encoding: 'utf8',
-      stdio: ['ignore', 'pipe', 'ignore'],
-    }).trim();
-    return row.startsWith('100755 ');
-  } catch {
-    return false;
   }
 }
 
@@ -184,15 +170,6 @@ function runStatic() {
     const shipped = path.relative(SKILLS_DIR, abs).split(path.sep).join('/');
     const owner = skillByDir.get(shipped.split('/')[0]);
 
-    // Hooks are ignored by Git unless they carry the exec bit, and Git only warns.
-    // cp -R preserves mode, so the bit has to be right here.
-    if (shipped.includes('/assets/githooks/') && !shipped.endsWith('.mjs')) {
-      // Windows does not expose POSIX execute bits through fs.stat; the Git index remains the
-      // authoritative transport mode there.
-      if (!(fs.statSync(abs).mode & 0o111) && !gitIndexMarksExecutable(abs)) {
-        fail('exec-bit', `system/skills/${shipped} is not executable`);
-      }
-    }
     if (path.basename(abs) === '.DS_Store') {
       fail('hygiene', `system/skills/${shipped} should not be committed`);
     }
@@ -227,7 +204,7 @@ function runStatic() {
 
   if (failures.length === 0) {
     console.log(
-      c.green('  ok') + c.dim(`  layout, exec bits, hygiene, references, docs, ${skillOwner.size} skills`)
+    c.green('  ok') + c.dim(`  layout, hygiene, references, docs, ${skillOwner.size} skills`)
     );
   }
 }

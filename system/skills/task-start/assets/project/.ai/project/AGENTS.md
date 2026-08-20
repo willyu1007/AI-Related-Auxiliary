@@ -7,7 +7,7 @@ Milestones, Features, and Requirements without replacing task records or reposit
 
 - Task bundles own task identity, goal, progress, decisions, design, verification, and lifecycle.
 - `.ai/project/registry.json` owns Milestones, Features, Requirements, their relationships, task
-  mappings, task-root configuration, and a lightweight deferred-idea list.
+  mappings, and a lightweight deferred-idea list.
 - Registry task entries are projections. They never override task identity, progress, kickoff
   readiness, or completion evidence.
 - Git history proves committed work; each linked worktree proves its current uncommitted state.
@@ -58,8 +58,8 @@ The hub consumes these task facts:
 
 ## Consistency and worktrees
 
-- Configured task roots are repository-relative and cannot escape the repository. They take
-  precedence over discovery; only immediate children of `active/` and `archive/` are task bundles.
+- The task-document root is the repository's top-level `dev-docs/` directory. Only immediate
+  children of its `active/` and `archive/` directories are task bundles.
 - Allocation and write-mode mapping use the shared governance lock under Git's common directory.
 - Task allocation considers metadata in every linked worktree, the current registry, and task
   trailers across branch history. Milestone, Feature, and Requirement allocation considers every

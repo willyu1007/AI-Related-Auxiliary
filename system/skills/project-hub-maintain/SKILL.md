@@ -18,7 +18,7 @@ description: >-
 
 The task bundle owns execution truth. The hub is a semantic map and derived projection; it does not replace checkpoint synchronization.
 
-Read `dev-docs/README.md` before auditing or changing a task bundle.
+Read `dev-docs/AGENTS.md` before auditing or changing a task bundle.
 
 ## Archive task
 

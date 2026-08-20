@@ -16,7 +16,6 @@ import {
   TASK_ID_RE,
   TASK_STATUS,
   cleanMarkdownValue,
-  discoverDevDocsRoots,
   exists,
   formatTaskRef,
   getBundleStatusFromStatusDoc,
@@ -27,7 +26,6 @@ import {
   normalizeEol,
   parseTaskMeta,
   readText,
-  resolveConfiguredRoots,
   scanTasks,
   statusRank,
   toPosix,
@@ -353,7 +351,6 @@ export function cmdLint({ repoRoot, strict }) {
 
   const { registry, error: registryParseError } = loadRegistry(repoRoot);
 
-  let devDocsRoots = [];
   if (registryParseError) {
     errors.push(`Failed to parse registry.json: ${registryParseError}`);
   }
@@ -362,7 +359,6 @@ export function cmdLint({ repoRoot, strict }) {
     warnings.push(
       'Project hub is not initialized. Run: node .ai/scripts/install-project-governance.mjs --repo-root .'
     );
-    devDocsRoots = discoverDevDocsRoots(repoRoot);
   } else if (registry) {
     const REQUIRED_REGISTRY_KEYS = [
       'version',
@@ -376,26 +372,36 @@ export function cmdLint({ repoRoot, strict }) {
         errors.push(`Registry missing required top-level key: "${key}".`);
       }
     }
+    if (Object.hasOwn(registry, 'task_doc_roots')) {
+      errors.push('Registry contains unsupported top-level key: "task_doc_roots".');
+    }
     validateRegistryGraph(registry, errors);
 
-    const configured = resolveConfiguredRoots(repoRoot, registry);
-    errors.push(...configured.errors);
-    devDocsRoots = configured.configured ? configured.roots : discoverDevDocsRoots(repoRoot);
   }
 
-  if (devDocsRoots.length === 0) {
-    warnings.push('No dev-docs roots discovered.');
-  }
-
-  for (const file of ['README.md', 'AGENTS.md', 'CLAUDE.md']) {
-    if (!exists(path.join(repoRoot, 'dev-docs', file))) {
-      errors.push(`Canonical task-document entry point dev-docs/${file} is missing.`);
+  const taskDocsDir = path.join(repoRoot, 'dev-docs');
+  for (const directory of ['active', 'archive']) {
+    if (!exists(path.join(taskDocsDir, directory))) {
+      errors.push(`Required task-document directory dev-docs/${directory}/ is missing.`);
     }
   }
+  for (const file of ['AGENTS.md', 'CLAUDE.md']) {
+    if (!exists(path.join(taskDocsDir, file))) {
+      errors.push(`Required task-document entry point dev-docs/${file} is missing.`);
+    }
+  }
+  if (exists(path.join(taskDocsDir, 'README.md'))) {
+    errors.push('Unsupported task-document entry point dev-docs/README.md conflicts with dev-docs/AGENTS.md.');
+  }
+  const claudeEntry = readText(path.join(taskDocsDir, 'CLAUDE.md'));
+  const expectedClaudeEntry = '# Task documentation\n\nFollow `AGENTS.md` for task-document semantics.';
+  if (claudeEntry !== null && normalizeEol(claudeEntry).trim() !== expectedClaudeEntry) {
+    errors.push('dev-docs/CLAUDE.md must contain only the task-document pointer to AGENTS.md.');
+  }
 
-  const tasks = scanTasks(repoRoot, devDocsRoots);
+  const tasks = scanTasks(repoRoot);
 
-  // Collect IDs and slug-to-ids mapping for cross-root checks
+  // Collect IDs and slug-to-ids mapping for duplicate checks.
   const taskIdToTask = new Map();
   const slugToIds = new Map();
 
@@ -578,7 +584,7 @@ export function cmdLint({ repoRoot, strict }) {
     }
   }
 
-  // Slug conflicts across roots (error only when multiple distinct IDs exist)
+  // A slug linked to multiple distinct IDs is ambiguous.
   for (const [slug, ids] of slugToIds.entries()) {
     if (ids.size <= 1) continue;
     errors.push(`Slug "${slug}" appears with multiple task_ids: ${[...ids].sort().join(', ')}`);
@@ -593,6 +599,12 @@ export function cmdLint({ repoRoot, strict }) {
       // Skip tasks that were found on disk
       if (taskIdToTask.has(id)) continue;
       const devDocsPath = String(regTask.dev_docs_path || '');
+      if (!/^dev-docs\/(?:active|archive)\/[^/]+$/.test(toPosix(devDocsPath))) {
+        errors.push(
+          `Registry task ${id} has unsupported dev_docs_path "${devDocsPath}"; task bundles must be immediate children of top-level dev-docs/active or dev-docs/archive.`
+        );
+        continue;
+      }
       warnings.push(
         `Registry task ${id} (slug="${regTask.slug || ''}"): dev_docs_path "${devDocsPath}" not found on disk. Consider removing from registry or re-creating the task bundle.`
       );

@@ -8,10 +8,9 @@
  *
  * Design notes:
  * - Dependency-free (Node built-ins only).
- * - Ships inside the skill that provisions the hub and installs itself into the target repository,
- *   because the Git hooks call it by repository path and cannot reach the skill's own location.
+ * - Ships inside the skill that provisions the hub and installs itself into the target repository.
  * - Task progress SoT remains in the dev-docs task bundle (`01-status.md`).
- * - Task bundles follow the semantics in `dev-docs/README.md`.
+ * - Task bundles follow the semantics in `dev-docs/AGENTS.md`.
  * - Task identity SoT is anchored by `.ai-task.json` (`task_id`).
  */
 
@@ -27,7 +26,6 @@ import {
   TASK_STATUS,
   cmdQuery,
   cmdResume,
-  cmdTaskExists,
   findRepoRoot,
 } from './lib/governance-read.mjs';
 import {
@@ -74,10 +72,6 @@ Commands:
     --json                    Output a single JSON array instead of JSON lines
     Locate tasks across every linked worktree for dedupe/triage (LLM-friendly output).
 
-  task-exists
-    --repo-root <path>        Repo root (default: auto-detect; fallback: cwd)
-    --task <T-###>            Task ID to validate (required)
-    Verify that a task ID is anchored by a task bundle; print the ID when found.
     Exit codes: 0 found, 4 invalid or not found.
 
   resume
@@ -145,7 +139,6 @@ const COMMAND_OPTIONS = Object.freeze({
   lint: { values: ['repo-root'], flags: ['strict'] },
   sync: { values: ['repo-root'], flags: ['dry-run', 'apply'], conflicts: [['dry-run', 'apply']] },
   query: { values: ['repo-root', 'id', 'status', 'text'], flags: ['json'] },
-  'task-exists': { values: ['repo-root', 'task'], flags: [] },
   resume: { values: ['repo-root', 'task', 'limit', 'scan'], flags: [] },
   map: {
     values: ['repo-root', 'task', 'feature', 'requirement'],
@@ -284,12 +277,6 @@ function main() {
         json,
       });
       process.exit(res.ok ? 0 : 1);
-      break;
-    }
-    case 'task-exists': {
-      const taskId = opts.task ? String(opts.task).trim() : '';
-      const res = cmdTaskExists({ repoRoot, taskId });
-      process.exit(res.exitCode);
       break;
     }
     case 'resume': {

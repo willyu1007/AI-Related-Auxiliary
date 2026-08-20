@@ -12,7 +12,7 @@ Converge one living roadmap without creating a second planning authority.
 
 ## Workflow
 
-1. **Recover the task and evidence.** Read `dev-docs/README.md`, then resolve exactly one existing
+1. **Recover the task and evidence.** Read `dev-docs/AGENTS.md`, then resolve exactly one existing
    task across linked worktrees with an exact ID query or request-text query. A result with
    `conflict: true` is a stop condition: show its occurrences and differing facts instead of
    choosing a source. Continue in another worktree only when the environment can target it safely

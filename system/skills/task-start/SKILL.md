@@ -22,7 +22,13 @@ Open and register a durable task bundle before implementation begins.
    node <this-skill>/assets/project/.ai/scripts/install-project-governance.mjs --repo-root .
    ```
 
-   `<this-skill>` is the directory containing this `SKILL.md`. The installer creates or refreshes `dev-docs/README.md`, `dev-docs/CLAUDE.md`, `dev-docs/AGENTS.md`, `dev-docs/active/`, `dev-docs/archive/`, and the project-governance assets. It preserves project-owned hub data. Read `dev-docs/README.md` completely before creating the bundle.
+   `<this-skill>` is the directory containing this `SKILL.md`. The installer creates or refreshes `dev-docs/CLAUDE.md`, `dev-docs/AGENTS.md`, `dev-docs/active/`, `dev-docs/archive/`, and the project-governance assets. It preserves project-owned hub data. Read `dev-docs/AGENTS.md` completely, then validate the existing layout before searching or creating anything:
+
+   ```bash
+   node .ai/scripts/ctl-project-governance.mjs lint
+   ```
+
+   Stop without creating a bundle when validation fails.
 
 3. **Search before creating.** Inspect active work in every linked worktree, including uncommitted bundles:
 
@@ -45,7 +51,7 @@ Open and register a durable task bundle before implementation begins.
 
    Record unresolved conflicts in `00-roadmap.md`; never drop one silently.
 
-6. **Seed the bundle from its defined semantics.** Create `dev-docs/active/<slug>/` from `./templates/` according to `dev-docs/README.md`. Populate the current goal and `State: planned`. Write a roadmap seed containing confirmed scope, known constraints and relationships, material open decisions, risks, and one concrete alignment or discovery phase. Set the kickoff gate to `pending`; do not invent downstream implementation phases or close decisions merely to make the task look ready. Do not leave required sections as unfilled template placeholders; express missing evidence as a discovery action. Apart from a `requirement.md` justified in Step 5, do not create optional entries speculatively; actual work may add them later when each has a distinct durable purpose. Never use an optional entry as a second goal, status, plan, decision, architecture, or verification authority.
+6. **Seed the bundle from its defined semantics.** Create `dev-docs/active/<slug>/` from `./templates/` according to `dev-docs/AGENTS.md`. Populate the current goal and `State: planned`. Write a roadmap seed containing confirmed scope, known constraints and relationships, material open decisions, risks, and one concrete alignment or discovery phase. Set the kickoff gate to `pending`; do not invent downstream implementation phases or close decisions merely to make the task look ready. Do not leave required sections as unfilled template placeholders; express missing evidence as a discovery action. Apart from a `requirement.md` justified in Step 5, do not create optional entries speculatively; actual work may add them later when each has a distinct durable purpose. Never use an optional entry as a second goal, status, plan, decision, architecture, or verification authority.
 
 7. **Allocate and register.** Let the control script validate the full sync change set, then create `.ai-task.json`, update the registry, and regenerate derived views under the shared governance lock:
 

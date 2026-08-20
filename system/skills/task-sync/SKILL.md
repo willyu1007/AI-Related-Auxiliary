@@ -18,7 +18,7 @@ description: >-
 
 ## Workflow
 
-1. **Resolve and inspect reality.** Read `dev-docs/README.md`, identify the task, then inspect linked commits, `git status --short`, and relevant diffs before editing its record. Git history proves committed work; the worktree proves uncommitted work.
+1. **Resolve and inspect reality.** Read `dev-docs/AGENTS.md`, identify the task, then inspect linked commits, `git status --short`, and relevant diffs before editing its record. Git history proves committed work; the worktree proves uncommitted work.
 
 2. **Attribute every changed path.** Split changes into this task and foreign work. Use environment session-attribution when available, but still inspect the whole worktree. Never modify, stage, or commit the foreign set. Report it in the handback.
 
@@ -64,23 +64,6 @@ description: >-
 A fresh session reading `01-status.md` must be able to state the task's goal, state, blocker, and first action. Reading `00-roadmap.md` next must reveal kickoff readiness, unresolved top-level choices, why the current direction was chosen, relevant cross-task boundaries, and the remaining route. Anything required to answer those questions that exists only in session memory must be recorded before stopping.
 
 Use `./templates/full-pass-checklist.md` for the compact checklist and `./examples/sample-full-pass.md` for a worked example.
-
-## Git hooks
-
-`./assets/githooks/` contains optional automation:
-
-```bash
-cp -R <this-skill>/assets/githooks/. .githooks/
-node .githooks/install.mjs
-```
-
-| Hook | Effect |
-|---|---|
-| `prepare-commit-msg` | Injects `Task:` only when the branch contains exactly one valid task ID |
-| `commit-msg` | Validates the conventional subject and task trailer |
-| `pre-commit` | Runs `sync --apply` when task docs are staged and stages the derived result |
-
-Hooks do not change the workflow's authority or attribution rules. A manual pre-stage sync is safe because it is idempotent; the hook should then be a no-op. On a task branch carrying unrelated work, skip automatic trailer injection for that commit with `SKIP_TASK_TRAILER=1`.
 
 ## Rules
 

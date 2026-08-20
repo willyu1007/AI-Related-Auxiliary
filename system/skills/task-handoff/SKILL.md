@@ -7,7 +7,7 @@ description: >-
 
 ## Stabilize the checkpoint
 
-Read `dev-docs/README.md`. Do not begin new work once handoff is chosen. Finish the current atomic action if that is safe, then run the checkpoint-sync workflow:
+Read `dev-docs/AGENTS.md`. Do not begin new work once handoff is chosen. Finish the current atomic action if that is safe, then run the checkpoint-sync workflow:
 
 - update the task bundle to match the repository;
 - verify and commit every coherent part that is safe to land with its `Task: T-###` trailer;

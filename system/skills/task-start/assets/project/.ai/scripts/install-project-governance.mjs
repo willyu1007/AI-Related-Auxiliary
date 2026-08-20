@@ -22,21 +22,6 @@ const RETIRED_SHIPPED_FILES = [
   '.ai/scripts/lib/colors.mjs',
   '.ai/scripts/lib/yaml-lite.mjs',
 ];
-const IGNORE_DIRS = new Set([
-  '.git',
-  '.hg',
-  '.svn',
-  'node_modules',
-  '.ai',
-  '.codex',
-  '.claude',
-  '.cursor',
-  '.next',
-  'dist',
-  'build',
-  'coverage',
-]);
-
 function fail(message) {
   console.error(message);
   process.exit(1);
@@ -132,37 +117,6 @@ function collectFiles(dir, base = dir) {
   return files;
 }
 
-function discoverDevDocsRoots(repoRoot) {
-  const roots = [];
-  const stack = [repoRoot];
-  while (stack.length > 0) {
-    const dir = stack.pop();
-    const base = path.basename(dir);
-    if (IGNORE_DIRS.has(base)) continue;
-    if (base.startsWith('.') && dir !== repoRoot) continue;
-
-    let entries;
-    try {
-      entries = fs.readdirSync(dir, { withFileTypes: true });
-    } catch {
-      continue;
-    }
-    for (const entry of entries) {
-      if (!entry.isDirectory()) continue;
-      const absolute = path.join(dir, entry.name);
-      if (entry.name === 'dev-docs') {
-        if (exists(path.join(absolute, 'active')) || exists(path.join(absolute, 'archive'))) {
-          roots.push(absolute);
-          continue;
-        }
-      }
-      if (IGNORE_DIRS.has(entry.name) || entry.name.startsWith('.')) continue;
-      stack.push(absolute);
-    }
-  }
-  return [...new Set(roots.map((root) => path.resolve(root)))].sort((a, b) => a.localeCompare(b));
-}
-
 function listImmediateChildDirs(dirPath) {
   try {
     return fs
@@ -175,80 +129,27 @@ function listImmediateChildDirs(dirPath) {
   }
 }
 
-function isPathInside(parent, candidate) {
-  const relative = path.relative(parent, candidate);
-  return (
-    relative === '' ||
-    (relative !== '..' && !relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative))
-  );
-}
-
-function resolveTaskRoots(repoRoot) {
-  const registryRaw = readText(path.join(repoRoot, '.ai', 'project', 'registry.json'));
-  if (registryRaw !== null && registryRaw.trim()) {
-    let registry = null;
-    try {
-      registry = JSON.parse(registryRaw);
-    } catch {
-      // Registry validation belongs to the runtime audit; discovery remains safe here.
-    }
-    const configured = registry?.task_doc_roots;
-    if (Array.isArray(configured) && configured.length > 0) {
-      const roots = [];
-      let realRepoRoot = null;
-      try {
-        realRepoRoot = fs.realpathSync(repoRoot);
-      } catch {
-        // Lexical containment below still protects a not-yet-realpathable repository root.
-      }
-      for (const item of configured) {
-        if (typeof item !== 'string' || !item.trim() || path.isAbsolute(item.trim())) {
-          fail('[error] Registry task_doc_roots entries must be non-empty repository-relative paths.');
-        }
-        const relative = item.trim();
-        const absolute = path.resolve(repoRoot, relative);
-        if (!isPathInside(repoRoot, absolute)) {
-          fail(`[error] Registry task_doc_root escapes the repository: ${relative}.`);
-        }
-        if (realRepoRoot !== null && exists(absolute)) {
-          let realRoot = null;
-          try {
-            realRoot = fs.realpathSync(absolute);
-          } catch {
-            // A path that disappears during inspection will be handled as an empty task root.
-          }
-          if (realRoot !== null && !isPathInside(realRepoRoot, realRoot)) {
-            fail(`[error] Registry task_doc_root resolves outside the repository: ${relative}.`);
-          }
-        }
-        roots.push(absolute);
-      }
-      return [...new Set(roots)].sort((a, b) => a.localeCompare(b));
-    }
-  }
-  return discoverDevDocsRoots(repoRoot);
-}
-
-function assertJsonGovernanceLayout(repoRoot) {
-  const retired = [];
+function assertGovernanceLayout(repoRoot) {
+  const unsupported = [];
+  const taskReadme = path.join(repoRoot, 'dev-docs', 'README.md');
+  if (exists(taskReadme)) unsupported.push(taskReadme);
   const registryYaml = path.join(repoRoot, '.ai', 'project', 'registry.yaml');
-  if (exists(registryYaml)) retired.push(registryYaml);
-  for (const root of resolveTaskRoots(repoRoot)) {
-    for (const phase of ['active', 'archive']) {
-      for (const slug of listImmediateChildDirs(path.join(root, phase))) {
-        const metadata = path.join(root, phase, slug, '.ai-task.yaml');
-        if (exists(metadata)) retired.push(metadata);
-      }
+  if (exists(registryYaml)) unsupported.push(registryYaml);
+  const root = path.join(repoRoot, 'dev-docs');
+  for (const phase of ['active', 'archive']) {
+    for (const slug of listImmediateChildDirs(path.join(root, phase))) {
+      const metadata = path.join(root, phase, slug, '.ai-task.yaml');
+      if (exists(metadata)) unsupported.push(metadata);
     }
   }
-  if (retired.length === 0) return;
+  if (unsupported.length === 0) return;
 
-  const paths = retired.map((file) => `  - ${toPosix(path.relative(repoRoot, file))}`).join('\n');
+  const paths = unsupported.map((file) => `  - ${toPosix(path.relative(repoRoot, file))}`).join('\n');
   fail(
-    '[error] YAML task-governance data is not supported by this JSON-only version. ' +
-      'Convert or remove these files before continuing:\n' +
+    '[error] Unsupported task-governance files conflict with the current single-path layout. ' +
+      'Remove them before continuing:\n' +
       paths
-  );
+    );
 }
 
 function refreshAssets({ repoRoot, dryRun, actions }) {
@@ -312,7 +213,7 @@ function printActions(repoRoot, actions, dryRun) {
 function main() {
   const opts = parseArgs(process.argv);
   const repoRoot = opts.repoRoot || findRepoRoot(process.cwd()) || path.resolve(process.cwd());
-  assertJsonGovernanceLayout(repoRoot);
+  assertGovernanceLayout(repoRoot);
 
   const actions = [];
   refreshAssets({ repoRoot, dryRun: opts.dryRun, actions });

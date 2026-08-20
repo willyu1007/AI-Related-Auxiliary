@@ -7,7 +7,7 @@ description: >-
 
 ## Fast path
 
-Read `dev-docs/README.md` before interpreting a task bundle.
+Read `dev-docs/AGENTS.md` before interpreting a task bundle.
 
 Resolve a named task ID directly:
 
