@@ -14,7 +14,7 @@
  * Design notes:
  *   - Dependency-free (Node built-ins only).
  *   - A smoke test starts from an empty repository and provisions it by running the skill's own
- *     install command, so the install path is the thing under test rather than a `cp -R` that only
+ *     installer entry point, so the install path is the thing under test rather than a `cp -R` that only
  *     the test knows how to perform.
  *   - POSIX shell is required for the smoke tests (as it is for the shipped Git hooks).
  *

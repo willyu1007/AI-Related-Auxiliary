@@ -10,14 +10,17 @@ fail() { echo "FAIL: $1"; exit 1; }
 
 [ -n "$AUX_ROOT" ] || fail "AUX_ROOT not set; run via node checks/run.mjs"
 
+INSTALLER="$AUX_ROOT/system/skills/task-start/assets/project/.ai/scripts/install-project-governance.mjs"
 CTL="$AUX_ROOT/system/skills/task-start/assets/project/.ai/scripts/ctl-project-governance.mjs"
+[ -f "$INSTALLER" ] || fail "task-start does not ship the installer"
 [ -f "$CTL" ] || fail "task-start does not ship the control script"
 
 # The repository starts with nothing: one command out of the skill must leave it fully provisioned.
 if [ -d .ai ] || [ -d dev-docs ]; then fail "target repo is not empty before install"; fi
-node "$CTL" install --repo-root . >/dev/null
+node "$INSTALLER" --repo-root . >/dev/null
 
-for f in .ai/scripts/ctl-project-governance.mjs \
+for f in .ai/scripts/install-project-governance.mjs \
+         .ai/scripts/ctl-project-governance.mjs \
          .ai/project/AGENTS.md .ai/project/CLAUDE.md .ai/project/templates/registry.json; do
   [ -f "$f" ] || fail "install did not place $f"
 done
@@ -45,7 +48,21 @@ done
 node -e "const r=require('./.ai/project/registry.json');process.exit(Array.isArray(r.task_doc_roots)&&r.task_doc_roots.length===0?0:1)" \
   || fail "registry template disabled task-root discovery"
 
-# CLI mistakes must fail explicitly instead of producing a plausible empty or dry-run result.
+mkdir installer-dry-run
+node "$INSTALLER" --repo-root installer-dry-run --dry-run >/dev/null
+[ ! -e installer-dry-run/.ai ] || fail "installer dry-run wrote project assets"
+rmdir installer-dry-run
+
+# Installer and runtime CLI mistakes must fail explicitly.
+if node "$INSTALLER" --bogus >/dev/null 2>&1; then
+  fail "installer accepted an unknown option"
+fi
+if node "$INSTALLER" --repo-root >/dev/null 2>&1; then
+  fail "installer accepted a missing option value"
+fi
+if node "$INSTALLER" --dry-run --dry-run >/dev/null 2>&1; then
+  fail "installer accepted a duplicate option"
+fi
 if node .ai/scripts/ctl-project-governance.mjs query --bogus >/dev/null 2>&1; then
   fail "query accepted an unknown option"
 fi
@@ -61,6 +78,45 @@ fi
 if node .ai/scripts/ctl-project-governance.mjs resume --limit nope >/dev/null 2>&1; then
   fail "resume accepted a non-numeric commit limit"
 fi
+
+# JSON-only rejection applies to actual task bundles, not unrelated fixtures with the same name.
+mkdir -p fixtures/yaml-example
+printf 'fixture: true\n' > fixtures/yaml-example/.ai-task.yaml
+node "$INSTALLER" --repo-root . >/dev/null \
+  || fail "installer treated an unrelated YAML fixture as task metadata"
+rm -rf fixtures
+
+mkdir -p dev-docs/active/yaml-task
+printf 'task_id: T-999\n' > dev-docs/active/yaml-task/.ai-task.yaml
+printf '\nyaml-guard-marker\n' >> dev-docs/README.md
+if node "$INSTALLER" --repo-root . >/dev/null 2>&1; then
+  fail "installer accepted YAML metadata in a task bundle"
+fi
+grep -q 'yaml-guard-marker' dev-docs/README.md \
+  || fail "failed installer partially refreshed fixed assets"
+rm -rf dev-docs/active/yaml-task
+node "$INSTALLER" --repo-root . >/dev/null
+
+cp .ai/project/registry.json registry.configured-root.tmp
+node -e "const fs=require('fs');const p='.ai/project/registry.json';const r=JSON.parse(fs.readFileSync(p,'utf8'));r.task_doc_roots=['docs/tasks'];fs.writeFileSync(p,JSON.stringify(r,null,2)+'\n')"
+mkdir -p docs/tasks/active/yaml-task docs/tasks/archive
+printf 'task_id: T-999\n' > docs/tasks/active/yaml-task/.ai-task.yaml
+printf '\nconfigured-yaml-guard-marker\n' >> dev-docs/README.md
+if node "$INSTALLER" --repo-root . >/dev/null 2>&1; then
+  fail "installer ignored YAML metadata under the configured task root"
+fi
+grep -q 'configured-yaml-guard-marker' dev-docs/README.md \
+  || fail "configured-root installer failure partially refreshed fixed assets"
+rm -rf docs
+mv registry.configured-root.tmp .ai/project/registry.json
+node "$INSTALLER" --repo-root . >/dev/null
+
+cp .ai/project/registry.json registry.invalid-root.tmp
+node -e "const fs=require('fs');const p='.ai/project/registry.json';const r=JSON.parse(fs.readFileSync(p,'utf8'));r.task_doc_roots=[123];fs.writeFileSync(p,JSON.stringify(r,null,2)+'\n')"
+if node "$INSTALLER" --repo-root . >/dev/null 2>&1; then
+  fail "installer accepted a non-string configured task root"
+fi
+mv registry.invalid-root.tmp .ai/project/registry.json
 
 # Empty governance data and task roots outside the repository are hard errors.
 cp .ai/project/registry.json registry.tmp
@@ -103,17 +159,28 @@ printf '# Redundant task index\n' > .ai/project/task-index.md
 printf '# Redundant changelog\n' > .ai/project/changelog.md
 printf '# Redundant task index template\n' > .ai/project/templates/task-index.md
 printf '# Redundant changelog template\n' > .ai/project/templates/changelog.md
-node "$CTL" install --repo-root . >/dev/null
+mkdir -p .ai/scripts/lib
+printf 'retired\n' > .ai/scripts/lib/colors.mjs
+printf 'retired\n' > .ai/scripts/lib/yaml-lite.mjs
+node "$INSTALLER" --repo-root . >/dev/null
 node -e "const r=require('./.ai/project/registry.json');process.exit(r.smoke_marker===true?0:1)" \
   || fail "re-install overwrote hub data"
 if grep -q 'shipped-doc-drift' dev-docs/README.md; then
   fail "re-install did not refresh the task-document guidance"
 fi
 [ ! -e .ai/project/CONTRACT.md ] || fail "re-install did not remove the superseded hub contract"
+[ ! -e .ai/scripts/lib/colors.mjs ] || fail "re-install retained the retired color helper"
+[ ! -e .ai/scripts/lib/yaml-lite.mjs ] || fail "re-install retained the retired YAML parser"
 for f in task-index.md changelog.md; do
   [ ! -e ".ai/project/$f" ] || fail "re-install did not remove redundant view $f"
   [ ! -e ".ai/project/templates/$f" ] || fail "re-install did not remove redundant template $f"
 done
+
+rm .ai/project/dashboard.md
+node .ai/scripts/install-project-governance.mjs --repo-root . >/dev/null
+[ -f .ai/project/dashboard.md ] || fail "installed installer did not restore missing hub data"
+node -e "const r=require('./.ai/project/registry.json');process.exit(r.smoke_marker===true?0:1)" \
+  || fail "installed installer overwrote existing hub data"
 
 # Hooks ship with the skill that installs them. AUX_ROOT is set by checks/run.mjs.
 mkdir -p .githooks
@@ -128,7 +195,7 @@ node -e "const r=require('./.ai/project/registry.json');process.exit(r.task_doc_
   || fail "sync did not discover the additional task-document root"
 
 # Single-project layout: no per-project subdirectory, no project key in the registry.
-if [ -d .ai/project/main ]; then fail "init created a per-project subdirectory"; fi
+if [ -d .ai/project/main ]; then fail "installer created a per-project subdirectory"; fi
 node -e "const r=require('./.ai/project/registry.json');process.exit(Object.hasOwn(r,'project')?1:0)" \
   || fail "registry still has a project block"
 

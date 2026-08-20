@@ -13,7 +13,7 @@ set -e
 
 if git diff --cached --name-only | grep -qE '(^|/)dev-docs/'; then
   if [ ! -f .ai/project/registry.json ]; then
-    echo "[hook] Project hub not initialized. Run 'node .ai/scripts/ctl-project-governance.mjs init' to initialize."
+    echo "[hook] Project hub is missing. Run 'node .ai/scripts/install-project-governance.mjs --repo-root .' before committing dev-docs changes."
     exit 0
   fi
 

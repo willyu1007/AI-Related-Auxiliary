@@ -18,7 +18,6 @@
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 
 
 function die(message, exitCode = 1) {
@@ -30,9 +29,6 @@ const warn = (message) => console.warn(message);
 const ok = (message) => console.log(message);
 const info = (message) => console.log(message);
 const header = (message) => console.log(message);
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 const RESUME_DEFAULT_COMMIT_LIMIT = 3;
 const RESUME_MAX_COMMIT_LIMIT = 20;
@@ -91,17 +87,6 @@ Usage:
   node .ai/scripts/ctl-project-governance.mjs <command> [options]
 
 Commands:
-  install
-    --repo-root <path>        Repo root (default: auto-detect; fallback: cwd)
-    --dry-run                 Show what would be copied and created
-    Copy the shipped project tree (.ai/ and dev-docs/) into <repo> and then initialize.
-    Idempotent: shipped material is refreshed, hub files created by init are left alone.
-
-  init
-    --repo-root <path>        Repo root (default: auto-detect; fallback: cwd)
-    --dry-run                 Show what would be created
-    Initialize missing project hub files at .ai/project/ without overwriting project data.
-
   lint
     --repo-root <path>        Repo root (default: auto-detect; fallback: cwd)
     --check                   (default) Exit non-zero only on errors (warnings do not fail)
@@ -166,7 +151,6 @@ Commands:
     Resolve an existing requirement by Feature/title or allocate one across linked worktrees.
 
 Examples:
-  node .ai/scripts/ctl-project-governance.mjs init
   node .ai/scripts/ctl-project-governance.mjs lint --check
   node .ai/scripts/ctl-project-governance.mjs sync --dry-run
   node .ai/scripts/ctl-project-governance.mjs sync --apply
@@ -181,8 +165,6 @@ Examples:
 }
 
 const COMMAND_OPTIONS = Object.freeze({
-  install: { values: ['repo-root'], flags: ['dry-run'] },
-  init: { values: ['repo-root'], flags: ['dry-run'] },
   lint: { values: ['repo-root'], flags: ['check', 'strict'], conflicts: [['check', 'strict']] },
   sync: { values: ['repo-root'], flags: ['dry-run', 'apply'], conflicts: [['dry-run', 'apply']] },
   query: { values: ['repo-root', 'id', 'status', 'text'], flags: ['json'] },
@@ -314,30 +296,12 @@ function findRepoRoot(startDir) {
   }
 }
 
-function templateVars() {
-  return {
-    today: today(),
-  };
-}
-
-function renderTemplate(raw, vars) {
-  let out = String(raw || '');
-  for (const [k, v] of Object.entries(vars)) {
-    out = out.replaceAll(`{{${k}}}`, String(v));
-  }
-  return out;
-}
-
 function getHubDir(repoRoot) {
   return path.join(repoRoot, '.ai', 'project');
 }
 
 function getRegistryPath(repoRoot) {
   return path.join(getHubDir(repoRoot), 'registry.json');
-}
-
-function getTemplatesDir(repoRoot) {
-  return path.join(repoRoot, '.ai', 'project', 'templates');
 }
 
 function listImmediateChildDirs(dirPath) {
@@ -880,164 +844,6 @@ function renderTaskMetaJson(meta) {
   });
 }
 
-// The shipped tree sits two levels above this script's own directory, so for a skill shipping
-// <skill>/assets/hub/.ai/scripts/, the root that mirrors a target repository is
-// <skill>/assets/hub. The same expression resolves to
-// the repository root once the script has been installed, which is what makes install a no-op copy
-// when it is run from inside a repository that already has it.
-const SHIPPED_ROOT = path.resolve(__dirname, '..', '..');
-const RETIRED_SHIPPED_FILES = [
-  '.ai/project/CONTRACT.md',
-  '.ai/project/task-index.md',
-  '.ai/project/changelog.md',
-  '.ai/project/templates/task-index.md',
-  '.ai/project/templates/changelog.md',
-  '.ai/project/templates/registry.yaml',
-];
-
-/** Every file under dir, as paths relative to dir. */
-function collectFiles(dir, base = dir) {
-  const out = [];
-  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-    const abs = path.join(dir, entry.name);
-    if (entry.isDirectory()) out.push(...collectFiles(abs, base));
-    else if (entry.isFile()) out.push(path.relative(base, abs));
-  }
-  return out;
-}
-
-// Install is the entry point for a repository that has nothing yet: the shipped tree is the control
-// script, the governance guidance, the templates init reads, and the empty task
-// directories. Shipped material is overwritten on every run so a re-install upgrades it in place;
-// the hub files init creates are project data and are never touched here.
-function assertJsonGovernanceLayout(repoRoot) {
-  const retired = [];
-  const registryYaml = path.join(repoRoot, '.ai', 'project', 'registry.yaml');
-  if (exists(registryYaml)) retired.push(registryYaml);
-
-  for (const root of discoverDevDocsRoots(repoRoot)) {
-    for (const phase of ['active', 'archive']) {
-      for (const slug of listImmediateChildDirs(path.join(root, phase))) {
-        const metaYaml = path.join(root, phase, slug, '.ai-task.yaml');
-        if (exists(metaYaml)) retired.push(metaYaml);
-      }
-    }
-  }
-
-  if (retired.length === 0) return;
-  const paths = retired.map((file) => `  - ${toPosix(path.relative(repoRoot, file))}`).join('\n');
-  die(
-    '[error] YAML task-governance data is not supported by this JSON-only version. ' +
-      'Convert or remove these files before continuing:\n' +
-      paths
-  );
-}
-
-function cmdInstall({ repoRoot, dryRun }) {
-  assertJsonGovernanceLayout(repoRoot);
-  const srcRoot = SHIPPED_ROOT;
-  const dstRoot = repoRoot;
-  const actions = [];
-
-  if (path.resolve(srcRoot) === path.resolve(dstRoot)) {
-    info('[info] Shipped assets already live in this repository; skipping the copy.');
-  } else {
-    if (!exists(srcRoot)) {
-      die(`[error] Shipped project assets are missing at ${toPosix(srcRoot)}`);
-    }
-    for (const rel of collectFiles(srcRoot)) {
-      const from = path.join(srcRoot, rel);
-      const to = path.join(dstRoot, rel);
-      const content = readText(from);
-      if (content === null) {
-        die(`[error] Cannot read shipped asset: ${toPosix(from)}`);
-      }
-      const existed = exists(to);
-      if (dryRun) {
-        actions.push({ op: existed ? 'update' : 'write', path: to, mode: 'dry-run' });
-        continue;
-      }
-      const changed = writeTextIfChanged(to, content);
-      actions.push({ op: changed ? (existed ? 'update' : 'write') : 'same', path: to });
-    }
-
-    for (const rel of RETIRED_SHIPPED_FILES) {
-      const retired = path.join(dstRoot, rel);
-      if (!exists(retired)) continue;
-      if (dryRun) {
-        actions.push({ op: 'remove', path: retired, mode: 'dry-run' });
-        continue;
-      }
-      fs.unlinkSync(retired);
-      actions.push({ op: 'remove', path: retired });
-    }
-
-    ok('[ok] Project assets installed.');
-    for (const a of actions) {
-      const mode = a.mode ? ` (${a.mode})` : '';
-      console.log(`  ${a.op}: ${toPosix(path.relative(repoRoot, a.path))}${mode}`);
-    }
-  }
-
-  cmdInit({ repoRoot, dryRun });
-}
-
-function cmdInit({ repoRoot, dryRun }) {
-  assertJsonGovernanceLayout(repoRoot);
-  const hubDir = getHubDir(repoRoot);
-  const templatesDir = getTemplatesDir(repoRoot);
-  const vars = templateVars();
-
-  if (!exists(templatesDir)) {
-    die(`[error] Missing templates directory: ${toPosix(path.relative(repoRoot, templatesDir))}`);
-  }
-
-  const templateFiles = ['registry.json', 'dashboard.md', 'feature-map.md'];
-  const actions = [];
-
-  if (dryRun) {
-    actions.push({ op: 'mkdir', path: hubDir, mode: 'dry-run' });
-  } else {
-    ensureDir(hubDir);
-    actions.push({ op: 'mkdir', path: hubDir });
-  }
-
-  for (const file of templateFiles) {
-    const src = path.join(templatesDir, file);
-    const dst = path.join(hubDir, file);
-    const existed = exists(dst);
-
-    if (!exists(src)) {
-      actions.push({ op: 'skip', path: dst, reason: `template missing: ${src}` });
-      continue;
-    }
-
-    if (existed) {
-      actions.push({ op: 'skip', path: dst, reason: 'exists' });
-      continue;
-    }
-
-    const raw = readText(src) || '';
-    const rendered = renderTemplate(raw, vars);
-
-    if (dryRun) {
-      actions.push({ op: 'write', path: dst, from: src, mode: 'dry-run' });
-      continue;
-    }
-
-    writeText(dst, rendered);
-    actions.push({ op: 'write', path: dst, from: src });
-  }
-
-  ok('[ok] Project hub initialized.');
-  for (const a of actions) {
-    const mode = a.mode ? ` (${a.mode})` : '';
-    const reason = a.reason ? ` [${a.reason}]` : '';
-    const from = a.from ? ` <- ${toPosix(path.relative(repoRoot, a.from))}` : '';
-    console.log(`  ${a.op}: ${toPosix(path.relative(repoRoot, a.path))}${from}${mode}${reason}`);
-  }
-}
-
 function collectRegistryIds(registry, key, label, idPattern, errors) {
   const items = registry[key];
   const ids = new Map();
@@ -1171,7 +977,7 @@ function cmdLint({ repoRoot, strict }) {
 
   if (!registry && !registryParseError) {
     warnings.push(
-      'Project hub is not initialized. Run: node .ai/scripts/ctl-project-governance.mjs init'
+      'Project hub is not initialized. Run: node .ai/scripts/install-project-governance.mjs --repo-root .'
     );
     devDocsRoots = discoverDevDocsRoots(repoRoot);
   } else if (registry) {
@@ -2222,7 +2028,9 @@ function cmdSync({ repoRoot, dryRun, apply }) {
 
   const registryPath = getRegistryPath(repoRoot);
   if (!exists(registryPath)) {
-    errors.push('Project hub missing. Run: node .ai/scripts/ctl-project-governance.mjs init');
+    errors.push(
+      'Project hub missing. Run: node .ai/scripts/install-project-governance.mjs --repo-root .'
+    );
     return finish();
   }
 
@@ -2477,7 +2285,10 @@ function cmdSync({ repoRoot, dryRun, apply }) {
     const base = readText(filePath);
     const existedOnDisk = base !== null;
     if (!base) {
-      warnings.push(`Missing derived view file: ${toPosix(path.relative(repoRoot, filePath))} (run init).`);
+      warnings.push(
+        `Missing derived view file: ${toPosix(path.relative(repoRoot, filePath))} ` +
+          '(run: node .ai/scripts/install-project-governance.mjs --repo-root .).'
+      );
       return;
     }
 
@@ -2931,12 +2742,6 @@ function main() {
     opts['repo-root'] ? path.resolve(opts['repo-root']) : findRepoRoot(process.cwd()) || path.resolve(process.cwd());
 
   switch (command) {
-    case 'install':
-      cmdInstall({ repoRoot, dryRun: !!opts['dry-run'] });
-      break;
-    case 'init':
-      cmdInit({ repoRoot, dryRun: !!opts['dry-run'] });
-      break;
     case 'lint': {
       const strict = !!opts.strict;
       // --check is the default behavior (exit non-zero only on errors; warnings do not fail).
