@@ -23,14 +23,21 @@ target; respect exclusions and disclose coverage limits.
 - **Semantic scope** — code belonging to a feature, task, module, or subsystem across commits and worktree state.
 - **Repository** — the repository's current code as a whole.
 
+For a VCS change set, resolve and verify the exact comparison basis—its commit
+or range, or its base or merge base and head—before reviewing. If materially
+different bases remain plausible, ask instead of selecting one silently.
+
 Use incremental review only with a reliable prior baseline; otherwise review the
 full related change set. In a re-review, check the prior findings, their fixes,
 and related regressions.
 
 ## Set the review policy
 
-- **Outcome** — apply explicit review priorities and judge whether the target
-  satisfies the task intent and acceptance conditions.
+- **Outcome** — apply explicit review priorities, identify the accepted source
+  of intended behavior (the user instruction, current task bundle, accepted
+  requirement or spec, issue, or PR), and judge against it. If sources conflict
+  or no accepted source exists, disclose the limitation instead of inferring
+  requirements from the implementation.
 - **Repository fit** — separately judge relevant contracts and established
   conventions; passing one dimension does not excuse failing the other.
 - **Fixing** — when changes are authorized, fix evidence-backed issues with
@@ -63,7 +70,9 @@ recommended.
 
 ## Return the result
 
-State the reviewed scope, then summarize issues in a table:
+State the reviewed scope, the concrete VCS comparison when applicable, the
+accepted intent source, and any unresolved limitation; then summarize issues in
+a table:
 
 | Issue / evidence | Severity | Status | Resolution | Verification |
 |---|---|---|---|---|

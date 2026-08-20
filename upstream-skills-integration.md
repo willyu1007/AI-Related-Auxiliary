@@ -44,20 +44,22 @@ Implemented in `task-plan` without adopting the issue and ticket hierarchy from
 
 ### `task-handoff`: sensitive-information boundary
 
-Add an explicit requirement to redact credentials, tokens, personal data, and
-other sensitive evidence from the handoff block. Continue to reference durable
-task records, commits, and diffs instead of duplicating them into the handoff.
+Not adopted. This repository keeps handoffs in the session channel or an
+explicitly confirmed destination session whose agent shares the project access
+boundary. Durable task artifacts already exclude secrets, so the upstream
+portable-document redaction contract adds no meaningful boundary here.
 
 ### `review-code`: VCS comparison authority
 
-For a VCS change-set review, make the comparison basis explicit and reliable:
+Implemented in `review-code`:
 
 - resolve and disclose the commit, range, base, or merge base used to construct
   the reviewed diff;
 - identify the user instruction, task bundle, requirement, issue, or other
   accepted source that owns the intended behavior;
-- treat uncertainty in either authority as a coverage limitation rather than
-  silently selecting a convenient baseline or intent.
+- leave a materially ambiguous VCS comparison unresolved instead of selecting a
+  convenient base, and limit outcome claims when the intent source is missing or
+  conflicting.
 
 ## Add new skills
 
@@ -106,7 +108,6 @@ it does not need to block the higher-value merges above.
 
 ## Remaining implementation order
 
-1. Add the handoff redaction and VCS review-baseline contracts.
-2. Design and validate `write-agent-docs`.
-3. Add `resolve-vcs-conflicts` when observed usage justifies the dedicated
+1. Design and validate `write-agent-docs`.
+2. Add `resolve-vcs-conflicts` when observed usage justifies the dedicated
    workflow.
