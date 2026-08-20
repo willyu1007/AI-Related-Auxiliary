@@ -1,6 +1,6 @@
 ---
 name: html-communication
-description: Use when the user asks for a plan, spec, report, summary, findings, comparison, or UI mock to be delivered as an HTML document.
+description: Use when a plan, spec, report, summary, findings, comparison, or UI mock should be delivered as an HTML communication artifact, whether requested directly or produced by another workflow.
 ---
 
 # HTML Communication
@@ -25,11 +25,10 @@ Present only the current result, without carrying the conversation, revision his
 
 ## UI Mocks
 
-When the user asks for variants:
+When delivering a UI mock:
 
-- Render real styled variants, not descriptions.
-- Label them `A`, `B`, `C`... for easy selection.
-- Lay them out for direct comparison.
+- Render the proposed view, not a description of it.
+- For variants, label them `A`, `B`, `C`... and lay them out for direct comparison.
 
 ## Artifact Lifecycle
 

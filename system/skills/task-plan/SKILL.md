@@ -29,7 +29,7 @@ Converge one living roadmap without creating a second planning authority.
    | Kickoff | The gate becomes `ready` and the first implementation phase is executable. |
    | Replan | Invalidated assumptions or decisions are replaced, affected phases are rewritten, and readiness is re-established. |
 
-   When evidence invalidates a decision or route that implementation depends on, set the kickoff gate to `pending` immediately and stop dependent implementation while replanning. Independent evidence gathering may continue.
+   When evidence invalidates a decision or route that implementation depends on, set the kickoff gate to `pending` immediately, uncheck the gate items the evidence invalidated (lint rejects a pending gate whose items are all checked), and stop dependent implementation while replanning. Independent evidence gathering may continue.
 
 3. **Drive decision convergence.** Work from the `Decision alignment` table rather than a temporary plan document.
 

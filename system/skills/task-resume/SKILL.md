@@ -23,8 +23,9 @@ When the request names work but not an ID, search the goal, slug, keywords, and 
 node .ai/scripts/ctl-project-governance.mjs query --text "<request terms>" --json
 ```
 
-- A candidate with `conflict: true`: show its `worktrees` and differing facts from `conflicts`. Do not choose a worktree or resume the task until the disagreement is resolved.
+- A candidate with `conflict: true`: show its `worktrees` and differing facts from `conflicts`. A `documents` entry carries a `reason` — `concurrent-divergence` needs the content-equivalence groups in `values` reconciled; `unrelated-history`, `missing-lineage`, and `unreadable-evidence` need the Git evidence named in `evidence` repaired. Do not choose a worktree or resume the task until the disagreement is resolved.
 - A candidate with `invalid: true`: show `metadata_errors` and stop until the identity record is repaired.
+- A candidate listing `stale_worktrees`: its facts come from the newest occurrence. When that occurrence is another worktree, `resume` stops with `other-worktree`; recover there or bring this worktree up to date first.
 - One relevant candidate in the current worktree: pass its ID to `resume`.
 - One relevant candidate in another worktree: do not create a duplicate task. Read it there; continue there only when the execution environment can safely target that worktree and the request clearly refers to it. Otherwise report its path and ask before changing worktrees.
 - Multiple plausible candidates: show the compact candidates and ask which one.

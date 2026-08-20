@@ -1,130 +1,77 @@
 ---
 name: review-code
 description: >-
-  Review code changes yourself and produce a prioritized, actionable report.
-  Use when the user asks to review a diff, PR, commit, uncommitted work, or an
-  implementation for correctness, security, performance, architecture boundaries,
-  maintainability, or missing verification. Model-agnostic: the current agent
-  (Claude or Codex) reads the change and reports. Not for delegating review to a
-  separate CLI second opinion, not for task-hub drift checks, and not for fixing
-  TypeScript or runtime errors unless the user also asks for fixes.
+  Use when code or code changes need direct review, either as the requested task
+  or as part of an authorized fix.
 ---
 
 # Review Code
 
-Perform a structured review of **already written** code changes. The current agent is the reviewer. Claude and Codex can both use this skill; install it wherever that agent loads skills.
+## Resolve the scope
 
-This is the default self-review path. When the user explicitly wants an independent second-pass review via another model's CLI, use that delegated review workflow instead of this skill.
+Honor an explicit target; otherwise infer the narrowest complete scope and ask
+only about material ambiguity. Inspect necessary context without expanding the
+target; respect exclusions and disclose coverage limits.
 
-## When to use
+### Scope types
 
-- Feature or bugfix is implemented and needs review before merge
-- A refactor changed module boundaries or public contracts
-- The user asks for a code review, PR review, or risk assessment of a diff
-- Preparing release notes around what still blocks merge
+- **Session delta** — changes made since the last reliable review checkpoint in the active session.
+- **Uncommitted worktree** — staged, unstaged, and untracked changes within the
+  requested or inferred target; unrelated or pre-existing work is not included
+  solely because it shares the worktree.
+- **VCS change set** — a commit, range, branch against a base, or PR.
+- **Semantic scope** — code belonging to a feature, task, module, or subsystem across commits and worktree state.
+- **Repository** — the repository's current code as a whole.
 
-## When not to use
+Use incremental review only with a reliable prior baseline; otherwise review the
+full related change set. In a re-review, check the prior findings, their fixes,
+and related regressions.
 
-- Delegating review to another agent/CLI for a second opinion
-- Project-hub / task-record lint (governance drift is a different concern)
-- Primary work is fixing compile errors or frontend crashes (review may follow)
-- Only aligning task docs with the repository
+## Set the review policy
 
-## Review target
+- **Outcome** — apply explicit review priorities and judge whether the target
+  satisfies the task intent and acceptance conditions.
+- **Repository fit** — separately judge relevant contracts and established
+  conventions; passing one dimension does not excuse failing the other.
+- **Fixing** — when changes are authorized, fix evidence-backed issues with
+  clear, in-scope corrections as they are found and verify them; otherwise
+  report only.
+- **Leave unresolved** — do not guess when a fix requires a material decision,
+  exceeds the authorized scope, or lacks enough evidence.
 
-Identify what to review before reading files:
+## Record findings
 
-| Target | How to obtain |
-|--------|----------------|
-| Uncommitted work | `git status` + `git diff` / `git diff --cached` (+ untracked as needed) |
-| Branch vs base | `git diff <base>...HEAD` (confirm base with the user if unclear) |
-| Single commit | `git show <sha>` or `git diff <sha>^!<sha>` |
-| Named paths / PR checkout | User-specified paths or the checked-out PR |
+A finding needs inspected evidence, a precise location, and a concrete
+consequence. Keep uncertainty as an assumption or question rather than a finding.
 
-State the target in the report summary. Do not claim a full review of files you did not inspect.
+Classify each issue at the lowest severity supported by the evidence:
 
-## Workflow
+- **Must fix** — a reachable failure, unacceptable risk, or requirement or
+  contract violation that prevents the accepted outcome.
+- **Should fix** — an evidence-backed current-scope risk worth correcting, but
+  not a demonstrated blocker.
+- **May fix** — an optional improvement with no demonstrated current risk; omit
+  low-value matters of taste.
 
-1. **Restate intent** — what problem the change solves, blast radius, and any NFR (auth, multi-tenant, perf, compatibility).
-2. **Optional author self-check** (when reviewing your own just-written work) — see `./reference/feedback-standards.md`. Skip rubber-stamp self-approval.
-3. **Review top-down** using the rubric below: contracts and boundaries first, then implementation detail.
-4. **Classify findings** as must fix / should fix / may fix. Every must-fix item needs evidence, why it matters, a proposed fix direction, and a verification action.
-5. **Emit the report** using `./templates/review-report.template.md` (checklist: `./templates/review-checklist.md`). Prefer the conversation as the channel unless the user asks to write a file.
-6. **Soft handoff to task docs** — if `dev-docs/active/<slug>/verification.md` exists and the review named concrete checks, offer to record the latest decisive evidence on the next sync; do not invent a task solely to store a review.
+Severity reflects consequence and reachability, not fix effort or reviewer
+preference. Verification is decisive only when it exercises the reported
+consequence or original symptom, or directly checks the relevant contract or
+invariant; a nearby passing check is insufficient. Verify claims from tools or
+other reviewers against the code, use project tooling as evidence instead of
+repeating every rule it already enforces, and distinguish checks run from checks
+recommended.
 
-## Rubric
+## Return the result
 
-Apply what fits the change. Do not force backend layering language onto a frontend-only or script-only diff.
+State the reviewed scope, then summarize issues in a table:
 
-### 1. Boundaries and structure
+| Issue / evidence | Severity | Status | Resolution | Verification |
+|---|---|---|---|---|
 
-- Responsibilities stay coherent (UI vs data, route vs domain vs persistence, etc.)
-- Dependency direction matches project conventions
-- Abstractions are justified (not premature, not leaky)
-
-### 2. Contracts and API surface
-
-- Inputs/outputs are explicit and stable where they cross a boundary
-- Error shapes are consistent with existing clients
-- Public exports stay minimal and intentional
-
-### 3. Correctness and error handling
-
-- Behavior matches the stated intent; edge cases and failure modes are considered
-- Errors are mapped consistently; unknown failures are observable
-- Retries / idempotency where the domain requires them
-
-### 4. Security and privacy
-
-- AuthZ/AuthN checks sit in the right place and match the threat model
-- Secrets and PII are not logged or exposed to clients
-- No unsafe sinks (injection, unsanitized HTML, `eval`, etc.) without justification
-
-### 5. Performance
-
-- Obvious N+1, unbounded lists, or hot-path blocking work
-- Caching/invalidation coherent when present
-- Expensive paths at least bounded
-
-### 6. Testing and verification
-
-- Critical business rules have automated coverage where feasible
-- New endpoints/flows have a realistic verification path
-- Tests look deterministic and maintainable
-
-### 7. Maintainability
-
-- Naming and module shape aid the next reader
-- Duplication vs reuse is intentional
-- Non-obvious decisions are documented lightly
-
-## Severity
-
-Align with `./reference/feedback-standards.md`:
-
-| Report section | Meaning |
-|----------------|---------|
-| Must fix | Blocking — merge/ship only after resolution or explicit risk acceptance |
-| Should fix | Important — default to fix in the same change unless deferred with rationale |
-| May fix | Optional — author decides; do not block solely on these |
-
-In inline comments (PR style), prefixes `[blocker]`, `[suggestion]`, `[question]`, `[nit]` remain useful. Map blockers → must fix; most suggestions → should/may fix.
-
-## Boundaries
-
-- Do not approve or LGTM without reading and understanding the change
-- Do not skip security review when auth, permissions, crypto, or privacy touch the diff
-- Do not leave vague feedback; every finding needs an actionable next step
-- Do not block on personal style that is not a project or team standard
-- Do not edit files unless the user also asks you to implement fixes
-- Do not treat another agent's review output as authority without verifying claims
-- Prefer correctness and risk over cosmetics
-
-## Assets
-
-| Path | Role |
-|------|------|
-| `templates/review-report.template.md` | Report skeleton |
-| `templates/review-checklist.md` | Short severity checklist |
-| `examples/sample-review-report.md` | Worked example |
-| `reference/feedback-standards.md` | Feedback quality, severity prefixes, author self-check |
+Put unresolved issues first and use `fixed`, `unresolved`, or `risk accepted`
+for status. Use `risk accepted` only after explicit acceptance by the user or
+another authorized decision-maker. For a fixed issue, record what changed and
+how it was verified; for an unresolved issue, record the bounded fix direction
+and required verification. If no issues were found, say so instead of returning
+an empty table; if all found issues were fixed, say that none remain unresolved.
+Disclose material coverage limits after the table.

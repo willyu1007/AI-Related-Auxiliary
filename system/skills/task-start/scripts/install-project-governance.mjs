@@ -10,7 +10,10 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { getUnsupportedGovernanceFiles } from '../assets/project/.ai/scripts/lib/governance-read.mjs';
+import {
+  getUnsupportedGovernanceFiles,
+  normalizeEol,
+} from '../assets/project/.ai/scripts/lib/governance-read.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const SHIPPED_ROOT = path.resolve(__dirname, '..', 'assets', 'project');
@@ -143,7 +146,8 @@ function refreshAssets({ repoRoot, dryRun, actions }) {
     const content = readText(source);
     if (content === null) fail(`[error] Cannot read shipped asset: ${toPosix(source)}.`);
     const previous = readText(target);
-    if (previous === content) continue;
+    // Compare with normalized line endings so checkout EOL settings do not force rewrites.
+    if (previous !== null && normalizeEol(previous) === normalizeEol(content)) continue;
     actions.push({ op: previous === null ? 'write' : 'update', path: target });
     if (!dryRun) writeText(target, content);
   }
@@ -195,4 +199,8 @@ function main() {
   printActions(repoRoot, actions, opts.dryRun);
 }
 
-main();
+try {
+  main();
+} catch (error) {
+  fail(`[error] Installation aborted: ${error?.message || String(error)}`);
+}

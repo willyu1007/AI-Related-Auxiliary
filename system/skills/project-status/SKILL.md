@@ -17,14 +17,14 @@ Pick by what was asked, then follow that reference's **Data Source** commands:
 
 | Question | Reference |
 |----------|-----------|
-| What tasks exist? | [reference/task-list.md](reference/task-list.md) |
-| How far along are we? | [reference/progress-summary.md](reference/progress-summary.md) |
-| What should I do next? | [reference/next-action.md](reference/next-action.md) |
-| What is blocked? | [reference/blocked-items.md](reference/blocked-items.md) |
-| How is a stage goal or Milestone progressing? | [reference/milestone-progress.md](reference/milestone-progress.md) |
-| What is the current focus? | [reference/semantic-focus.md](reference/semantic-focus.md) |
-| Which tasks appear ready to archive? | [reference/archive-readiness.md](reference/archive-readiness.md) |
-| Is the project hub consistent? | [reference/hub-drift.md](reference/hub-drift.md) |
+| What tasks exist? | [references/task-list.md](references/task-list.md) |
+| How far along are we? | [references/progress-summary.md](references/progress-summary.md) |
+| What should I do next? | [references/next-action.md](references/next-action.md) |
+| What is blocked? | [references/blocked-items.md](references/blocked-items.md) |
+| How is a stage goal or Milestone progressing? | [references/milestone-progress.md](references/milestone-progress.md) |
+| What is the current focus? | [references/semantic-focus.md](references/semantic-focus.md) |
+| Which tasks appear ready to archive? | [references/archive-readiness.md](references/archive-readiness.md) |
+| Is the project hub consistent? | [references/hub-drift.md](references/hub-drift.md) |
 
 ## Workflow
 

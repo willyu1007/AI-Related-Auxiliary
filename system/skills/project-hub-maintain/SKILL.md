@@ -136,6 +136,12 @@ node .ai/scripts/ctl-project-governance.mjs lint
 ```
 
 - Active `in-progress` or `blocked` work on `F-000` is unresolved Feature triage; report it instead of inventing ownership.
+- A registry task entry whose bundle no longer exists in any linked worktree or at any local branch tip is an orphan. Preview, confirm the reported evidence, and then remove it with the supported prune mode instead of hand-editing the registry; prune refuses entries whose bundle survives on a branch or whose evidence cannot be verified:
+
+  ```bash
+  node .ai/scripts/ctl-project-governance.mjs sync --prune --dry-run
+  node .ai/scripts/ctl-project-governance.mjs sync --prune --apply
+  ```
 - For a confirmed task-to-Feature correction, preview and then apply the supported mapping instead of expecting sync to choose semantic ownership:
 
   ```bash

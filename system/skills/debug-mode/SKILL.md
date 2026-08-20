@@ -1,131 +1,100 @@
 ---
 name: debug-mode
-description: >-
-  Use when the user asks to diagnose, reproduce, or fix a runtime failure whose
-  root cause is unclear, especially an intermittent, environment-dependent,
-  timing, lifecycle, state, performance, or memory issue.
+description: Use when diagnosing, reproducing, or fixing a runtime failure or performance regression whose root cause is unclear.
 ---
 
 # Debug Mode
 
-## Core rules
+## Establish the investigation
 
-- Proceed autonomously within the requested scope. Ask only when blocked by missing information, authority, or a material user decision; otherwise use progress updates without pausing.
-- Form a small set of falsifiable hypotheses and collect only evidence that can distinguish them.
-- Treat every failed or inconclusive attempt as evidence. Before another iteration, update the active constraints and do not repeat a ruled-out hypothesis, probe, or correction unless new evidence invalidates the earlier result.
-- When the requested scope includes a fix, implement the complete evidence-backed correction and all necessary dependent changes without seeking additional approval; avoid unrelated work.
-- Do not claim a root cause or successful verification beyond the evidence obtained.
-- Remove all session-only instrumentation and artifacts when the investigation completes, is abandoned, cannot continue, or is stopped.
+Resolve whether the requested outcome is reproduction, diagnosis, or a fix.
+Establish the expected and actual behavior, completion criteria, environment,
+reproduction conditions and frequency, and existing evidence.
 
-## Interaction routing
+Build or identify a feedback signal that exercises the reported symptom, and
+record its invocation, environment, outcome, and baseline frequency. Prefer a
+fast, deterministic, agent-runnable signal, but do not block investigation when
+one cannot be built; use available evidence and state the resulting limitation.
+Minimize the reproduction when doing so materially narrows the hypothesis space
+or creates useful regression protection.
 
-Verify autonomously first, including with available shell, browser, desktop, and device-control tools. Use human-in-the-loop assistance only when required information or action cannot be obtained or performed by the agent, such as a physical-device interaction, MFA, an inaccessible private environment, account-specific information, or a subjective observation.
+Read `references/privacy-redaction.md` before collecting, requesting, or quoting
+logs, traces, payloads, identifiers, or other potentially sensitive evidence.
 
-For a simple blocking question before investigation state or temporary changes exist, ask directly without creating a journal. Before pausing an active investigation for human assistance:
+Keep short investigations in the conversation. Create a session id and use
+`templates/journal-entry.md` at
+`<active-root>/.ai/.tmp/debug-mode/<session_id>/journal.md` when the investigation
+uses temporary instrumentation, pauses for human evidence, spans sessions, or
+becomes too iterative or flaky to track reliably in chat. Maintain one journal
+at the active repository or worktree root, update its active constraints after
+each evidence iteration and before a pause, and remove it during cleanup unless
+the user explicitly requests retention.
 
-1. Create a session id if one does not exist, then create or update the journal checkpoint with the current hypotheses, evidence, applicable run ids, changed paths, and pending decision.
-2. Explain why human involvement is required and provide the exact minimal action to perform.
-3. Specify the evidence to return, its format, any applicable run id, and required redaction.
-4. Do not request credentials, secrets, or unnecessary raw logs.
+## Run the evidence loop
 
-When the user responds, validate the environment and run id where applicable, append the returned evidence to the active journal or record it concisely in chat, and resume the interrupted phase without restarting the investigation.
+1. Form a small set of falsifiable hypotheses. For each, identify the observation
+   that would support it, rule it out, and distinguish it from the alternatives.
+2. Collect existing evidence first. If it cannot distinguish the hypotheses,
+   read `references/instrumentation-rules.md` and add only the least intrusive,
+   reversible probes needed.
+3. Exercise the feedback signal and collect only discriminating evidence.
+4. Mark each hypothesis `supported`, `ruled out`, or `uncertain`, and update the
+   active constraints with confirmed facts, failed or inconclusive attempts, and
+   unsupported corrections.
+5. Iterate only when the next probe or hypothesis can produce new information.
+   Do not repeat a ruled-out approach unless changed conditions invalidate the
+   earlier evidence.
 
-A documented pause awaiting required human evidence is not completion. Retain only the temporary instrumentation needed for the pending action and keep it fully tracked. If the investigation completes, is abandoned, cannot continue, or the user stops it, proceed to cleanup.
+If no reproduction path exists, continue from available evidence without
+claiming reproduction or verification. Stop when the root cause is supported or
+no in-scope action can reduce the remaining uncertainty. If no root cause is
+supported, do not claim one or apply a speculative correction. An independently
+justified mitigation may still proceed under **Correct when authorized**;
+otherwise clean up and report the unresolved state even when a fix was requested.
 
-## Execution protocol
+For a reproduction- or diagnosis-only request, stop once that outcome is met.
+Do not continue into correction merely because a possible fix is visible.
 
-### Phase 1 — Intake
+## Request human evidence only when necessary
 
-Establish the following from the request, repository, and available tools:
+Use available tools before asking the user to reproduce an action or collect
+evidence. Ask only when the required environment, physical interaction, account
+state, or subjective observation is inaccessible. Before pausing, checkpoint the
+journal with the current evidence and pending decision, then request the exact
+minimal action and redacted evidence needed. A pause is not completion; resume
+from the checkpoint without restarting the investigation.
 
-- expected and actual behavior, including completion criteria
-- reproduction conditions and frequency
-- environment, runtime, build mode, and relevant recent changes
-- existing evidence such as stack traces, screenshots, logs, and failing tests
+## Correct when authorized
 
-Ask only for missing inputs that block progress. Do not repeat questions the repository or tools can answer.
+Apply a correction only when the requested scope includes a fix and the evidence
+supports either the root cause or an independently justified mitigation with a
+concrete expected effect and decisive verification path. Label a mitigation as
+such; do not claim that it resolves the root cause. Implement the complete
+in-scope correction and necessary dependent changes without mixing unrelated
+work. Keep temporary instrumentation until verification finishes. Authorization
+to change repository code does not authorize production deployment, external
+resources, or new operational ownership.
 
-Create a session id whenever a journal or temporary instrumentation is used. Resolve one active repository or worktree root and maintain the journal only at `<active-root>/.ai/.tmp/debug-mode/<session_id>/journal.md`; do not create duplicates in parent repositories or adjacent workspaces. Keep a short single-iteration investigation in chat. For any multi-iteration, flaky, session-spanning, or human-assisted active investigation, use `templates/journal-entry.md`. Before each iteration, read the journal's active constraints and latest relevant entry. Remove the temporary journal during cleanup unless the user explicitly requests retention.
+When regression protection would materially prevent recurrence, read
+`references/verification-policy.md` before adding it; do not duplicate existing
+coverage.
 
-### Phase 2 — Establish baseline
+## Verify and clean up
 
-- Run the reproduction yourself and inspect its output with available tools when feasible, before adding instrumentation.
-- Inspect existing evidence, relevant code and tests, and recent changes.
-- Record the reproduction command, environment, outcome, and frequency needed for later comparison.
+Read and apply `references/verification-policy.md`. Re-run the original feedback
+signal and the checks needed for affected behavior and relevant regressions. A
+failed or inconclusive attempt becomes evidence: update the active constraints,
+remove unsupported behavior changes, and return to the evidence loop only when
+the next iteration can distinguish the remaining hypotheses. Do not stack
+speculative fixes or claim success without decisive verification.
 
-When the environment or required action is inaccessible, follow Interaction routing. Ask the user for an exact reproduction and a short redacted excerpt; do not request full terminal tails.
+Read and apply `references/cleanup-policy.md` whenever the investigation
+completes, is abandoned, cannot continue, or is stopped. Cleanup precedes the
+final result; if it cannot be completed, report the exact residue and leave the
+task incomplete.
 
-If the requested scope is reproduction only and the reproduction outcome is established, record it and proceed to cleanup. If further evidence is required only to establish reproduction, use the evidence loop for that purpose and exit as soon as the reproduction completion criteria are met or the stop condition applies.
+## Return the result
 
-### Phase 3 — Evidence loop
-
-1. Form a small set of falsifiable hypotheses. For each, identify the observation that would support it, the observation that would rule it out, and the available evidence source.
-2. Collect existing evidence first. If it cannot distinguish the hypotheses, read `references/instrumentation-rules.md` and add the least intrusive reversible probes needed.
-3. Reproduce the symptom and collect only the signals needed to distinguish the hypotheses.
-4. Mark each hypothesis `supported`, `ruled out`, or `uncertain`, citing the evidence.
-5. Update the active constraints with confirmed facts, ruled-out hypotheses, failed probes or corrections, and remaining uncertainties.
-6. Start another iteration only when it can produce new discriminating evidence. State what changed and why the next hypothesis, probe, or correction differs from prior attempts. Repetition is allowed only to characterize the baseline, meet a verification threshold, or when changed conditions invalidate the earlier result.
-
-When a second iteration becomes necessary, create the session journal before continuing if none exists and seed its active constraints from the evidence already recorded in chat.
-
-For temporary instrumentation, use the current session id, use a unique run id per iteration as defined by `references/instrumentation-rules.md`, and track every touched path. When a journal is active, update its active constraints and append a concise entry after every iteration. For long investigations, provide progress updates at meaningful checkpoints without pausing.
-
-If no current reproduction path exists, use available evidence without claiming verification. When a fix request exposes code that discards evidence required for diagnosis, automatically implement and verify evidence-preserving changes within the scoped repository using existing project mechanisms. Ask for user involvement only when evidence collection requires production deployment, external resources, or new operational ownership. For reproduction- or diagnosis-only requests, recommend the change without implementing it.
-
-Stop iterating when no next in-scope hypothesis or probe can produce new discriminating evidence or reduce the remaining uncertainty. Record the unresolved hypotheses and the exact evidence needed next; do not claim a verified root cause.
-
-If no root cause is supported, do not enter Correct. Proceed to cleanup and report the unresolved status, even when a fix was requested.
-
-When the requested scope ends at reproduction or diagnosis, record the requested result and proceed to cleanup as soon as the completion criteria are met or the stop condition applies.
-
-### Phase 4 — Correct
-
-Enter this phase only when the requested scope includes a fix. Implement the complete evidence-backed correction and all necessary dependent changes without seeking additional approval; avoid unrelated work. Keep temporary instrumentation until verification is complete.
-
-When it materially prevents recurrence, preserve the lesson through the implementation, an appropriate existing check, or targeted non-duplicative regression protection. Do not add tests or documentation that duplicate existing coverage.
-
-### Phase 5 — Verify
-
-Read and follow `references/verification-policy.md`. Run the original reproduction plus all checks needed to cover the affected behavior and necessary regression surface.
-
-If verification fails or is inconclusive:
-
-1. Record the failing evidence, attempted correction, verification result, and next decision in the active journal; keep a concise record in chat when no journal is used.
-2. Update the active constraints so the failed correction and the evidence against it constrain the next iteration.
-3. Review the behavior-changing changes introduced by the failed correction. Remove unsupported changes; retain a partial change only when independently justified by evidence.
-4. Keep or revise temporary instrumentation only when it can still distinguish the remaining hypotheses.
-5. Return to the evidence loop only when the next iteration can produce new discriminating evidence as required by Phase 3; start a new run id when further instrumentation is needed. Otherwise stop iterating, clean up, and report the verification limitation.
-
-Do not stack speculative fixes or claim success when verification cannot be performed.
-
-### Phase 6 — Cleanup
-
-Read and apply `references/cleanup-policy.md` when the investigation completes, is abandoned, cannot continue, or the user stops it. Remove session-only instrumentation, markers, and temporary artifacts; inspect the diff and run the appropriate post-cleanup checks.
-
-If cleanup cannot be completed, report every remaining path or marker and treat the task as incomplete.
-
-## Final report
-
-- symptom and root-cause status: supported or unresolved
-- distinguishing evidence and remaining uncertainty
-- material ruled-out approaches and reusable lessons
-- implemented or recommended correction and its risk, when applicable
-- verification attempts/results
-- regression protection implemented or recommended, when applicable
-- `cleanup: done` (or exact unresolved cleanup blocker)
-
-## Boundaries
-
-- Autonomy does not expand the requested scope or bypass normal safety, permission, or production-change requirements.
-- Treat permanent logs, metrics, or telemetry as deliberate product changes, not retained debug instrumentation. A fix request authorizes repository-local evidence-preserving changes through existing project mechanisms, but not production deployment, external resources, or new operational ownership. Remove debug markers and review privacy, volume, and cardinality.
-- Never collect, request, store, or expose credentials, secrets, raw auth headers, or unnecessary sensitive data; follow `references/privacy-redaction.md`.
-
-## Resources
-
-| Path | Role |
-|------|------|
-| `references/instrumentation-rules.md` | Removable, low-impact evidence probes |
-| `references/verification-policy.md` | Pass thresholds and failure behavior |
-| `references/cleanup-policy.md` | Mandatory automatic cleanup checklist |
-| `references/privacy-redaction.md` | Evidence minimization |
-| `templates/journal-entry.md` | Required state record for multi-iteration, flaky, session-spanning, or human-assisted investigations |
+Report the requested outcome, root-cause status, decisive evidence, correction
+when applicable, verification results, remaining uncertainty, and cleanup status.
+Include ruled-out approaches only when they materially help future investigation.

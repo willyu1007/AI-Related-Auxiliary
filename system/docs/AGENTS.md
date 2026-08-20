@@ -50,7 +50,7 @@ Channel both "measure twice, cut once" and "yagni". Fight scope creep. Honor the
 
 ### Preferred stack
 
-- If not already specified in the project: TypeScript, React, Vite, Tailwind, Convex.
+- If not already specified in the project: TypeScript, React, Vite, Convex.
 - For more complex web and React Native apps, pull in: Zustand, React Query, Tanstack Start, Clerk (or better-auth if self-hosting), and ArkType (or zod if perf isn't an issue).
 - Deploy: Vercel when a host is needed.
 
@@ -72,8 +72,3 @@ Channel both "measure twice, cut once" and "yagni". Fight scope creep. Honor the
 ### User-facing artifacts
 
 - Presentation artifacts (reports, diagrams, screenshots, prototypes) should not be placed in the repository unless they are intended to become maintained project assets. Default destination: a dedicated directory on the Desktop.
-
-## Visual and Design Work
-
-- Do not edit real components first. For any non-trivial UI, layout, or copy change, build several distinct static HTML mocks, deliver them, report the location, and stop. Wait for a pick before implementing.
-- Avoid continuously repainting CSS animations (pulse, shimmer, blur, spinners); they peg the GPU on high-refresh displays.

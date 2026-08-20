@@ -38,7 +38,7 @@ Open and register a durable task bundle before implementation begins.
    node .ai/scripts/ctl-project-governance.mjs query --status blocked
    ```
 
-   Read the goal of plausible matches. If one already covers the requested outcome, continue it instead of creating a duplicate. Multiple checkouts of the same task ID appear as one logical result with their occurrences in `worktrees`. If `conflict` is true, inspect `conflicts` and stop rather than choosing a worktree or fact source. If `invalid` is true, repair the reported task metadata before deduplication or allocation.
+   Read the goal of plausible matches. If one already covers the requested outcome, continue it instead of creating a duplicate. Multiple checkouts of the same task ID appear as one logical result with their occurrences in `worktrees`; when a row lists `stale_worktrees`, its facts come from the newest occurrence and the listed copies are merely behind. If `conflict` is true, inspect `conflicts` and stop rather than choosing a worktree or fact source. If `invalid` is true, repair the reported task metadata before deduplication or allocation.
 
 4. **Define the task head.** Infer a one-sentence goal, high-level completion conditions, and a kebab-case slug. Ask only when an unresolved choice would materially change the goal, boundaries, or success conditions. Otherwise state the inferred values and proceed. Keep sequential work as phases when it serves the same goal and completion conditions. Split work only when it needs its own observable outcome, state, owner, handoff, verification, archive, separate worktree, or independently managed interface.
 
@@ -59,7 +59,7 @@ Open and register a durable task bundle before implementation begins.
    node .ai/scripts/ctl-project-governance.mjs sync --apply
    ```
 
-   Read the allocated ID from `.ai-task.json`; never choose one manually. For a new project capability, inspect registry Feature titles and descriptions for the same intent. Reuse the existing Feature when appropriate; otherwise allocate one under the shared cross-worktree lock:
+   Read the allocated ID from `.ai-task.json`; never choose one manually. Then write 3–8 durable search keywords into its `keywords` array — domain terms a later session would search for — so cross-worktree query can find the task; sync preserves them. For a new project capability, inspect registry Feature titles and descriptions for the same intent. Reuse the existing Feature when appropriate; otherwise allocate one under the shared cross-worktree lock:
 
    ```bash
    node .ai/scripts/ctl-project-governance.mjs feature --title "<feature title>" --description "<intent>" --apply --json
@@ -81,7 +81,7 @@ Open and register a durable task bundle before implementation begins.
    node .ai/scripts/ctl-project-governance.mjs lint
    ```
 
-   Stop if distinct task IDs represent the same goal, the same ID has divergent uncommitted bundles, or lint reports an error.
+   Stop if distinct task IDs represent the same goal, the same ID reports `conflict: true` — concurrent or unprovable divergence — or lint reports an error. A row that merely lists `stale_worktrees` is provably linear evolution, not a stop condition. Confirm the new task's metadata carries its 3–8 keywords before the checkpoint.
 
 9. **Create the initial checkpoint.** Stage only the new task and hub files, then commit the verified record with its task trailer. Include installed governance assets when this is the repository's first task. If repository policy or the user forbids commits, leave the files uncommitted and report that explicitly.
 

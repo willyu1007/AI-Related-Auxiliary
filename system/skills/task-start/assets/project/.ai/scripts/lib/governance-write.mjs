@@ -160,7 +160,58 @@ export function withGovernanceWriteLock(repoRoot, fn) {
   }
 }
 
-export function cmdSync({ repoRoot, dryRun, apply }) {
+/**
+ * Local branch tips whose committed tree still contains a bundle for this task ID. Identity is
+ * the `.ai-task.json` task_id — never the registry path or slug, both of which can be renamed on
+ * a branch nobody has checked out. Returns null when any evidence is unreadable or any candidate
+ * metadata cannot be parsed, so callers stay fail-closed.
+ */
+function findTaskBranchTips(repoRoot, taskId) {
+  if (!TASK_ID_RE.test(String(taskId || ''))) return null;
+  const refsRaw = runGit(repoRoot, [
+    'for-each-ref',
+    'refs/heads',
+    '--format=%(refname:short)%00%(objectname)',
+  ]);
+  if (refsRaw === null) return null;
+
+  const tips = [];
+  for (const line of normalizeEol(refsRaw).split('\n')) {
+    if (!line.trim()) continue;
+    const [name, sha] = line.split('\u0000');
+    if (!name || !sha) return null;
+    const treeRaw = runGit(repoRoot, [
+      'ls-tree',
+      '-r',
+      sha,
+      '--',
+      'dev-docs/active',
+      'dev-docs/archive',
+    ]);
+    if (treeRaw === null) return null;
+    for (const entry of normalizeEol(treeRaw).split('\n')) {
+      if (!entry.trim()) continue;
+      const match = entry.match(
+        /^\S+ \S+ (\S+)\tdev-docs\/(?:active|archive)\/([^/]+)\/\.ai-task\.json$/
+      );
+      if (!match) continue;
+      const blobRaw = runGit(repoRoot, ['cat-file', 'blob', match[1]]);
+      if (blobRaw === null) return null;
+      // Branch-tip evidence must satisfy the exact metadata schema and agree with its bundle
+      // directory. Schema drift is unverifiable evidence, never "this task does not exist".
+      const meta = parseTaskMeta(blobRaw);
+      if (meta.parse_error || meta.schema_errors.length > 0) return null;
+      if (meta.slug !== match[2]) return null;
+      if (meta.task_id === taskId) {
+        tips.push(name);
+        break;
+      }
+    }
+  }
+  return tips;
+}
+
+export function cmdSync({ repoRoot, dryRun, apply, prune = false }) {
   const actions = [];
   const errors = [];
   const warnings = [];
@@ -222,7 +273,8 @@ export function cmdSync({ repoRoot, dryRun, apply }) {
     return finish();
   }
   const reg = loaded.registry;
-  errors.push(...collectProjectGraphFromAllWorktrees(repoRoot, { repairingRepoRoot: repoRoot }).errors);
+  const projectGraph = collectProjectGraphFromAllWorktrees(repoRoot, { repairingRepoRoot: repoRoot });
+  errors.push(...projectGraph.errors);
   if (errors.length > 0) return finish();
 
   const tasks = scanTasks(repoRoot);
@@ -244,7 +296,8 @@ export function cmdSync({ repoRoot, dryRun, apply }) {
 
   // Linked worktrees may contain valid task metadata that has not been committed yet. Include it
   // while holding the shared Git-common-dir lock so concurrent syncs cannot choose the same ID.
-  for (const id of taskIdsFromAllWorktrees(repoRoot)) existingIds.add(id);
+  const worktreeBundleIds = new Set(taskIdsFromAllWorktrees(repoRoot));
+  for (const id of worktreeBundleIds) existingIds.add(id);
 
   function nextId() {
     // Allocate monotonically increasing IDs (best-effort) to avoid reusing historical task IDs.
@@ -270,6 +323,7 @@ export function cmdSync({ repoRoot, dryRun, apply }) {
 
   // Build/refresh registry tasks
   const tasksById = new Map();
+  const diskIds = new Set();
   for (const t of reg.tasks) {
     tasksById.set(t.id, t);
   }
@@ -331,6 +385,7 @@ export function cmdSync({ repoRoot, dryRun, apply }) {
     }
 
     if (!task.taskId) continue;
+    diskIds.add(task.taskId);
 
     const previous = tasksById.get(task.taskId) || {};
     const nextStatus = effectiveStatus;
@@ -347,6 +402,39 @@ export function cmdSync({ repoRoot, dryRun, apply }) {
     };
 
     tasksById.set(task.taskId, entry);
+  }
+
+  const prunedIds = [];
+  if (prune) {
+    for (const id of [...tasksById.keys()]) {
+      if (diskIds.has(id)) continue;
+      if (worktreeBundleIds.has(id)) {
+        warnings.push(
+          `Registry task ${id} has no bundle in this worktree but its bundle exists in a linked ` +
+            'worktree; not pruned.'
+        );
+        continue;
+      }
+      // "Absent from every linked worktree" does not prove the task left the repository: the
+      // bundle can still live on a branch nobody has checked out. Verify every local branch tip
+      // by stable task ID and refuse to prune on surviving or unverifiable evidence.
+      const branchTips = findTaskBranchTips(repoRoot, id);
+      if (branchTips === null) {
+        warnings.push(
+          `Registry task ${id}: branch-tip evidence could not be verified; not pruned.`
+        );
+        continue;
+      }
+      if (branchTips.length > 0) {
+        warnings.push(
+          `Registry task ${id} has no bundle in any linked worktree but its bundle exists at ` +
+            `branch tip(s): ${branchTips.join(', ')}; not pruned.`
+        );
+        continue;
+      }
+      tasksById.delete(id);
+      prunedIds.push(id);
+    }
   }
 
   reg.tasks = [...tasksById.values()].sort((a, b) => String(a.id).localeCompare(String(b.id)));
@@ -402,6 +490,14 @@ export function cmdSync({ repoRoot, dryRun, apply }) {
   // projections partially refreshed. Filesystem failures during the final write pass are still
   // ordinary I/O failures; this is validation atomicity, not a multi-file storage transaction.
   if (errors.length === 0) {
+    for (const id of prunedIds) {
+      actions.push({
+        op: 'prune',
+        path: registryPath,
+        note: `remove orphaned registry task ${id}`,
+        mode: apply && !dryRun ? '' : 'dry-run',
+      });
+    }
     for (const pending of pendingWrites.values()) {
       const { content, ...action } = pending;
       if (dryRun || !apply) {
@@ -451,7 +547,8 @@ export function cmdMap({ repoRoot, taskId, featureId, dryRun, apply }) {
 
   const reg = loaded.registry;
   errors.push(...getRegistryWriteErrors(reg));
-  errors.push(...collectProjectGraphFromAllWorktrees(repoRoot).errors);
+  const projectGraph = collectProjectGraphFromAllWorktrees(repoRoot);
+  errors.push(...projectGraph.errors);
   if (errors.length > 0) return { ok: false, errors, actions };
   const registryPath = loaded.path;
 
@@ -468,8 +565,10 @@ export function cmdMap({ repoRoot, taskId, featureId, dryRun, apply }) {
     return { ok: false, errors, actions };
   }
 
+  // A mapping is a semantic decision about one task, so it stays fail-closed while the task has
+  // multiple checked-out copies: a single-worktree remap would silently create divergent facts.
   const mappingWouldChange = String(taskEntry.feature_id || '') !== featureId;
-  if (logicalTask && logicalTask.occurrence_count > 1 && mappingWouldChange) {
+  if (logicalTask.occurrence_count > 1 && mappingWouldChange) {
     errors.push(
       `Task ${taskId} occurs in ${logicalTask.occurrence_count} linked worktrees. ` +
         'A single-worktree mapping change would create divergent task facts; resolve to one ' +
@@ -567,6 +666,9 @@ function collectProjectGraphFromAllWorktrees(repoRoot, { repairingRepoRoot = nul
       });
     }
   }
+  // Milestone and Feature values are project-level semantic decisions; Git recency proves file
+  // evolution, not that the meaning was confirmed. Same-ID divergence across linked worktrees is
+  // therefore always a stop condition, unlike the task-bundle linear-evolution rule.
   for (const [label, rows, fields] of [
     ['Milestone', milestones, ['title', 'status', 'description']],
     ['Feature', features, ['title', 'milestone_id', 'status', 'description']],
@@ -581,11 +683,10 @@ function collectProjectGraphFromAllWorktrees(repoRoot, { repairingRepoRoot = nul
       const differing = fields.filter(
         (field) => new Set(grouped.map((row) => row[field])).size > 1
       );
-      if (differing.length > 0) {
-        errors.push(
-          `${label} ID ${id} has different ${differing.join(', ')} values across linked worktrees.`
-        );
-      }
+      if (differing.length === 0) continue;
+      errors.push(
+        `${label} ID ${id} has different ${differing.join(', ')} values across linked worktrees.`
+      );
     }
   }
   return { milestones, features, errors };

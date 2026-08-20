@@ -59,7 +59,12 @@ Commands:
     --repo-root <path>        Repo root (default: auto-detect; fallback: cwd)
     --dry-run                 Print planned changes without writing
     --apply                   Apply changes (writes files)
+    --prune                   Also remove registry task entries whose bundle no longer exists
+                              in any linked worktree or at any local branch tip (verified by
+                              stable task ID; unverifiable evidence refuses the prune)
     Generate missing task meta IDs, upsert registry tasks, and regenerate derived views.
+    Sync projects only this worktree's bundles. Provably linear cross-worktree divergence does
+    not block it; concurrent or unprovable divergence does.
 
   query
     --repo-root <path>        Repo root (default: auto-detect; fallback: cwd)
@@ -77,7 +82,7 @@ Commands:
     Output one bounded JSON context packet from dev-docs, linked commits, and the worktree.
     Resolution order: --task, branch T-###, single in-progress, then single blocked task.
     Exit codes: 0 resolved, 1 unreadable evidence, 2 ambiguous/conflicted/invalid,
-                3 none, 4 unavailable in this worktree.
+                3 no such task, 4 newest state is in another linked worktree.
 
   map
     --repo-root <path>        Repo root (default: auto-detect; fallback: cwd)
@@ -121,7 +126,11 @@ Examples:
 
 const COMMAND_OPTIONS = Object.freeze({
   lint: { values: ['repo-root'], flags: ['strict'] },
-  sync: { values: ['repo-root'], flags: ['dry-run', 'apply'], conflicts: [['dry-run', 'apply']] },
+  sync: {
+    values: ['repo-root'],
+    flags: ['dry-run', 'apply', 'prune'],
+    conflicts: [['dry-run', 'apply']],
+  },
   query: { values: ['repo-root', 'id', 'status', 'text'], flags: ['json'] },
   resume: { values: ['repo-root', 'task', 'limit', 'scan'], flags: [] },
   map: {
@@ -238,6 +247,7 @@ function main() {
             repoRoot,
             dryRun: dryRun || !apply,
             apply: apply && !dryRun,
+            prune: !!opts.prune,
           });
         res = apply && !dryRun ? withGovernanceWriteLock(repoRoot, runSync) : runSync();
       } catch (error) {

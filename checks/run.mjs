@@ -39,6 +39,20 @@ const SKILL_CHECKS_DIR = path.join(REPO_ROOT, 'checks', 'skills');
 const NUL = String.fromCharCode(0);
 const SCRIPT_REF_RE = /\.ai\/scripts\/[a-z0-9-]+\.mjs/g;
 const MACHINE_PATH_RE = /(?:\/Users\/|\/home\/[a-z]|\/Volumes\/|[A-Z]:\\\\)/;
+const SKILL_CROSSLINK_ALLOWLIST = new Map([
+  [
+    'goal-mode',
+    new Set([
+      'cleanup-project-residue',
+      'review-code',
+      'task-handoff',
+      'task-plan',
+      'task-resume',
+      'task-start',
+      'task-sync',
+    ]),
+  ],
+]);
 
 const c = {
   green: (s) => `\x1b[32m${s}\x1b[0m`,
@@ -147,6 +161,22 @@ function runStatic() {
     skillByDir.set(entry.name, declared);
   }
 
+  // Cross-skill orchestration is exceptional and explicit. Validate the allowlist itself so a
+  // renamed or removed orchestrator or target cannot silently leave a dangling handoff.
+  for (const [orchestrator, targets] of SKILL_CROSSLINK_ALLOWLIST) {
+    if (!skillOwner.has(orchestrator)) {
+      fail('skill-crosslink-policy', `allowlisted orchestrator "${orchestrator}" is not a skill`);
+    }
+    for (const target of targets) {
+      if (!skillOwner.has(target)) {
+        fail(
+          'skill-crosslink-policy',
+          `allowlisted target "${target}" for "${orchestrator}" is not a skill`
+        );
+      }
+    }
+  }
+
   // Who ships which control script, e.g. ".ai/scripts/foo.mjs" -> the skill that installs it. A
   // skill ships its installable tree under assets/<bundle>/, laid out exactly as it lands in the
   // target repository, so the path below the bundle directory is the shipped path.
@@ -188,15 +218,14 @@ function runStatic() {
       }
     }
 
-    // No skill names another skill, anywhere in what it ships. In a description the cost is
-    // routing: descriptions are all loaded at once, so a sibling's name in an entry that is not
-    // the sibling makes the router match that name in several places. In a body the cost is
-    // coupling: a skill that hands off by name pins the pair together, and a rename has to find
-    // every mention or the handoff points at nothing. State the action instead ("continue that
-    // task") and let the router pick who performs it. Naming yourself is fine, as is pointing at
-    // anything that is not a skill.
+    // Ordinary skills do not name another skill anywhere in what they ship. In a description the
+    // cost is routing; in a body the cost is rename coupling and dangling handoffs. A small,
+    // validated allowlist is reserved for an intentional orchestrator whose contract is to
+    // sequence existing capabilities. Naming yourself is fine, as is pointing at anything that
+    // is not a skill.
     for (const other of skillOwner.keys()) {
-      if (other !== owner && text.includes(other)) {
+      const allowed = SKILL_CROSSLINK_ALLOWLIST.get(owner)?.has(other);
+      if (other !== owner && text.includes(other) && !allowed) {
         fail('skill-crosslink', `system/skills/${shipped} names the "${other}" skill`);
       }
     }

@@ -30,6 +30,12 @@ description: >-
    remove the invalid metadata file and let sync allocate it. Absence of one source alone is not
    that proof. This is identity repair, never manual allocation.
 
+   If query shows the task's newest occurrence in another worktree — this copy appears in
+   `stale_worktrees` — a checkpoint here may only synchronize this worktree's local reality.
+   Never copy the newest occurrence's facts into this bundle; recover in the newest worktree or
+   bring this one level through Git instead. `conflict: true` — concurrent or unprovable
+   divergence — stops the checkpoint until the disagreement is resolved.
+
 2. **Attribute every changed path.** Split changes into this task and foreign work. Use environment session-attribution when available, but still inspect the whole worktree. Never modify, stage, or commit the foreign set. Report it in the handback.
 
 3. **Update only the authorities reality changed.**
@@ -43,7 +49,7 @@ description: >-
    | `implementation.md` (optional) | Current map of non-obvious implementation, integration, migration, or operational facts |
    | `pitfalls.md` (optional) | Current evidence-backed recurring hazards and their prevention |
 
-   A relationship row records only an edge touching this task and never copies the other task's mutable state. When a dependency blocks this task, update the blocker in `01-status.md` too. If repository or verification evidence invalidates a decision or route that implementation depends on, set the kickoff gate to `pending`, record the evidence, and stop dependent implementation; do not improvise a replacement route during factual synchronization. Keep `01-status.md` pointed at the truthful current phase and next action. Do not create another plan, goal, status, or verification authority.
+   A relationship row records only an edge touching this task and never copies the other task's mutable state. When a dependency blocks this task, update the blocker in `01-status.md` too. If repository or verification evidence invalidates a decision or route that implementation depends on, set the kickoff gate to `pending`, uncheck the invalidated gate items (lint rejects a pending gate whose items are all checked), record the evidence, and stop dependent implementation; do not improvise a replacement route during factual synchronization. Keep `01-status.md` pointed at the truthful current phase and next action. Do not create another plan, goal, status, or verification authority.
 
    Create `implementation.md` from `./templates/implementation.md` only when its durable map would help a fresh agent understand the realized design. Create `pitfalls.md` from `./templates/pitfalls.md` only after a recurring hazard has evidence. Update both as current snapshots: do not append routine history, ordinary TODOs, or repeated test logs. Remove obsolete pitfalls after prevention is encoded and the warning is no longer useful; Git history retains the old entry. Put bulky raw evidence in `artifacts/`.
 

@@ -6,6 +6,7 @@
  */
 
 import { execFileSync } from 'node:child_process';
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -218,8 +219,13 @@ function listImmediateChildDirs(dirPath) {
   let entries;
   try {
     entries = fs.readdirSync(dirPath, { withFileTypes: true });
-  } catch {
-    return [];
+  } catch (error) {
+    // A directory that does not exist is a legitimate empty state (governance not installed
+    // there yet). Any other failure is unreadable evidence and must not degrade to "empty".
+    if (error?.code === 'ENOENT') return [];
+    throw new Error(
+      `Cannot read task-evidence directory ${toPosix(dirPath)}: ${error?.code || error?.message || error}.`
+    );
   }
   return entries.filter((entry) => entry.isDirectory()).map((entry) => entry.name).sort((a, b) => a.localeCompare(b));
 }
@@ -354,7 +360,7 @@ function getMarkdownChecklistStats(markdownRaw, heading) {
   };
 }
 
-function getMarkdownChecklistItems(markdownRaw, heading) {
+export function getMarkdownChecklistItems(markdownRaw, heading) {
   const items = [];
   for (const line of getMarkdownSectionLines(markdownRaw, heading)) {
     const match = line.trim().match(/^\-\s*\[(x|X|\s)\]\s+(.+)$/);
@@ -632,6 +638,268 @@ const QUERY_FACT_FIELDS = [
   'kickoff_status',
 ];
 
+const PROJECTION_FACT_FIELDS = new Set(['feature_id', 'milestone_id']);
+
+/**
+ * Object at a path inside a commit, distinguishing "absent at this commit" (`ok` with a null id)
+ * from "evidence unreadable" (`ok: false`). Fail-closed callers must treat unreadable evidence as
+ * a stop, never as an empty state.
+ */
+function readGitCommitPathObject(repoRoot, sha, relPath) {
+  const raw = runGit(repoRoot, ['ls-tree', sha, '--', toPosix(relPath)]);
+  if (raw === null) return { ok: false, id: null };
+  const line = raw.split('\n').find((item) => item.trim());
+  if (!line) return { ok: true, id: null };
+  const id = line.split(/\s+/)[2] || null;
+  return id ? { ok: true, id } : { ok: false, id: null };
+}
+
+function listBundleFiles(absDir) {
+  const out = [];
+  function walk(dir, prefix) {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const rel = prefix ? `${prefix}/${entry.name}` : entry.name;
+      if (entry.isDirectory()) walk(path.join(dir, entry.name), rel);
+      else if (entry.isFile()) out.push(rel);
+    }
+  }
+  try {
+    walk(absDir, '');
+  } catch {
+    return null;
+  }
+  return out.sort();
+}
+
+/**
+ * Content digest of a bundle as it exists in a worktree right now, uncommitted edits included.
+ * Hashing goes through `git hash-object` so checkout filters (e.g. CRLF) cannot make a clean
+ * file look modified. Returns '' for an absent/empty bundle and null when evidence is unreadable.
+ */
+function worktreeBundleDigest(worktreePath, relPath) {
+  const files = listBundleFiles(path.join(worktreePath, relPath));
+  if (files === null) return null;
+  if (files.length === 0) return '';
+  // Paths go through stdin so a bundle with many artifacts cannot exceed the platform's
+  // command-line length limit.
+  const raw = runGit(worktreePath, ['hash-object', '--stdin-paths'], {
+    input: `${files.map((file) => toPosix(path.join(relPath, file))).join('\n')}\n`,
+  });
+  if (raw === null) return null;
+  const oids = raw.split('\n').map((line) => line.trim()).filter(Boolean);
+  if (oids.length !== files.length) return null;
+  return files.map((file, index) => `${file}:${oids[index]}`).join('\n');
+}
+
+/**
+ * Content digest of a bundle inside a commit. Returns '' when the path is absent at that commit
+ * and null when the evidence is unreadable.
+ */
+function committedBundleDigest(repoRoot, sha, relPath) {
+  const posix = toPosix(relPath);
+  const raw = runGit(repoRoot, ['ls-tree', '-r', sha, '--', posix]);
+  if (raw === null) return null;
+  const lines = [];
+  for (const line of raw.split('\n')) {
+    if (!line.trim()) continue;
+    const match = line.match(/^\S+ \S+ (\S+)\t(.+)$/);
+    if (!match) return null;
+    const [, oid, fullPath] = match;
+    if (!fullPath.startsWith(`${posix}/`)) return null;
+    lines.push(`${fullPath.slice(posix.length + 1)}:${oid}`);
+  }
+  return lines.sort().join('\n');
+}
+
+function serializeTaskProjection(featureId, milestoneId) {
+  return `${featureId || ''}\u0000${milestoneId || ''}`;
+}
+
+function readTaskProjectionAt(repoRoot, sha, taskId) {
+  const object = readGitCommitPathObject(repoRoot, sha, '.ai/project/registry.json');
+  if (!object.ok) return { ok: false, projection: '' };
+  if (object.id === null) return { ok: true, projection: serializeTaskProjection('', '') };
+  const raw = runGit(repoRoot, ['cat-file', 'blob', object.id]);
+  if (raw === null) return { ok: false, projection: '' };
+  try {
+    const parsed = JSON.parse(raw);
+    const tasks = Array.isArray(parsed?.tasks) ? parsed.tasks : [];
+    const entry = tasks.find((task) => task && String(task.id || '') === taskId) || null;
+    if (!entry) return { ok: true, projection: serializeTaskProjection('', '') };
+    const features = Array.isArray(parsed?.features) ? parsed.features : [];
+    const feature =
+      features.find((item) => item && String(item.id || '') === String(entry.feature_id || '')) ||
+      null;
+    return {
+      ok: true,
+      projection: serializeTaskProjection(entry.feature_id, feature?.milestone_id),
+    };
+  } catch {
+    return { ok: false, projection: '' };
+  }
+}
+
+function taskOccurrenceRef(occurrence) {
+  return {
+    worktree_path: occurrence.worktree_path,
+    worktree_branch: occurrence.worktree_branch,
+    dev_docs_path: occurrence.dev_docs_path,
+  };
+}
+
+/**
+ * Resolve divergent task copies when Git proves linear evolution: since each merge base only one
+ * side changed (counting uncommitted edits), the newest occurrence supplies the row. Freshness is
+ * judged on full bundle content plus the registry projection — not only on query facts — so an
+ * evolution that lives only in roadmap, architecture, verification, or supporting documents still
+ * routes to the newest copy. Content-equal copies are interchangeable co-leaders, never stale.
+ *
+ * Returns { equal: true } when every occurrence carries the same content and { leader, stale }
+ * when one provable line of evolution exists. Everything else stays fail-closed and returns
+ * { failure } with a reason (`concurrent-divergence`, `unrelated-history`, `missing-lineage`, or
+ * `unreadable-evidence`), the content-equivalence `groups` when they were readable, and the
+ * implicated `evidence` occurrences with the stage that failed.
+ */
+function resolveStaleTaskOccurrences(repoRoot, taskId, ordered, conflicts) {
+  const projectionConflicted = conflicts.some((item) => PROJECTION_FACT_FIELDS.has(item.field));
+
+  const states = [];
+  for (const occurrence of ordered) {
+    const currentBundle = worktreeBundleDigest(occurrence.worktree_path, occurrence.dev_docs_path);
+    if (currentBundle === null || currentBundle === '') {
+      return {
+        failure: {
+          reason: 'unreadable-evidence',
+          evidence: [{ ...taskOccurrenceRef(occurrence), stage: 'worktree-content' }],
+        },
+      };
+    }
+    const currentProjection = serializeTaskProjection(
+      occurrence.feature_id,
+      occurrence.milestone_id
+    );
+    states.push({
+      occurrence,
+      currentBundle,
+      currentProjection,
+      key: `${currentBundle}\u0000${projectionConflicted ? currentProjection : ''}`,
+    });
+  }
+
+  const groupsByKey = new Map();
+  for (const state of states) {
+    const group = groupsByKey.get(state.key) || {
+      value: `content:${crypto.createHash('sha256').update(state.key).digest('hex').slice(0, 12)}`,
+      worktrees: [],
+    };
+    group.worktrees.push(taskOccurrenceRef(state.occurrence));
+    groupsByKey.set(state.key, group);
+  }
+  const groups = [...groupsByKey.values()];
+  const failWith = (reason, evidence) => ({
+    failure: { reason, groups, ...(evidence ? { evidence } : {}) },
+  });
+
+  if (groups.length === 1) return { equal: true };
+
+  for (const state of states) {
+    const headRaw = runGit(state.occurrence.worktree_path, ['rev-parse', 'HEAD']);
+    if (!headRaw?.trim()) {
+      return failWith('unreadable-evidence', [
+        { ...taskOccurrenceRef(state.occurrence), stage: 'head-commit' },
+      ]);
+    }
+    state.head = headRaw.trim();
+    const headBundle = committedBundleDigest(repoRoot, state.head, state.occurrence.dev_docs_path);
+    if (headBundle === null) {
+      return failWith('unreadable-evidence', [
+        { ...taskOccurrenceRef(state.occurrence), stage: 'head-bundle' },
+      ]);
+    }
+    // A bundle absent from its own HEAD has no provable lineage.
+    if (headBundle === '') {
+      return failWith('missing-lineage', [
+        { ...taskOccurrenceRef(state.occurrence), stage: 'head-bundle' },
+      ]);
+    }
+    if (projectionConflicted) {
+      const headProjection = readTaskProjectionAt(repoRoot, state.head, taskId);
+      if (!headProjection.ok) {
+        return failWith('unreadable-evidence', [
+          { ...taskOccurrenceRef(state.occurrence), stage: 'head-projection' },
+        ]);
+      }
+      state.headProjection = headProjection.projection;
+    }
+  }
+
+  // { sha } on success, { reason } when there is no common ancestor or the command fails.
+  function mergeBaseEvidence(left, right) {
+    if (left === right) return { sha: left };
+    const result = runGitWithStatus(repoRoot, ['merge-base', left, right]);
+    if (result.status === 0 && result.stdout.trim()) return { sha: result.stdout.trim() };
+    if (result.status === 1) return { reason: 'unrelated-history' };
+    return { reason: 'unreadable-evidence' };
+  }
+
+  // true / false, or { stage } when the evidence is unreadable. Content comparison against the
+  // merge base covers committed evolution and uncommitted edits in one check.
+  function changedSince(state, baseSha) {
+    const baseBundle = committedBundleDigest(repoRoot, baseSha, state.occurrence.dev_docs_path);
+    if (baseBundle === null) return { stage: 'base-bundle' };
+    if (state.currentBundle !== baseBundle) return true;
+    if (projectionConflicted) {
+      if (state.currentProjection !== state.headProjection) return true;
+      const baseProjection = readTaskProjectionAt(repoRoot, baseSha, taskId);
+      if (!baseProjection.ok) return { stage: 'base-projection' };
+      if (state.headProjection !== baseProjection.projection) return true;
+    }
+    return false;
+  }
+
+  const leaders = [];
+  for (const candidate of states) {
+    let dominates = true;
+    for (const other of states) {
+      if (other === candidate) continue;
+      // A content-equal copy is an interchangeable co-leader; it does not need to be dominated.
+      if (other.key === candidate.key) continue;
+      const base = mergeBaseEvidence(candidate.head, other.head);
+      if (base.reason) {
+        return failWith(base.reason, [
+          { ...taskOccurrenceRef(candidate.occurrence), stage: 'merge-base' },
+          { ...taskOccurrenceRef(other.occurrence), stage: 'merge-base' },
+        ]);
+      }
+      const otherChanged = changedSince(other, base.sha);
+      if (otherChanged !== true && otherChanged !== false) {
+        return failWith('unreadable-evidence', [
+          { ...taskOccurrenceRef(other.occurrence), stage: otherChanged.stage },
+        ]);
+      }
+      if (otherChanged) {
+        dominates = false;
+        break;
+      }
+    }
+    if (dominates) leaders.push(candidate);
+  }
+  if (leaders.length === 0 || new Set(leaders.map((state) => state.key)).size > 1) {
+    return failWith('concurrent-divergence');
+  }
+
+  const currentRoot = path.resolve(repoRoot);
+  const leader =
+    leaders.find((state) => path.resolve(state.occurrence.worktree_path) === currentRoot) ||
+    leaders[0];
+  return {
+    leader: leader.occurrence,
+    stale: states
+      .filter((state) => state.key !== leader.key)
+      .map((state) => state.occurrence),
+  };
+}
+
 function normalizeQueryFact(field, value) {
   if (field === 'keywords') {
     return [...new Set(Array.isArray(value) ? value.map((item) => String(item)) : [])].sort();
@@ -661,9 +929,9 @@ function mergeTaskOccurrences(repoRoot, rows) {
         || String(left.worktree_path).localeCompare(String(right.worktree_path))
         || String(left.dev_docs_path).localeCompare(String(right.dev_docs_path));
     });
-    const representative = ordered[0];
+    let representative = ordered[0];
     const result = { id: String(representative.id || '') };
-    const conflicts = [];
+    let conflicts = [];
 
     for (const field of QUERY_FACT_FIELDS) {
       const values = new Map();
@@ -687,9 +955,43 @@ function mergeTaskOccurrences(repoRoot, rows) {
       }
     }
 
+    result.stale_worktrees = [];
+    const anyInvalid = ordered.some((occurrence) => occurrence.meta_invalid);
+    if (ordered.length > 1 && !anyInvalid && TASK_ID_RE.test(result.id)) {
+      // Freshness is judged on full bundle content, not only on query facts, for every
+      // multi-occurrence task: a provable single line of evolution routes the row to its newest
+      // occurrence; anything unprovable stays fail-closed.
+      const resolution = resolveStaleTaskOccurrences(repoRoot, result.id, ordered, conflicts);
+      if (resolution.leader) {
+        for (const field of QUERY_FACT_FIELDS) {
+          result[field] = normalizeQueryFact(field, resolution.leader[field]);
+        }
+        conflicts = [];
+        representative = resolution.leader;
+        result.stale_worktrees = resolution.stale.map(taskOccurrenceRef);
+      } else if (resolution.failure && conflicts.length === 0) {
+        // The divergence lives only in non-query documents (or its evidence is unreadable).
+        // Surface it as a conflict with actionable diagnostics instead of silently choosing a
+        // copy: the reason says whether to coordinate concurrent edits or repair evidence, the
+        // groups say which worktrees carry equivalent content, and the evidence entries name the
+        // occurrence and stage that could not be read.
+        const failure = resolution.failure;
+        conflicts = [
+          {
+            field: 'documents',
+            reason: failure.reason,
+            values: failure.groups || [
+              { value: 'unverifiable-content', worktrees: ordered.map(taskOccurrenceRef) },
+            ],
+            ...(failure.evidence ? { evidence: failure.evidence } : {}),
+          },
+        ];
+      }
+    }
+
     result.conflict = conflicts.length > 0;
     result.conflicts = conflicts;
-    result.invalid = ordered.some((occurrence) => occurrence.meta_invalid);
+    result.invalid = anyInvalid;
     result.metadata_errors = ordered
       .filter((occurrence) => occurrence.meta_invalid)
       .map((occurrence) => ({
@@ -832,22 +1134,49 @@ function docsTrailerValue(devDocsPath) {
   return value ? `${value}/` : '';
 }
 
-export function runGit(repoRoot, args) {
+export function runGit(repoRoot, args, { input } = {}) {
   try {
     return execFileSync('git', args, {
       cwd: repoRoot,
       encoding: 'utf8',
       maxBuffer: 64 * 1024 * 1024,
-      stdio: ['ignore', 'pipe', 'ignore'],
+      stdio: [input === undefined ? 'ignore' : 'pipe', 'pipe', 'ignore'],
+      ...(input === undefined ? {} : { input }),
     });
   } catch {
     return null;
   }
 }
 
+/**
+ * Like runGit but preserves the exit status, for callers that must distinguish a meaningful
+ * non-zero answer (e.g. `merge-base` finding no common ancestor) from a failing command.
+ */
+function runGitWithStatus(repoRoot, args) {
+  try {
+    const stdout = execFileSync('git', args, {
+      cwd: repoRoot,
+      encoding: 'utf8',
+      maxBuffer: 64 * 1024 * 1024,
+      stdio: ['ignore', 'pipe', 'ignore'],
+    });
+    return { status: 0, stdout };
+  } catch (error) {
+    return {
+      status: typeof error?.status === 'number' ? error.status : null,
+      stdout: typeof error?.stdout === 'string' ? error.stdout : '',
+    };
+  }
+}
+
 export function listGitWorktrees(repoRoot) {
+  // Worktree enumeration is the entry point for every cross-worktree fact. A failure here must
+  // never degrade to "only the current worktree": that silently hides evidence from query,
+  // dedupe, allocation, and prune.
   const raw = runGit(repoRoot, ['worktree', 'list', '--porcelain']);
-  if (!raw) return [{ path: path.resolve(repoRoot), branch: readCurrentBranch(repoRoot) }];
+  if (!raw || !raw.trim()) {
+    throw new Error('Cannot enumerate linked worktrees: `git worktree list --porcelain` failed.');
+  }
 
   const worktrees = [];
   let current = null;
@@ -862,9 +1191,19 @@ export function listGitWorktrees(repoRoot) {
     }
   }
   if (current) worktrees.push(current);
-  return worktrees.length > 0
-    ? worktrees
-    : [{ path: path.resolve(repoRoot), branch: readCurrentBranch(repoRoot) }];
+  if (worktrees.length === 0) {
+    throw new Error('Cannot enumerate linked worktrees: `git worktree list --porcelain` returned no entries.');
+  }
+  for (const worktree of worktrees) {
+    if (!exists(worktree.path)) {
+      throw new Error(
+        `Linked worktree ${toPosix(worktree.path)} is registered but its directory is missing or ` +
+          'unreadable. Repair or remove it (e.g. `git worktree prune`) before governance can trust ' +
+          'cross-worktree evidence.'
+      );
+    }
+  }
+  return worktrees;
 }
 
 export function taskIdsFromAllWorktrees(repoRoot) {
@@ -888,8 +1227,18 @@ export function taskIdsFromAllWorktrees(repoRoot) {
 }
 
 export function taskIdsFromAllBranches(repoRoot) {
+  // A repository with no refs yet legitimately has no branch history; a failing Git command does
+  // not. Only the former may be treated as an empty ID set.
+  const refsRaw = runGit(repoRoot, ['for-each-ref', '--format=%(refname)']);
+  if (refsRaw === null) {
+    throw new Error('Cannot enumerate refs: `git for-each-ref` failed.');
+  }
+  if (!refsRaw.trim()) return [];
+
   const raw = runGit(repoRoot, ['log', '--all', '--format=%B']);
-  if (!raw) return [];
+  if (raw === null) {
+    throw new Error('Cannot read branch history: `git log --all` failed.');
+  }
   const ids = new Set();
   for (const line of normalizeEol(raw).split('\n')) {
     const match = /^Task:[ \t]*(T-\d{3})[ \t]*$/.exec(line);
@@ -913,7 +1262,6 @@ const COMMIT_FIELDS = [
   '%H', '%h', '%aI', '%an', '%s',
   '%(trailers:key=Task,valueonly,separator=%x2C)',
   '%(trailers:key=Phase,valueonly,separator=%x2C)',
-  '%(trailers:key=Docs,valueonly,separator=%x2C)',
   '%(trailers:key=Verify,valueonly,separator=%x2C)',
 ];
 
@@ -930,7 +1278,7 @@ function readCommitTimeline({ repoRoot, scan }) {
   for (const chunk of raw.split('\x1e')) {
     const line = chunk.replace(/^\n/, '');
     if (!line.trim()) continue;
-    const [sha, short, date, author, subject, task, phase, docs, verify] = line.split('\x1f');
+    const [sha, short, date, author, subject, task, phase, verify] = line.split('\x1f');
     records.push({
       commit: short || '',
       sha: sha || '',
@@ -939,7 +1287,6 @@ function readCommitTimeline({ repoRoot, scan }) {
       subject: subject || '',
       tasks: String(task || '').split(',').map((value) => value.trim()).filter(Boolean),
       phase: String(phase || '').trim(),
-      docs: String(docs || '').trim(),
       verify: String(verify || '').trim(),
     });
   }
@@ -965,8 +1312,8 @@ function resumeFailureExitCode(reason) {
     reason === 'conflict' ||
     reason === 'invalid-metadata'
   ) return 2;
-  if (reason === 'none') return 3;
-  if (reason === 'not-found' || reason === 'branch-task-not-found' || reason === 'other-worktree') return 4;
+  if (reason === 'none' || reason === 'not-found' || reason === 'branch-task-not-found') return 3;
+  if (reason === 'other-worktree') return 4;
   return 1;
 }
 
@@ -985,7 +1332,7 @@ function resumeFailureMessage(result) {
     return 'The requested task has conflicting facts across linked worktrees; reconcile them before resuming.';
   }
   if (result.reason === 'other-worktree') {
-    return 'The requested task exists only in another linked worktree; run recovery there or confirm a worktree change.';
+    return 'The requested task\u2019s bundle, or its newest state, is in another linked worktree; run recovery there or confirm a worktree change.';
   }
   if (result.reason === 'invalid-metadata') {
     return 'The requested task has invalid metadata in a linked worktree; repair that identity record before resuming.';

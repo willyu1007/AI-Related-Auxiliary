@@ -2,7 +2,7 @@
 
 Collect the minimum evidence needed.
 
-## Never record
+## Never request, collect, or record
 
 - passwords, access/refresh tokens, API keys, private keys, auth headers
 - payment, government, medical, or other highly sensitive identifiers

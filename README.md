@@ -11,7 +11,7 @@ system/          # 库本身：跟着人走的全局层
   skills/        #   所有 Skill，一层平铺（发现只扫这一层）
     <skill>/
       SKILL.md
-      templates/ examples/ reference/   # 随技能走的资产
+      templates/ examples/ references/  # 随技能走的资产
       assets/<bundle>/                  # 技能装进目标仓库的东西，按目标仓库的目录形状摆好
   docs/          #   全局 Agent 指令（CLAUDE.md / AGENTS.md）
 checks/          # 本仓库自己的校验，不是分发物
@@ -44,12 +44,12 @@ checks/          # 本仓库自己的校验，不是分发物
 | Skill | 用途 |
 |---|---|
 | `codex-*`（三个） / `html-communication` | 见各自 `SKILL.md` |
-| [review-code](system/skills/review-code/SKILL.md) | 当前 Agent 自审代码改动并出分级报告（Claude/Codex 通用）；第二意见仍走 `codex-review` |
+| [review-code](system/skills/review-code/SKILL.md) | 直接审查代码：圈定范围、对齐审查意图，在已授权时边审边修，并报告已修复与未解决问题 |
 | [sync-db-from-prisma](system/skills/sync-db-from-prisma/SKILL.md) | Prisma repo→DB migration 闸门：预览、单独的 apply 批准、按环境应用、验证 |
 | [manage-llm-config](system/skills/manage-llm-config/SKILL.md) | 集中管理 agent/workflow 的模型、参数、Prompt 与 Provider 配置；通过共享加载器读取 `.ai/llm` |
-| [debug-mode](system/skills/debug-mode/SKILL.md) | 证据驱动调试：可选审批门（默认无）、Agent 自行采证、验证后自动清理临时埋点与产物 |
+| [debug-mode](system/skills/debug-mode/SKILL.md) | 根因不明故障的证据循环：准确症状信号、可证伪假设、授权修复、原始复现验证与自动清理 |
 | [get-sensitive-info](system/skills/get-sensitive-info/SKILL.md) | 获取并使用 `~/Documents/LLM/project-ops.md` 中的项目敏感信息；按项目标准机制落地配置，缺失内容用中文占位符反写并返回可点击文档链接 |
-| [manage-ui-style](system/skills/manage-ui-style/SKILL.md) | UI 风格：房子层（品味规约+反模式地板）随技能走并在生成前载入，项目层（tokens/exemplar/STYLE.md）留在仓库里；先查资产定模式，mock 先行，收尾跑机检；含结晶与审计 workflow |
+| [manage-ui-style](system/skills/manage-ui-style/SKILL.md) | 继承、探索并沉淀项目 UI 风格，在需要时审计和修复视觉漂移 |
 | [cleanup-project-residue](system/skills/cleanup-project-residue/SKILL.md) | 清理当前 session、任务、近期工作或全项目中的过时测试、冗余内容、语义漂移、双轨/legacy 残留和技术债；证据+批准后删除，校验门收尾 |
 
 `system/` 是全局 Agent 配置的版本化镜像。改动流程：

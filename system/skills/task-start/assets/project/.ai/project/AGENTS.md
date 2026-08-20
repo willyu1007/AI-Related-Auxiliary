@@ -67,14 +67,42 @@ The hub consumes these task facts:
   trailers across branch history. Milestone and Feature allocation considers every linked
   worktree registry.
 - Cross-worktree search returns one logical row per valid task ID and preserves its occurrences in
-  `worktrees`. Equal copies collapse into that row. `conflict: true` means one or more task facts
-  differ; the differing top-level facts are unset and `conflicts` preserves the evidence. Do not
-  select a source until the disagreement is resolved.
+  `worktrees`. Freshness is judged on full bundle content plus the registry projection, not only
+  on query facts: an evolution that lives only in roadmap, architecture, verification, or
+  supporting documents still counts. Content-equal copies collapse into one row. When copies
+  differ but Git proves linear evolution — since the merge base only one side changed, counting
+  uncommitted edits — the newest occurrence supplies the row's facts and strictly older copies are
+  listed in `stale_worktrees`; equally newest copies are interchangeable and never stale.
+  `conflict: true` remains for concurrent divergence and for any unprovable or unreadable
+  evidence, including divergence only in non-query documents; the differing top-level facts are
+  unset and `conflicts` preserves what was seen. A `documents` conflict carries a `reason`
+  (`concurrent-divergence`, `unrelated-history`, `missing-lineage`, `unreadable-evidence`), the
+  content-equivalence groups of worktrees in `values`, and the occurrence and stage that failed
+  in `evidence`. Do not select a source for a conflicted row until the disagreement is resolved.
+- Evidence enumeration itself is fail-closed: when linked worktrees, branch history, or a task
+  root cannot be enumerated — including a registered worktree whose directory is missing — every
+  governance command stops instead of degrading to "empty" or "only the current worktree". Only
+  a directory that verifiably does not exist yet (governance not installed) is an empty state.
+- Branch-tip task evidence is interpreted under the exact metadata schema, and the metadata slug
+  must match the bundle directory; schema drift or slug mismatch makes the evidence unverifiable
+  rather than silently compatible or absent.
+- In a worktree listed as stale, sync only records that worktree's local reality; never copy the
+  newest occurrence's facts into a stale bundle. Recovery and implementation belong in the newest
+  occurrence, or bring the stale worktree level through Git first.
+- Registry Milestone and Feature values are project-level semantic decisions, so they do not use
+  the task rule: any same-ID divergence across linked worktree registries is a stop condition
+  until the registries are reconciled.
+- Changing a task-to-Feature mapping stays fail-closed while the task has multiple checked-out
+  copies; resolve to one writable occurrence or coordinate every occurrence as one edit.
 - `invalid: true` means at least one occurrence has invalid task metadata. `metadata_errors`
   preserves those diagnostics; do not use that row as task evidence until the metadata is fixed.
 - Confirmed duplicate goals under distinct task IDs and lock failures are stop conditions.
 - Mapping accepts existing project objects only; it never invents a caller-supplied ID.
 - Each valid task bundle has one registry projection with its actual path and effective status.
+- A registry task entry whose bundle no longer exists in any linked worktree or at any local
+  branch tip is removed only through `sync --prune`. Branch-tip evidence is verified by stable
+  task ID — never by the recorded path or slug, which can be renamed on other branches; surviving
+  or unverifiable evidence refuses the prune, and projection entries are never hand-deleted.
 - Report disagreements among bundles, registry projections, Git, and worktrees instead of
   silently choosing a source.
 

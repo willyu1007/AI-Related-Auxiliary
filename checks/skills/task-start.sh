@@ -387,6 +387,8 @@ printf '# Pitfalls\n\n| Hazard | Evidence | Prevention | Applies until |\n|---|-
 
 git checkout -q -b feat/T-001-sample
 node .ai/scripts/ctl-project-governance.mjs sync --apply >/dev/null
+# The opening workflow records 3-8 durable search keywords in the allocated identity metadata.
+node -e "const fs=require('fs');const p='dev-docs/active/sample/.ai-task.json';const m=JSON.parse(fs.readFileSync(p,'utf8'));m.keywords=['smoke','governance-probe','worktree-suite'];fs.writeFileSync(p,JSON.stringify(m,null,2)+'\n')"
 git add -A
 git -c user.email=ci@local -c user.name=ci commit -qm "feat(sample): add task bundle" -m "Task: T-001" >/dev/null
 
@@ -394,6 +396,16 @@ git -c user.email=ci@local -c user.name=ci commit -qm "feat(sample): add task bu
 [ -f dev-docs/active/sample/.ai-task.json ] || fail "sync did not allocate .ai-task.json"
 node -e "const m=require('./dev-docs/active/sample/.ai-task.json');const keys=Object.keys(m).sort().join(',');process.exit(m.task_id==='T-001'&&keys==='keywords,slug,task_id,version'?0:1)" \
   || fail "unexpected task metadata"
+
+# Keywords are durable identity data: sync preserves them, the count honors the opening
+# workflow's 3-8 contract, and text query searches them.
+node .ai/scripts/ctl-project-governance.mjs sync --apply >/dev/null
+node -e "const m=require('./dev-docs/active/sample/.ai-task.json');process.exit(m.keywords.length>=3&&m.keywords.length<=8&&m.keywords[0]==='smoke'?0:1)" \
+  || fail "sync did not preserve the contracted number of task search keywords"
+node .ai/scripts/ctl-project-governance.mjs query --text governance-probe --json > keyword-query.json
+node -e "const q=require('./keyword-query.json');process.exit(q.length===1&&q[0].id==='T-001'?0:1)" \
+  || fail "query did not search task keywords"
+rm -f keyword-query.json
 node -e "const r=require('./.ai/project/registry.json');process.exit(r.tasks.some(x=>x.id==='T-001'&&!Object.hasOwn(x,'milestone_id'))?0:1)" \
   || fail "registry was not synced"
 git log -1 --format='%B' | git interpret-trailers --parse | grep -q '^Task: T-001$' \
@@ -597,6 +609,16 @@ node -e "const r=require('./resume.json');const s=r.status;process.exit(r.versio
 grep -q 'Repeating a stale path.*use the supported path' resume.json \
   || fail "resume packet did not parse current pitfalls"
 rm -f resume.json
+
+# A task that exists nowhere is "no such task", distinct from "unavailable in this worktree".
+set +e
+node .ai/scripts/ctl-project-governance.mjs resume --task T-098 > missing-resume.json
+resume_exit=$?
+set -e
+[ "$resume_exit" -eq 3 ] || fail "resume did not use the no-such-task exit code"
+node -e "const r=require('./missing-resume.json');process.exit(r.error.reason==='not-found'?0:1)" \
+  || fail "resume did not explain the missing task"
+rm -f missing-resume.json
 node .ai/scripts/ctl-project-governance.mjs query --id T-001 --json > query.json
 node -e "const q=require('./query.json');const t=q[0];process.exit(q.length===1&&t.kickoff_status==='ready'&&!Object.hasOwn(t,'title')&&!Object.hasOwn(t,'description')&&!Object.hasOwn(t,'updated')?0:1)" \
   || fail "query did not expose only authoritative task fields"
@@ -950,10 +972,14 @@ fi
 mv "$WT_B/registry.parent.tmp" "$WT_B/.ai/project/registry.json"
 
 # The committed T-001 bundle appears in all three worktrees. Equal occurrences are one logical
-# query row; a divergent occurrence is one conflicted row with no selected top-level fact source.
+# query row. Divergent copies resolve to the newest occurrence only when Git proves linear
+# evolution; concurrent or unprovable divergence stays one conflicted row with no fact source.
 node .ai/scripts/ctl-project-governance.mjs query --id T-001 --json > shared-task.json
-node -e "const q=require('./shared-task.json');const t=q[0];process.exit(q.length===1&&!t.conflict&&t.occurrence_count===3&&t.worktrees.length===3?0:1)" \
+node -e "const q=require('./shared-task.json');const t=q[0];process.exit(q.length===1&&!t.conflict&&t.occurrence_count===3&&t.worktrees.length===3&&t.stale_worktrees.length===0?0:1)" \
   || fail "query did not merge equal worktree occurrences"
+
+# Remapping a task with multiple checked-out copies stays fail-closed even when they are equal:
+# a single-worktree mapping change would silently create divergent task facts.
 duplicate_map_state_before="$(git status --porcelain=v1 --untracked-files=all; git hash-object \
   .ai/project/registry.json .ai/project/dashboard.md .ai/project/feature-map.md)"
 node .ai/scripts/ctl-project-governance.mjs map --task T-001 --feature F-000 --apply >/dev/null \
@@ -969,10 +995,103 @@ duplicate_map_state_after="$(git status --porcelain=v1 --untracked-files=all; gi
 [ "$duplicate_map_state_before" = "$duplicate_map_state_after" ] \
   || fail "duplicate-occurrence map guards changed governance state"
 
+# A copy with no committed lineage cannot prove linear evolution; the divergence stays a conflict.
+WT_C="${TMPDIR:-/tmp}/aux-wt-c.$$"
+ROOT_COMMIT=$(git rev-list --max-parents=0 HEAD | tail -n 1)
+git worktree add -q --detach "$WT_C" "$ROOT_COMMIT"
+mkdir -p "$WT_C/dev-docs/active/sample"
+for f in .ai-task.json 00-roadmap.md 01-status.md 02-architecture.md verification.md; do
+  cp "dev-docs/active/sample/$f" "$WT_C/dev-docs/active/sample/$f"
+done
+sed -i 's/Smoke test\./Divergent goal./' "$WT_C/dev-docs/active/sample/01-status.md"
+node .ai/scripts/ctl-project-governance.mjs query --id T-001 --json > unprovable-task.json
+node -e "const q=require('./unprovable-task.json');const t=q[0];process.exit(q.length===1&&t.conflict&&t.goal===null?0:1)" \
+  || fail "query resolved a divergent copy that has no committed lineage"
+if node .ai/scripts/ctl-project-governance.mjs sync --apply >/dev/null 2>&1; then
+  fail "sync wrote while divergence evidence was unprovable"
+fi
+git worktree remove --force "$WT_C"
+rm -f unprovable-task.json
+
+# Freshness covers the whole bundle: an evolution that lives only in architecture (a non-query
+# document) still routes query and resume to the newest occurrence.
+sed -i 's/# Architecture/# Architecture\n\nSettled: use the governance module./' \
+  "$WT_A/dev-docs/active/sample/02-architecture.md"
+node .ai/scripts/ctl-project-governance.mjs query --id T-001 --json > doc-linear-task.json
+node -e "const q=require('./doc-linear-task.json');const t=q[0];process.exit(q.length===1&&!t.conflict&&t.status==='in-progress'&&t.stale_worktrees.length===2&&String(t.worktree_path).includes('aux-wt-a')?0:1)" \
+  || fail "query did not route an architecture-only evolution to its newest occurrence"
+set +e
+node .ai/scripts/ctl-project-governance.mjs resume --task T-001 > doc-linear-resume.json
+resume_exit=$?
+set -e
+[ "$resume_exit" -eq 4 ] || fail "resume ignored an architecture-only evolution in another worktree"
+node -e "const r=require('./doc-linear-resume.json');process.exit(r.error.reason==='other-worktree'&&String(r.error.candidates[0].worktree_path).includes('aux-wt-a')?0:1)" \
+  || fail "resume did not identify the document-fresh worktree"
+git -C "$WT_A" checkout -q -- dev-docs
+rm -f doc-linear-task.json doc-linear-resume.json
+
+# A verification-only evolution behaves the same from the other sibling.
+sed -i 's/Awaiting the final smoke result/Verified in worktree B/' \
+  "$WT_B/dev-docs/active/sample/verification.md"
+node .ai/scripts/ctl-project-governance.mjs query --id T-001 --json > doc-linear-task.json
+node -e "const q=require('./doc-linear-task.json');const t=q[0];process.exit(q.length===1&&!t.conflict&&t.stale_worktrees.length===2&&String(t.worktree_path).includes('aux-wt-b')?0:1)" \
+  || fail "query did not route a verification-only evolution to its newest occurrence"
+git -C "$WT_B" checkout -q -- dev-docs
+rm -f doc-linear-task.json
+
+# Concurrent divergence in non-query documents has no provable line of evolution: fail closed.
+sed -i 's/## Decision alignment/## Decision alignment\n\nDecision: route A./' \
+  dev-docs/active/sample/00-roadmap.md
+sed -i 's/## Decision alignment/## Decision alignment\n\nDecision: route B./' \
+  "$WT_A/dev-docs/active/sample/00-roadmap.md"
+node .ai/scripts/ctl-project-governance.mjs query --id T-001 --json > doc-conflict-task.json
+node -e "const q=require('./doc-conflict-task.json');const t=q[0];process.exit(q.length===1&&t.conflict&&t.worktree_path===null&&t.conflicts.some(x=>x.field==='documents')?0:1)" \
+  || fail "query selected a copy despite concurrent document divergence"
+# The documents conflict is actionable: the reason names concurrent divergence and the values
+# group worktrees by content equivalence (route A, route B, and the unchanged base copy).
+node -e "const q=require('./doc-conflict-task.json');const d=q[0].conflicts.find(x=>x.field==='documents');process.exit(d&&d.reason==='concurrent-divergence'&&d.values.length===3&&d.values.every(v=>v.worktrees.length===1)?0:1)" \
+  || fail "documents conflict did not carry a reason and content-equivalence groups"
+if node .ai/scripts/ctl-project-governance.mjs sync --apply >/dev/null 2>&1; then
+  fail "sync wrote while non-query documents diverged concurrently"
+fi
+git checkout -q -- dev-docs/active/sample
+git -C "$WT_A" checkout -q -- dev-docs
+rm -f doc-conflict-task.json
+
+# One worktree evolves the shared bundle while the others stay at the base: Git proves linear
+# evolution, the newest occurrence supplies the facts, and strictly older copies are stale.
 sed -i 's/State: in-progress/State: blocked/' "$WT_A/dev-docs/active/sample/01-status.md"
+node .ai/scripts/ctl-project-governance.mjs query --id T-001 --json > diverged-task.json
+node -e "const q=require('./diverged-task.json');const t=q[0];process.exit(q.length===1&&!t.conflict&&t.status==='blocked'&&t.occurrence_count===3&&t.stale_worktrees.length===2&&String(t.worktree_path).includes('aux-wt-a')?0:1)" \
+  || fail "query did not resolve a single-editor divergence to its newest occurrence"
+node .ai/scripts/ctl-project-governance.mjs query --status blocked --json > diverged-filter.json
+node -e "const q=require('./diverged-filter.json');process.exit(q.some(x=>x.id==='T-001'&&!x.conflict)?0:1)" \
+  || fail "status filter missed the resolved newest fact"
+set +e
+node .ai/scripts/ctl-project-governance.mjs resume --task T-001 > stale-resume.json
+resume_exit=$?
+set -e
+[ "$resume_exit" -eq 4 ] || fail "resume did not route a stale worktree to the newest occurrence"
+node -e "const r=require('./stale-resume.json');process.exit(r.error.reason==='other-worktree'&&String(r.error.candidates[0].worktree_path).includes('aux-wt-a')?0:1)" \
+  || fail "resume did not identify the authoritative worktree"
+node .ai/scripts/ctl-project-governance.mjs sync --apply >/dev/null \
+  || fail "sync in a stale worktree was blocked by a linear divergence"
+node -e "const r=require('./.ai/project/registry.json');process.exit(r.tasks.some(x=>x.id==='T-001'&&x.status==='in-progress')?0:1)" \
+  || fail "stale-worktree sync imported foreign facts instead of local reality"
+rm -f stale-resume.json diverged-task.json diverged-filter.json
+
+# Two equally newest copies are interchangeable co-leaders; only the strictly older copy is stale.
+sed -i 's/State: in-progress/State: blocked/' "$WT_B/dev-docs/active/sample/01-status.md"
+node .ai/scripts/ctl-project-governance.mjs query --id T-001 --json > co-leader-task.json
+node -e "const q=require('./co-leader-task.json');const t=q[0];const s=t.stale_worktrees;process.exit(q.length===1&&!t.conflict&&t.status==='blocked'&&s.length===1&&!String(s[0].worktree_path).includes('aux-wt-')?0:1)" \
+  || fail "co-leader resolution mislabeled an equally newest copy as stale"
+rm -f co-leader-task.json
+
+# Concurrent divergence has no provable single line of evolution and stays fail-closed.
+sed -i 's/State: in-progress/State: planned/' dev-docs/active/sample/01-status.md
 node .ai/scripts/ctl-project-governance.mjs query --id T-001 --json > conflicted-task.json
 node -e "const q=require('./conflicted-task.json');const t=q[0];const c=t.conflicts.find(x=>x.field==='status');process.exit(q.length===1&&t.conflict&&t.status===null&&t.worktree_path===null&&t.occurrence_count===3&&c&&c.values.some(x=>x.value==='blocked')?0:1)" \
-  || fail "query selected a fact source for divergent worktree occurrences"
+  || fail "query selected a fact source for concurrent divergence"
 node .ai/scripts/ctl-project-governance.mjs query --status blocked --json > conflicted-filter.json
 node -e "const q=require('./conflicted-filter.json');process.exit(q.some(x=>x.id==='T-001'&&x.conflict)?0:1)" \
   || fail "status filter hid a matching conflicted occurrence"
@@ -988,21 +1107,36 @@ conflict_state_before="$(git status --porcelain=v1 --untracked-files=all; git ha
   .ai/project/registry.json .ai/project/dashboard.md .ai/project/feature-map.md \
   dev-docs/active/sample/.ai-task.json "$WT_A/dev-docs/active/sample/01-status.md")"
 if conflict_sync_output="$(node .ai/scripts/ctl-project-governance.mjs sync --apply 2>&1)"; then
-  fail "sync wrote while a task had divergent worktree facts"
+  fail "sync wrote while a task had concurrent divergent facts"
 fi
 printf '%s\n' "$conflict_sync_output" | grep -q 'Cross-worktree task conflict for T-001' \
   || fail "sync did not report the divergent task"
 if node .ai/scripts/ctl-project-governance.mjs map --task T-001 --feature F-000 --apply \
   >/dev/null 2>&1; then
-  fail "map wrote while its task had divergent worktree facts"
+  fail "map wrote while its task had concurrent divergent facts"
 fi
 conflict_state_after="$(git status --porcelain=v1 --untracked-files=all; git hash-object \
   .ai/project/registry.json .ai/project/dashboard.md .ai/project/feature-map.md \
   dev-docs/active/sample/.ai-task.json "$WT_A/dev-docs/active/sample/01-status.md")"
 [ "$conflict_state_before" = "$conflict_state_after" ] \
   || fail "a write command changed governance state during a worktree conflict"
+sed -i 's/State: planned/State: in-progress/' dev-docs/active/sample/01-status.md
+git -C "$WT_B" checkout -q -- dev-docs
 
-sed -i 's/State: blocked/State: in-progress/' "$WT_A/dev-docs/active/sample/01-status.md"
+# A committed checkpoint in one worktree is still linear evolution for the copies left behind.
+git -C "$WT_A" -c user.email=ci@local -c user.name=ci commit -qam "docs(task): checkpoint sample" -m "Task: T-001"
+node .ai/scripts/ctl-project-governance.mjs query --id T-001 --json > committed-task.json
+node -e "const q=require('./committed-task.json');const t=q[0];process.exit(q.length===1&&!t.conflict&&t.status==='blocked'&&t.stale_worktrees.length===2&&String(t.worktree_path).includes('aux-wt-a')?0:1)" \
+  || fail "query did not resolve a committed single-editor divergence"
+set +e
+node .ai/scripts/ctl-project-governance.mjs resume --task T-001 > committed-resume.json
+resume_exit=$?
+set -e
+[ "$resume_exit" -eq 4 ] || fail "resume did not route to the committed newest occurrence"
+node .ai/scripts/ctl-project-governance.mjs sync --apply >/dev/null \
+  || fail "sync in a worktree behind a committed checkpoint was blocked"
+rm -f committed-task.json committed-resume.json
+
 mv registry.worktree.tmp .ai/project/registry.json
 rm -f shared-task.json conflicted-task.json conflicted-filter.json conflicted-resume.json
 
@@ -1014,6 +1148,120 @@ rm -f worktrees.json
 git worktree remove --force "$WT_A"
 git worktree remove --force "$WT_B"
 git branch -D feat/sib-a feat/sib-b >/dev/null 2>&1 || true
+
+# A registered worktree whose directory is missing is unreadable evidence: every governance
+# command stops instead of degrading to "only the current worktree", and nothing is written.
+WT_GONE="${TMPDIR:-/tmp}/aux-wt-gone.$$"
+git worktree add -q --detach "$WT_GONE"
+rm -rf "$WT_GONE"
+enum_state_before="$(git status --porcelain=v1 --untracked-files=all; git hash-object \
+  .ai/project/registry.json .ai/project/dashboard.md .ai/project/feature-map.md)"
+if node .ai/scripts/ctl-project-governance.mjs query --id T-001 --json >/dev/null 2>&1; then
+  fail "query answered while a registered worktree directory was missing"
+fi
+if node .ai/scripts/ctl-project-governance.mjs resume --task T-001 >/dev/null 2>&1; then
+  fail "resume answered while a registered worktree directory was missing"
+fi
+if node .ai/scripts/ctl-project-governance.mjs sync --apply >/dev/null 2>&1; then
+  fail "sync wrote while a registered worktree directory was missing"
+fi
+if node .ai/scripts/ctl-project-governance.mjs sync --prune --apply >/dev/null 2>&1; then
+  fail "prune ran while a registered worktree directory was missing"
+fi
+enum_state_after="$(git status --porcelain=v1 --untracked-files=all; git hash-object \
+  .ai/project/registry.json .ai/project/dashboard.md .ai/project/feature-map.md)"
+[ "$enum_state_before" = "$enum_state_after" ] \
+  || fail "a governance command changed state while worktree evidence was unreadable"
+git worktree prune
+node .ai/scripts/ctl-project-governance.mjs query --id T-001 --json >/dev/null \
+  || fail "query did not recover after the missing worktree was pruned"
+
+# Prune removes an orphaned registry projection only when no linked worktree and no local branch
+# tip still carries the bundle; surviving or unverifiable branch evidence refuses the removal.
+mkdir -p dev-docs/active/prune-probe
+printf '# Roadmap\n\n## Scope and constraints\n- Scope: prune probe\n\n## Decision alignment\nNone.\n\n## Task relationships\nNone.\n\n## Implementation plan\n\n### Phase 1 — discovery\n- Outcome: prune evidence exists\n- Approach: create and remove a bundle\n- Planned changes:\n  1. Allocate the task ID\n- Affected boundaries / entry points: governance script\n- Dependencies: none\n- Exit criteria: allocation succeeds\n- Verification: inspect the registry\n- Recovery: delete the probe bundle\n\n## Kickoff gate\n- Status: pending\n- [ ] Every user-owned choice that blocks implementation is decided.\n- [ ] Settled design and interfaces are reflected in `02-architecture.md`.\n- [ ] The first implementation phase is executable with exit, verification, and recovery criteria.\n- [ ] Every current completion condition has a decisive planned check in `verification.md`.\n\n## Risks and recovery\nNone.\n\n## Phase closeout\nRemove the probe.\n' \
+  > dev-docs/active/prune-probe/00-roadmap.md
+printf '# Status\n\n## Goal\nPrune probe.\n\n## Progress\n- State: planned\n- Current phase: verify\n- Next step: verify prune\n- Blocker: none\n\n## Done when\n- [ ] Prune verified\n' \
+  > dev-docs/active/prune-probe/01-status.md
+printf '# Architecture\n' > dev-docs/active/prune-probe/02-architecture.md
+printf '# Verification\n\n## Completion matrix\n\n| Completion condition | Check / procedure | Latest result | Evidence / limitation |\n|---|---|---|---|\n| Prune verified | Inspect the registry | not-run | Awaiting the prune run |\n\n## Outstanding verification\n\n- Inspect the registry.\n' \
+  > dev-docs/active/prune-probe/verification.md
+node .ai/scripts/ctl-project-governance.mjs sync --apply >/dev/null
+PRUNE_ID=$(grep -oE 'T-[0-9]{3}' dev-docs/active/prune-probe/.ai-task.json)
+git add -A
+git -c user.email=ci@local -c user.name=ci commit -qm "docs(task): open $PRUNE_ID prune-probe" -m "Task: $PRUNE_ID"
+
+# The surviving branch legally renames the bundle (directory and metadata slug together), so only
+# the stable task ID identifies it there; the registry still records the old path.
+git checkout -q -b keep/prune-renamed
+git mv dev-docs/active/prune-probe dev-docs/active/prune-probe-renamed
+node -e "const fs=require('fs');const p='dev-docs/active/prune-probe-renamed/.ai-task.json';const m=JSON.parse(fs.readFileSync(p,'utf8'));m.slug='prune-probe-renamed';fs.writeFileSync(p,JSON.stringify(m,null,2)+'\n')"
+git add -A
+git -c user.email=ci@local -c user.name=ci commit -qm "chore: rename prune probe on a side branch"
+git checkout -q feat/T-001-sample
+rm -rf dev-docs/active/prune-probe
+git add -A
+git -c user.email=ci@local -c user.name=ci commit -qm "chore: drop prune probe bundle"
+
+node .ai/scripts/ctl-project-governance.mjs sync --prune --dry-run > prune-plan.txt \
+  || fail "prune dry-run failed while branch evidence existed"
+grep -q "branch tip" prune-plan.txt \
+  || fail "prune did not report surviving branch evidence"
+grep -q "keep/prune-renamed" prune-plan.txt \
+  || fail "prune did not name the branch that still carries the renamed bundle"
+if grep -q "remove orphaned registry task $PRUNE_ID" prune-plan.txt; then
+  fail "prune planned a removal while a branch tip still carried the renamed bundle"
+fi
+node .ai/scripts/ctl-project-governance.mjs sync --prune --apply >/dev/null \
+  || fail "guarded prune apply failed"
+node -e "const r=require('./.ai/project/registry.json');process.exit(r.tasks.some(x=>x.id==='$PRUNE_ID')?0:1)" \
+  || fail "prune removed a projection whose renamed bundle survives on a branch tip"
+git branch -D keep/prune-renamed >/dev/null 2>&1
+
+# A branch that renamed the bundle directory without updating the metadata slug carries invalid
+# evidence: prune must treat it as unverifiable, never as "the task does not exist".
+git checkout -q -b keep/prune-mismatch HEAD~1
+git mv dev-docs/active/prune-probe dev-docs/active/prune-probe-drifted
+git -c user.email=ci@local -c user.name=ci commit -qm "chore: rename prune probe without updating its slug"
+git checkout -q feat/T-001-sample
+node .ai/scripts/ctl-project-governance.mjs sync --prune --dry-run > prune-plan.txt \
+  || fail "prune dry-run failed on slug-drifted branch metadata"
+grep -q "could not be verified" prune-plan.txt \
+  || fail "prune did not report slug-drifted branch metadata as unverifiable"
+if grep -q "remove orphaned registry task $PRUNE_ID" prune-plan.txt; then
+  fail "prune planned a removal despite slug-drifted branch metadata"
+fi
+node .ai/scripts/ctl-project-governance.mjs sync --prune --apply >/dev/null
+node -e "const r=require('./.ai/project/registry.json');process.exit(r.tasks.some(x=>x.id==='$PRUNE_ID')?0:1)" \
+  || fail "prune removed a projection while branch evidence was slug-drifted"
+git branch -D keep/prune-mismatch >/dev/null 2>&1
+
+# Malformed branch metadata is likewise unverifiable evidence, not an implicit "absent".
+git checkout -q -b keep/prune-broken HEAD~1
+printf '{ not json\n' > dev-docs/active/prune-probe/.ai-task.json
+git add -A
+git -c user.email=ci@local -c user.name=ci commit -qm "chore: corrupt prune probe metadata on a side branch"
+git checkout -q feat/T-001-sample
+node .ai/scripts/ctl-project-governance.mjs sync --prune --dry-run > prune-plan.txt \
+  || fail "prune dry-run failed on malformed branch metadata"
+grep -q "could not be verified" prune-plan.txt \
+  || fail "prune did not report malformed branch metadata as unverifiable"
+if grep -q "remove orphaned registry task $PRUNE_ID" prune-plan.txt; then
+  fail "prune planned a removal despite malformed branch metadata"
+fi
+git branch -D keep/prune-broken >/dev/null 2>&1
+
+node .ai/scripts/ctl-project-governance.mjs sync --prune --dry-run > prune-plan.txt
+grep -q "remove orphaned registry task $PRUNE_ID" prune-plan.txt \
+  || fail "prune dry-run did not plan the orphan removal"
+node -e "const r=require('./.ai/project/registry.json');process.exit(r.tasks.some(x=>x.id==='$PRUNE_ID')?0:1)" \
+  || fail "prune dry-run wrote the registry"
+node .ai/scripts/ctl-project-governance.mjs sync --prune --apply >/dev/null
+node -e "const r=require('./.ai/project/registry.json');process.exit(r.tasks.some(x=>x.id==='$PRUNE_ID')?1:0)" \
+  || fail "prune apply did not remove the orphaned projection"
+node .ai/scripts/ctl-project-governance.mjs lint --strict >/dev/null \
+  || fail "lint failed after prune"
+rm -f prune-plan.txt
 
 # archiving flips the effective status.
 mkdir -p dev-docs/archive
@@ -1027,4 +1275,4 @@ node -e "const r=require('./.ai/project/registry.json');process.exit(r.tasks.som
   || fail "archive status not propagated"
 node .ai/scripts/ctl-project-governance.mjs lint --strict >/dev/null || fail "lint failed after archive"
 
-echo "install/guidance refresh, strict CLI/data guards, single task root, pending seed example, kickoff/completion gates, roadmap and registry lint, resume, validation-atomic sync, Milestone progress and Feature mapping, lightweight Ideas, JSON round-trip, worktree allocation and query reconciliation, archive"
+echo "install/guidance refresh, strict CLI/data guards, single task root, pending seed example, kickoff/completion gates, roadmap and registry lint, resume with keyword search and exit codes, validation-atomic sync, Milestone progress and Feature mapping, lightweight Ideas, JSON round-trip, worktree allocation, full-bundle linear/stale/co-leader/concurrent divergence with reasoned documents diagnostics, fail-closed evidence enumeration, schema-checked ID-verified guarded prune, archive"
