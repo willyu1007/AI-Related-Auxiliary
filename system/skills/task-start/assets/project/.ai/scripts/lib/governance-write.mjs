@@ -224,7 +224,7 @@ export function cmdSync({ repoRoot, dryRun, apply }) {
   const registryPath = getRegistryPath(repoRoot);
   if (!exists(registryPath)) {
     errors.push(
-      'Project hub missing. Run: node .ai/scripts/install-project-governance.mjs --repo-root .'
+      'Project hub missing. Run the repository task-system installer from its skill source.'
     );
     return finish();
   }
@@ -473,7 +473,7 @@ export function cmdSync({ repoRoot, dryRun, apply }) {
     if (!base) {
       warnings.push(
         `Missing derived view file: ${toPosix(path.relative(repoRoot, filePath))} ` +
-          '(run: node .ai/scripts/install-project-governance.mjs --repo-root .).'
+          '(run the repository task-system installer from its skill source).'
       );
       return;
     }

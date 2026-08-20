@@ -11,17 +11,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const SHIPPED_ROOT = path.resolve(__dirname, '..', '..');
-const RETIRED_SHIPPED_FILES = [
-  '.ai/project/CONTRACT.md',
-  '.ai/project/task-index.md',
-  '.ai/project/changelog.md',
-  '.ai/project/templates/task-index.md',
-  '.ai/project/templates/changelog.md',
-  '.ai/project/templates/registry.yaml',
-  '.ai/scripts/lib/colors.mjs',
-  '.ai/scripts/lib/yaml-lite.mjs',
-];
+const SHIPPED_ROOT = path.resolve(__dirname, '..', 'assets', 'project');
 function fail(message) {
   console.error(message);
   process.exit(1);
@@ -34,7 +24,7 @@ Usage:
 
 Options:
   --repo-root <path>  Repo root (default: auto-detect; fallback: cwd)
-  --dry-run           Show planned refresh, cleanup, and initialization without writing
+  --dry-run           Show planned refresh and initialization without writing
   -h, --help          Show this help
 
 Refresh fixed task-governance assets and create missing project-owned hub files without
@@ -117,6 +107,15 @@ function collectFiles(dir, base = dir) {
   return files;
 }
 
+function isPathInside(parent, candidate) {
+  const relative = path.relative(parent, candidate);
+  return relative === '' || (
+    relative !== '..' &&
+    !relative.startsWith(`..${path.sep}`) &&
+    !path.isAbsolute(relative)
+  );
+}
+
 function listImmediateChildDirs(dirPath) {
   try {
     return fs
@@ -157,24 +156,15 @@ function refreshAssets({ repoRoot, dryRun, actions }) {
     fail(`[error] Shipped project assets are missing at ${toPosix(SHIPPED_ROOT)}.`);
   }
 
-  if (path.resolve(SHIPPED_ROOT) !== path.resolve(repoRoot)) {
-    for (const relative of collectFiles(SHIPPED_ROOT)) {
-      const source = path.join(SHIPPED_ROOT, relative);
-      const target = path.join(repoRoot, relative);
-      const content = readText(source);
-      if (content === null) fail(`[error] Cannot read shipped asset: ${toPosix(source)}.`);
-      const previous = readText(target);
-      if (previous === content) continue;
-      actions.push({ op: previous === null ? 'write' : 'update', path: target });
-      if (!dryRun) writeText(target, content);
-    }
-  }
-
-  for (const relative of RETIRED_SHIPPED_FILES) {
-    const retired = path.join(repoRoot, relative);
-    if (!exists(retired)) continue;
-    actions.push({ op: 'remove', path: retired });
-    if (!dryRun) fs.unlinkSync(retired);
+  for (const relative of collectFiles(SHIPPED_ROOT)) {
+    const source = path.join(SHIPPED_ROOT, relative);
+    const target = path.join(repoRoot, relative);
+    const content = readText(source);
+    if (content === null) fail(`[error] Cannot read shipped asset: ${toPosix(source)}.`);
+    const previous = readText(target);
+    if (previous === content) continue;
+    actions.push({ op: previous === null ? 'write' : 'update', path: target });
+    if (!dryRun) writeText(target, content);
   }
 }
 
@@ -213,6 +203,9 @@ function printActions(repoRoot, actions, dryRun) {
 function main() {
   const opts = parseArgs(process.argv);
   const repoRoot = opts.repoRoot || findRepoRoot(process.cwd()) || path.resolve(process.cwd());
+  if (isPathInside(SHIPPED_ROOT, repoRoot)) {
+    fail('[error] The installation target must not be the skill asset source or one of its descendants.');
+  }
   assertGovernanceLayout(repoRoot);
 
   const actions = [];

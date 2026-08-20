@@ -19,7 +19,7 @@ Open and register a durable task bundle before implementation begins.
 2. **Provision and read the task system.** When the gate passes, run the idempotent installer before using task docs:
 
    ```bash
-   node <this-skill>/assets/project/.ai/scripts/install-project-governance.mjs --repo-root .
+   node <this-skill>/scripts/install-project-governance.mjs --repo-root .
    ```
 
    `<this-skill>` is the directory containing this `SKILL.md`. The installer creates or refreshes `dev-docs/CLAUDE.md`, `dev-docs/AGENTS.md`, `dev-docs/active/`, `dev-docs/archive/`, and the project-governance assets. It preserves project-owned hub data. Read `dev-docs/AGENTS.md` completely, then validate the existing layout before searching or creating anything:
@@ -117,4 +117,5 @@ Before proceeding, verify that a fresh agent can read `01-status.md` and answer 
 
 - `./templates/` — required initial bundle templates and the conditional requirements input
 - `./examples/sample-roadmap-seed.md` — a worked pending roadmap seed
+- `./scripts/install-project-governance.mjs` — project governance installer
 - `./assets/project/` — repository governance guidance, code, and hub assets installed into a project

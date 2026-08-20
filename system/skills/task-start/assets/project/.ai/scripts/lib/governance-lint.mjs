@@ -357,7 +357,7 @@ export function cmdLint({ repoRoot, strict }) {
 
   if (!registry && !registryParseError) {
     warnings.push(
-      'Project hub is not initialized. Run: node .ai/scripts/install-project-governance.mjs --repo-root .'
+      'Project hub is not initialized. Run the repository task-system installer from its skill source.'
     );
   } else if (registry) {
     const REQUIRED_REGISTRY_KEYS = [

@@ -10,7 +10,7 @@ fail() { echo "FAIL: $1"; exit 1; }
 
 [ -n "$AUX_ROOT" ] || fail "AUX_ROOT not set; run via node checks/run.mjs"
 
-INSTALLER="$AUX_ROOT/system/skills/task-start/assets/project/.ai/scripts/install-project-governance.mjs"
+INSTALLER="$AUX_ROOT/system/skills/task-start/scripts/install-project-governance.mjs"
 CTL="$AUX_ROOT/system/skills/task-start/assets/project/.ai/scripts/ctl-project-governance.mjs"
 [ -f "$INSTALLER" ] || fail "task-start does not ship the installer"
 [ -f "$CTL" ] || fail "task-start does not ship the control script"
@@ -19,16 +19,14 @@ CTL="$AUX_ROOT/system/skills/task-start/assets/project/.ai/scripts/ctl-project-g
 if [ -d .ai ] || [ -d dev-docs ]; then fail "target repo is not empty before install"; fi
 node "$INSTALLER" --repo-root . >/dev/null
 
-for f in .ai/scripts/install-project-governance.mjs \
-         .ai/scripts/ctl-project-governance.mjs \
+for f in .ai/scripts/ctl-project-governance.mjs \
          .ai/scripts/lib/governance-read.mjs \
          .ai/scripts/lib/governance-lint.mjs \
          .ai/scripts/lib/governance-write.mjs \
          .ai/project/AGENTS.md .ai/project/CLAUDE.md .ai/project/templates/registry.json; do
   [ -f "$f" ] || fail "install did not place $f"
 done
-[ ! -e .ai/scripts/lib/yaml-lite.mjs ] || fail "install retained the retired YAML parser"
-[ ! -e .ai/project/CONTRACT.md ] || fail "install retained the superseded hub contract"
+[ ! -e .ai/scripts/install-project-governance.mjs ] || fail "install distributed the skill-source installer"
 grep -q 'Follow `AGENTS.md`' .ai/project/CLAUDE.md \
   || fail "hub Claude entry does not route to AGENTS.md"
 for d in dev-docs/active dev-docs/archive; do
@@ -42,10 +40,6 @@ grep -q 'Follow `AGENTS.md`' dev-docs/CLAUDE.md \
   || fail "task-doc Claude entry does not route to AGENTS.md"
 for f in registry.json dashboard.md feature-map.md; do
   [ -f ".ai/project/$f" ] || fail "install did not initialize .ai/project/$f"
-done
-for f in task-index.md changelog.md; do
-  [ ! -e ".ai/project/$f" ] || fail "install retained redundant view $f"
-  [ ! -e ".ai/project/templates/$f" ] || fail "install retained redundant template $f"
 done
 node -e "const r=require('./.ai/project/registry.json');process.exit(Object.hasOwn(r,'task_doc_roots')?1:0)" \
   || fail "registry retained configurable task roots"
@@ -102,6 +96,9 @@ if node "$INSTALLER" --repo-root >/dev/null 2>&1; then
 fi
 if node "$INSTALLER" --dry-run --dry-run >/dev/null 2>&1; then
   fail "installer accepted a duplicate option"
+fi
+if node "$INSTALLER" --repo-root "$AUX_ROOT/system/skills/task-start/assets/project" --dry-run >/dev/null 2>&1; then
+  fail "installer accepted its own asset source as the target repository"
 fi
 if node .ai/scripts/ctl-project-governance.mjs query --bogus >/dev/null 2>&1; then
   fail "query accepted an unknown option"
@@ -200,33 +197,18 @@ mv registry.tmp .ai/project/registry.json
 # discard every task the repository has.
 node -e "const fs=require('fs');const p='.ai/project/registry.json';const r=JSON.parse(fs.readFileSync(p,'utf8'));r.smoke_marker=true;fs.writeFileSync(p,JSON.stringify(r,null,2)+'\n')"
 printf '\nshipped-doc-drift\n' >> dev-docs/AGENTS.md
-printf '# Superseded contract\n' > .ai/project/CONTRACT.md
-printf '# Redundant task index\n' > .ai/project/task-index.md
-printf '# Redundant changelog\n' > .ai/project/changelog.md
-printf '# Redundant task index template\n' > .ai/project/templates/task-index.md
-printf '# Redundant changelog template\n' > .ai/project/templates/changelog.md
-mkdir -p .ai/scripts/lib
-printf 'retired\n' > .ai/scripts/lib/colors.mjs
-printf 'retired\n' > .ai/scripts/lib/yaml-lite.mjs
 node "$INSTALLER" --repo-root . >/dev/null
 node -e "const r=require('./.ai/project/registry.json');process.exit(r.smoke_marker===true?0:1)" \
   || fail "re-install overwrote hub data"
 if grep -q 'shipped-doc-drift' dev-docs/AGENTS.md; then
   fail "re-install did not refresh the task-document guidance"
 fi
-[ ! -e .ai/project/CONTRACT.md ] || fail "re-install did not remove the superseded hub contract"
-[ ! -e .ai/scripts/lib/colors.mjs ] || fail "re-install retained the retired color helper"
-[ ! -e .ai/scripts/lib/yaml-lite.mjs ] || fail "re-install retained the retired YAML parser"
-for f in task-index.md changelog.md; do
-  [ ! -e ".ai/project/$f" ] || fail "re-install did not remove redundant view $f"
-  [ ! -e ".ai/project/templates/$f" ] || fail "re-install did not remove redundant template $f"
-done
 
 rm .ai/project/dashboard.md
-node .ai/scripts/install-project-governance.mjs --repo-root . >/dev/null
-[ -f .ai/project/dashboard.md ] || fail "installed installer did not restore missing hub data"
+node "$INSTALLER" --repo-root . >/dev/null
+[ -f .ai/project/dashboard.md ] || fail "skill-source installer did not restore missing hub data"
 node -e "const r=require('./.ai/project/registry.json');process.exit(r.smoke_marker===true?0:1)" \
-  || fail "installed installer overwrote existing hub data"
+  || fail "skill-source installer overwrote existing hub data"
 
 # Single-project layout: no per-project subdirectory, no project key in the registry.
 if [ -d .ai/project/main ]; then fail "installer created a per-project subdirectory"; fi
