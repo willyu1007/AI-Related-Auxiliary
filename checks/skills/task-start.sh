@@ -21,6 +21,7 @@ node "$INSTALLER" --repo-root . >/dev/null
 
 for f in .ai/scripts/install-project-governance.mjs \
          .ai/scripts/ctl-project-governance.mjs \
+         .ai/scripts/lib/governance-read.mjs \
          .ai/project/AGENTS.md .ai/project/CLAUDE.md .ai/project/templates/registry.json; do
   [ -f "$f" ] || fail "install did not place $f"
 done
