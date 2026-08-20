@@ -1,9 +1,9 @@
 ---
 name: goal-mode
 description: >-
-  Use when a repository goal requires sustained execution through a task bundle
-  across multiple roadmap phases, checkpoints, long-running operations,
-  external waits, or sessions.
+  Use when a task or goal is expected to span hours, days, long-running
+  operations, external waits, or multiple sessions, or when the user explicitly
+  asks to use goal mode.
 ---
 
 # Goal Mode
