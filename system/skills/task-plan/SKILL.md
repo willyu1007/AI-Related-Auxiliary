@@ -40,7 +40,26 @@ Converge one living roadmap without creating a second planning authority.
 
 4. **Propagate each conclusion once.** Keep the decision question, status, closure evidence, concise rationale, consequences, and working assumptions in `00-roadmap.md`. Put only the resulting current technical design and contracts in `02-architecture.md`; do not copy alternatives, decision ownership, closure status, or rationale history there. If a premise is invalidated, remove or revise any architecture conclusion that no longer remains settled. If the goal, completion conditions, current phase, next action, or blocker changed, update `01-status.md`. The first alignment or discovery checkpoint after opening changes `State: planned` to `State: in-progress`; kickoff readiness remains a separate dimension. Keep relationship rows directional and never copy another task's mutable state.
 
-5. **Build or revise the executable route.** While kickoff is `pending`, the first phase may be alignment or discovery and later implementation phases may remain absent rather than invented. Keep work as phases only while it shares this task's outcome, state, completion conditions, and lifecycle. If new evidence reveals work needing an independent outcome, owner, pause, verification, archive, worktree, or managed interface, record the relationship and creation trigger instead of expanding this roadmap to own it. Before changing the gate to `ready`, verify all of the following in the roadmap:
+5. **Build or revise the executable route.** While kickoff is `pending`, the first phase may be alignment or discovery and later implementation phases may remain absent rather than invented. Keep work as phases only while it shares this task's outcome, state, completion conditions, and lifecycle. If new evidence reveals work needing an independent outcome, owner, pause, verification, archive, worktree, or managed interface, record the relationship and creation trigger instead of expanding this roadmap to own it.
+
+   Prefer the smallest coherent implementation phase that produces an independently
+   demonstrable or decisive vertical result and can pass its own verification. If the
+   entire change is already one such unit, keep it as one phase. Do not split work by
+   technical layer when no phase can prove a meaningful outcome.
+
+   For a wide migration that cannot stay usable as ordinary vertical phases, use explicit
+   `expand -> migrate -> contract` phases:
+
+   - `expand` introduces the new path while keeping the old path recoverable;
+   - each `migrate` phase moves one bounded caller, data, or traffic batch and defines its
+     own verification and recovery boundary;
+   - when batches cannot close independently, keep them inside one `migrate` phase instead
+     of presenting them as independent checkpoints;
+   - `contract` starts only after no supported caller, data, or traffic dependency remains
+     on the old path, then removes the superseded path and unsupported dual track.
+
+   Do not complete the task before the `contract` phase passes verification. Before
+   changing the gate to `ready`, verify all of the following in the roadmap:
 
    - every user-owned choice that blocks implementation is `decided`;
    - current settled design and interfaces are reflected in `02-architecture.md`;

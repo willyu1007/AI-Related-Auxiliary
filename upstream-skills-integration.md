@@ -28,8 +28,8 @@ handling from `perform-web-research` in `Template-Skill-Addon`.
 
 ### `task-plan` and `goal-mode`: executable migration shape
 
-Absorb the planning contracts from `to-tickets` without adopting its issue and
-ticket hierarchy.
+Implemented in `task-plan` without adopting the issue and ticket hierarchy from
+`to-tickets`; `goal-mode` remains the orchestration pointer.
 
 - Prefer roadmap phases that produce an independently demonstrable or decisive
   vertical result.
@@ -106,9 +106,7 @@ it does not need to block the higher-value merges above.
 
 ## Remaining implementation order
 
-1. Merge the executable-migration contract into `task-plan`; retain
-   `goal-mode` as the orchestration pointer.
-2. Add the handoff redaction and VCS review-baseline contracts.
-3. Design and validate `write-agent-docs`.
-4. Add `resolve-vcs-conflicts` when observed usage justifies the dedicated
+1. Add the handoff redaction and VCS review-baseline contracts.
+2. Design and validate `write-agent-docs`.
+3. Add `resolve-vcs-conflicts` when observed usage justifies the dedicated
    workflow.
