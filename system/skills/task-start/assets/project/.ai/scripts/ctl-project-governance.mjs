@@ -32,7 +32,6 @@ import {
   cmdFeature,
   cmdMap,
   cmdMilestone,
-  cmdRequirement,
   cmdSync,
   withGovernanceWriteLock,
 } from './lib/governance-write.mjs';
@@ -72,8 +71,6 @@ Commands:
     --json                    Output a single JSON array instead of JSON lines
     Locate tasks across every linked worktree for dedupe/triage (LLM-friendly output).
 
-    Exit codes: 0 found, 4 invalid or not found.
-
   resume
     --repo-root <path>        Repo root (default: auto-detect; fallback: cwd)
     --task <T-###>            Task ID (default: branch task, then the active task)
@@ -86,11 +83,10 @@ Commands:
   map
     --repo-root <path>        Repo root (default: auto-detect; fallback: cwd)
     --task <T-###>            Task ID to map (required)
-    --feature <F-###>         Feature ID to map the task to
-    --requirement <R-###>     Existing Requirement ID to map the task to
+    --feature <F-###>         Existing Feature ID to map the task to (required)
     --dry-run                 Show what would change without writing
     --apply                   Apply the mapping change
-    Map a task to a Feature or Requirement. Its Milestone is derived from the Feature.
+    Map a task to a Feature. Its Milestone is derived from that Feature.
 
   milestone
     --repo-root <path>        Repo root (default: auto-detect; fallback: cwd)
@@ -110,23 +106,12 @@ Commands:
     --json                    Output the resolved feature as JSON
     Resolve an existing feature by title or allocate one across linked worktrees.
 
-  requirement
-    --repo-root <path>        Repo root (default: auto-detect; fallback: cwd)
-    --title <text>            Exact requirement title to find or create (required)
-    --feature <F-###>         Existing parent Feature ID (required)
-    --description <text>      Description used only when creating a requirement
-    --dry-run                 Show what would change without writing
-    --apply                   Ensure the requirement exists in the current registry
-    --json                    Output the resolved requirement as JSON
-    Resolve an existing requirement by Feature/title or allocate one across linked worktrees.
-
 Examples:
   node .ai/scripts/ctl-project-governance.mjs lint
   node .ai/scripts/ctl-project-governance.mjs sync --dry-run
   node .ai/scripts/ctl-project-governance.mjs sync --apply
   node .ai/scripts/ctl-project-governance.mjs milestone --title "Public beta" --apply --json
   node .ai/scripts/ctl-project-governance.mjs feature --title "OAuth providers" --apply --json
-  node .ai/scripts/ctl-project-governance.mjs requirement --title "Google sign-in" --feature F-002 --apply --json
   node .ai/scripts/ctl-project-governance.mjs map --task T-001 --feature F-002 --apply
   node .ai/scripts/ctl-project-governance.mjs resume
 `.trim();
@@ -141,7 +126,7 @@ const COMMAND_OPTIONS = Object.freeze({
   query: { values: ['repo-root', 'id', 'status', 'text'], flags: ['json'] },
   resume: { values: ['repo-root', 'task', 'limit', 'scan'], flags: [] },
   map: {
-    values: ['repo-root', 'task', 'feature', 'requirement'],
+    values: ['repo-root', 'task', 'feature'],
     flags: ['dry-run', 'apply'],
     conflicts: [['dry-run', 'apply']],
   },
@@ -152,11 +137,6 @@ const COMMAND_OPTIONS = Object.freeze({
   },
   feature: {
     values: ['repo-root', 'title', 'description'],
-    flags: ['dry-run', 'apply', 'json'],
-    conflicts: [['dry-run', 'apply']],
-  },
-  requirement: {
-    values: ['repo-root', 'title', 'feature', 'description'],
     flags: ['dry-run', 'apply', 'json'],
     conflicts: [['dry-run', 'apply']],
   },
@@ -307,7 +287,6 @@ function main() {
     case 'map': {
       const taskId = opts.task ? String(opts.task).trim() : '';
       const featureId = opts.feature ? String(opts.feature).trim() : '';
-      const requirementId = opts.requirement ? String(opts.requirement).trim() : '';
       const dryRun = !!opts['dry-run'];
       const apply = !!opts.apply;
       if (!dryRun && !apply) {
@@ -320,7 +299,6 @@ function main() {
             repoRoot,
             taskId,
             featureId: featureId || null,
-            requirementId: requirementId || null,
             dryRun: dryRun || !apply,
             apply: apply && !dryRun,
           });
@@ -332,41 +310,6 @@ function main() {
       if (!res.ok) {
         header('Errors:');
         for (const e of res.errors) console.log(`- ${e}`);
-      }
-      process.exit(res.ok ? 0 : 1);
-      break;
-    }
-    case 'requirement': {
-      const title = opts.title ? String(opts.title) : '';
-      const featureId = opts.feature ? String(opts.feature).trim() : '';
-      const description = opts.description ? String(opts.description) : '';
-      const dryRun = !!opts['dry-run'];
-      const apply = !!opts.apply;
-      if (!dryRun && !apply) info('No mode specified; defaulting to --dry-run.');
-
-      let res;
-      try {
-        const runRequirement = () =>
-          cmdRequirement({
-            repoRoot,
-            title,
-            featureId,
-            description,
-            dryRun: dryRun || !apply,
-            apply: apply && !dryRun,
-            json: !!opts.json,
-          });
-        res = apply && !dryRun ? withGovernanceWriteLock(repoRoot, runRequirement) : runRequirement();
-      } catch (error) {
-        console.error(
-          `[error] Requirement resolution aborted: ${error?.message || String(error)}`
-        );
-        process.exit(1);
-      }
-
-      if (!res.ok) {
-        header('Errors:');
-        for (const error of res.errors) console.log(`- ${error}`);
       }
       process.exit(res.ok ? 0 : 1);
       break;

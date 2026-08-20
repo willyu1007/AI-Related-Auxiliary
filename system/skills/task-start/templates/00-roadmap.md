@@ -31,11 +31,11 @@ Use one `None` row when no assumption is currently needed.
 
 ## Task relationships
 
-| Task / proposed work | Relationship from this task | Owned boundary / exchanged contract | Coordination condition |
+| Task | Relationship from this task | Owned boundary / exchanged contract | Coordination condition |
 |---|---|---|---|
-| <!-- T-### or proposed:<slug> --> | <!-- depends-on / blocks / sibling / follow-up / derived-from / supersedes --> | <!-- what each task owns or passes across the boundary --> | <!-- event, decision, or interface that requires coordination --> |
+| <!-- T-### --> | <!-- depends-on / blocks / sibling / follow-up / derived-from / supersedes --> | <!-- what each task owns or passes across the boundary --> | <!-- event, decision, or interface that requires coordination --> |
 
-Interpret the relationship from the current task: `depends-on` means this task needs the listed work, `blocks` means this task gates it, `follow-up` means the listed work follows this task, and `derived-from` or `supersedes` also use this-task-first direction. Record only evidence-backed relationships that touch this task. If none is known, replace the placeholder with `| None | — | — | — |`; do not infer a relationship from shared files or domain alone. Use `proposed:<slug>` only for a concrete outcome with a creation trigger. Do not copy another task's state here; resolve current state from that task's own status file. If a dependency blocks this task, also update `01-status.md`. Before archive, convert each unresolved proposal into a task ID, cancel or descope it explicitly, or transfer it to the Feature Brief and `summary.md`.
+Interpret the relationship from the current task: `depends-on` means this task needs the listed work, `blocks` means this task gates it, `follow-up` means the listed work follows this task, and `derived-from` or `supersedes` also use this-task-first direction. Record only evidence-backed relationships to opened tasks. If none is known, replace the placeholder with `| None | — | — | — |`; do not infer a relationship from shared files or domain alone. Do not copy another task's state here; resolve current state from that task's own status file. If a dependency blocks this task, also update `01-status.md`. A deferred possibility that does not justify a task belongs only in the project Idea list.
 
 ## Implementation plan
 

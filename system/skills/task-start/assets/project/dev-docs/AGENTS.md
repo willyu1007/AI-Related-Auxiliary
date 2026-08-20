@@ -91,8 +91,7 @@ Use each source only for what it proves:
 - The task bundle owns its task-level identity, intent, progress, design, verification, and
   lifecycle according to the document responsibilities above.
 - The project hub provides the cross-task semantic map. `.ai/project/registry.json` owns
-  Milestones, Features, Requirements, and their mappings; its task entries are projections of
-  task bundles.
+  Milestones, Features, and their task mappings; its task entries are projections of task bundles.
 - Generated hub views are derived and may be rebuilt. Neither registry task entries nor generated
   views override a task bundle.
 - Git history proves committed work; a task commit carries exactly one `Task: T-###` trailer.

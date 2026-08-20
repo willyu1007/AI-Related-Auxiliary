@@ -14,15 +14,15 @@ For the selected task, read its bounded recovery packet:
 node .ai/scripts/ctl-project-governance.mjs resume --repo-root <worktree_path> --task T-xxx
 ```
 
-## Priority Rules
+## Action Rules
 
-| Priority | Condition |
+| Condition | Action type |
 |----------|-----------|
-| 1 | Has `in-progress` task with kickoff `pending` → continue alignment or replanning, not implementation |
-| 2 | Has `in-progress` task with kickoff `ready` → continue that task's implementation |
-| 3 | Has `blocked` task → attempt to unblock |
-| 4 | Has `planned` task → continue planning toward kickoff |
-| 5 | All `done` → report completion or suggest new work |
+| `in-progress` with kickoff `pending` | Continue alignment or replanning, not implementation |
+| `in-progress` with kickoff `ready` | Continue that task's implementation |
+| `blocked` | Investigate the named blocker or required external input |
+| `planned` | Continue planning toward kickoff |
+| All tasks terminal | Report completion or suggest selecting new work |
 
 ## Output Template
 
@@ -45,6 +45,9 @@ node .ai/scripts/ctl-project-governance.mjs resume --repo-root <worktree_path> -
 
 ## Rules
 - Always provide at least one actionable command
+- When several tasks are eligible, rank them only from documented deadlines, dependencies, blockers,
+  project focus, or an explicit user priority. If no evidence distinguishes them, present the choices
+  without inventing a project priority.
 - If continuing an in-progress task, suggest reading its current status head first
 - For blocked tasks, suggest investigation steps
 - Use `timeline.commits` for landed work and `status` for the task goal and next step.

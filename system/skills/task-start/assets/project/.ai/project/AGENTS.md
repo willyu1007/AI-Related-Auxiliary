@@ -1,13 +1,13 @@
 # Project governance
 
 `.ai/project/` is the cross-task semantic hub. It relates durable task work to project-level
-Milestones, Features, and Requirements without replacing task records or repository reality.
+Milestones and Features without replacing task records or repository reality.
 
 ## Authority boundaries
 
 - Task bundles own task identity, goal, progress, decisions, design, verification, and lifecycle.
-- `.ai/project/registry.json` owns Milestones, Features, Requirements, their relationships, task
-  mappings, and a lightweight deferred-idea list.
+- `.ai/project/registry.json` owns Milestones, Features, their relationships, task mappings, and a
+  lightweight deferred-idea list. A Feature's `title` and `description` are its semantic authority.
 - Registry task entries are projections. They never override task identity, progress, kickoff
   readiness, or completion evidence.
 - Git history proves committed work; each linked worktree proves its current uncommitted state.
@@ -32,14 +32,11 @@ The hub consumes these task facts:
 - A real Milestone is a low-frequency project-stage outcome that groups the Features needed for
   that outcome. Keep work in `M-000` when no explicit stage goal has been confirmed.
 - Feature IDs use `F-###`; `F-000` is the Inbox / Untriaged Feature and belongs to `M-000`.
-- Requirement IDs use `R-###`.
 - Milestone statuses are `planned | in-progress | blocked | done`.
-- Feature and Requirement statuses are `planned | in-progress | blocked | done | cut`.
+- Feature statuses are `planned | in-progress | blocked | done | cut`.
 - Every Feature references an existing Milestone.
-- Every Requirement references an existing Feature.
 - Every task projection references an existing Feature. Its Milestone is derived only through
-  that Feature; task entries never store an independent `milestone_id`. Any Requirement the task
-  references belongs to the same Feature.
+  that Feature; task entries never store an independent `milestone_id`.
 - Milestone and Feature statuses are project-level claims, not task-count rollups. Task states are
   progress evidence; they may reveal a contradiction or possible readiness, but never change a
   Milestone or Feature status automatically. A real Milestone is `done` only after its outcome is
@@ -62,8 +59,8 @@ The hub consumes these task facts:
   children of its `active/` and `archive/` directories are task bundles.
 - Allocation and write-mode mapping use the shared governance lock under Git's common directory.
 - Task allocation considers metadata in every linked worktree, the current registry, and task
-  trailers across branch history. Milestone, Feature, and Requirement allocation considers every
-  linked worktree registry.
+  trailers across branch history. Milestone and Feature allocation considers every linked
+  worktree registry.
 - Cross-worktree search returns one logical row per valid task ID and preserves its occurrences in
   `worktrees`. Equal copies collapse into that row. `conflict: true` means one or more task facts
   differ; the differing top-level facts are unset and `conflicts` preserves the evidence. Do not
@@ -76,10 +73,8 @@ The hub consumes these task facts:
 
 ## Derived views
 
-- `dashboard.md` and `feature-map.md` are derived views with bounded manual sections.
+- `dashboard.md` and `feature-map.md` are derived views.
 - AUTO-GENERATED sections are replaceable projections and must not be hand-edited.
-- Manual Feature Briefs may summarize Feature-level intent, boundaries, dependencies, and success
-  signals. They link tasks without copying mutable task facts.
 
 ## Change control
 

@@ -9,11 +9,6 @@ import path from 'node:path';
 
 import {
   FEATURE_ID_RE,
-  FEATURE_STATUS,
-  MILESTONE_ID_RE,
-  MILESTONE_STATUS,
-  REQUIREMENT_ID_RE,
-  REQUIREMENT_STATUS,
   TASK_ID_RE,
   exists,
   getBundleStatusFromStatusDoc,
@@ -25,14 +20,16 @@ import {
   parseTaskMeta,
   queryTasks,
   readText,
+  renderDashboardProjection,
+  renderFeatureMap,
   runGit,
   scanTasks,
   taskIdsFromAllBranches,
   taskIdsFromAllWorktrees,
   toPosix,
 } from './governance-read.mjs';
+import { getRegistryDataErrors } from './governance-lint.mjs';
 
-const warn = (message) => console.warn(message);
 const ok = (message) => console.log(message);
 const info = (message) => console.log(message);
 const header = (message) => console.log(message);
@@ -56,11 +53,8 @@ function getTaskConflictErrorsFromRows(tasks) {
     });
 }
 
-function getRegistryLayoutErrors(registry) {
-  const errors = [];
-  if (Object.hasOwn(registry, 'task_doc_roots')) {
-    errors.push('Registry contains unsupported top-level key: "task_doc_roots".');
-  }
+function getRegistryWriteErrors(registry) {
+  const errors = getRegistryDataErrors(registry);
   for (const task of Array.isArray(registry.tasks) ? registry.tasks : []) {
     if (!task || typeof task !== 'object') continue;
     const devDocsPath = toPosix(String(task.dev_docs_path || ''));
@@ -69,6 +63,28 @@ function getRegistryLayoutErrors(registry) {
         `Registry task ${String(task.id || '(no-id)')} has unsupported dev_docs_path "${devDocsPath}"; task bundles must be immediate children of top-level dev-docs/active or dev-docs/archive.`
       );
     }
+  }
+  return errors;
+}
+
+function getSyncTaskShapeErrors(registry) {
+  const errors = [];
+  if (!Array.isArray(registry.tasks)) {
+    return ['Registry "tasks" must be a list.'];
+  }
+  const seen = new Set();
+  for (const task of registry.tasks) {
+    if (!task || typeof task !== 'object' || Array.isArray(task)) {
+      errors.push('Task entry must be a mapping.');
+      continue;
+    }
+    const id = String(task.id || '').trim();
+    if (!TASK_ID_RE.test(id)) {
+      errors.push(`Task ID "${id}" does not match the required format.`);
+      continue;
+    }
+    if (seen.has(id)) errors.push(`Duplicate Task ID "${id}" in registry.`);
+    seen.add(id);
   }
   return errors;
 }
@@ -98,21 +114,13 @@ function writeTextIfChanged(filePath, content) {
   return true;
 }
 
-function replaceAutoBlock(raw, blockId, content, filePath, allowFullReplace = true) {
+function replaceAutoBlock(raw, blockId, content) {
   const start = `<!-- AUTO-GENERATED:START ${blockId} -->`;
   const end = `<!-- AUTO-GENERATED:END ${blockId} -->`;
   const sIdx = raw.indexOf(start);
   const eIdx = raw.indexOf(end);
   if (sIdx === -1 || eIdx === -1 || eIdx < sIdx) {
-    const label = filePath ? toPosix(filePath) : '(unknown file)';
-    if (!allowFullReplace) {
-      // Existing file with missing markers: refuse to overwrite to prevent data loss.
-      warn(`[warning] Missing AUTO-GENERATED markers for "${blockId}" in ${label}; skipping update to preserve manual content. Restore the markers before retrying sync.`);
-      return null;
-    }
-    // Safe fallback for freshly created templates.
-    warn(`[warning] Missing AUTO-GENERATED markers for "${blockId}" in ${label}; replacing entire file content.`);
-    return content.endsWith('\n') ? content : `${content}\n`;
+    return null;
   }
 
   const before = raw.slice(0, sIdx + start.length);
@@ -235,7 +243,8 @@ export function cmdSync({ repoRoot, dryRun, apply }) {
     return finish();
   }
   const reg = loaded.registry;
-  errors.push(...getRegistryLayoutErrors(reg));
+  errors.push(...getSyncTaskShapeErrors(reg));
+  errors.push(...collectProjectGraphFromAllWorktrees(repoRoot, { repairingRepoRoot: repoRoot }).errors);
   if (errors.length > 0) return finish();
 
   const tasks = scanTasks(repoRoot);
@@ -334,7 +343,7 @@ export function cmdSync({ repoRoot, dryRun, apply }) {
         continue;
       }
       if (!TASK_ID_RE.test(meta.task_id)) {
-        warnings.push(`${toPosix(task.relPath)}: Invalid task_id; sync will not auto-repair without manual fix.`);
+        errors.push(`${toPosix(task.relPath)}: Invalid task_id; sync will not auto-repair without manual fix.`);
         continue;
       }
       task.taskId = meta.task_id;
@@ -391,8 +400,9 @@ export function cmdSync({ repoRoot, dryRun, apply }) {
       description: 'Untriaged tasks live here until mapped to a real feature.',
     });
   }
-  if (!Array.isArray(reg.requirements)) reg.requirements = [];
   if (reg.ideas === undefined) reg.ideas = [];
+  errors.push(...getRegistryWriteErrors(reg));
+  if (errors.length > 0) return finish();
   // Write registry
   const registryOut = renderJson(reg);
   planWrite(registryPath, registryOut, { op: 'update', note: 'update registry' });
@@ -402,89 +412,24 @@ export function cmdSync({ repoRoot, dryRun, apply }) {
   const dashboardPath = path.join(hubDir, 'dashboard.md');
   const featureMapPath = path.join(hubDir, 'feature-map.md');
 
-  const regTasks = Array.isArray(reg.tasks) ? reg.tasks : [];
-  const counts = { total: regTasks.length, planned: 0, inProgress: 0, blocked: 0, done: 0, archived: 0 };
-  for (const t of regTasks) {
-    const st = String(t.status || '');
-    if (st === 'planned') counts.planned++;
-    else if (st === 'in-progress') counts.inProgress++;
-    else if (st === 'blocked') counts.blocked++;
-    else if (st === 'done') counts.done++;
-    else if (st === 'archived') counts.archived++;
-  }
-  const cell = (value) => String(value || '').replace(/\r?\n/g, ' ').replace(/\|/g, '\\|');
-  const dashAutoLines = [
-    '## Summary',
-    '',
-    `- Tasks: ${counts.total} (planned: ${counts.planned}, in-progress: ${counts.inProgress}, blocked: ${counts.blocked}, done: ${counts.done}, archived: ${counts.archived})`,
-    '',
-    '## Recently registered or status-changed tasks',
-    '',
-    '| Task | Status | Feature | Dev Docs |',
-    '| --- | --- | --- | --- |',
-    ...regTasks
-      .slice()
-      .sort((a, b) => String(b.updated || '').localeCompare(String(a.updated || '')))
-      .slice(0, 20)
-      .map((t) => {
-        const taskLabel = `${t.id} ${t.slug || ''}`.trim();
-        return `| ${cell(taskLabel)} | ${cell(t.status)} | ${cell(t.feature_id)} | ${cell(t.dev_docs_path)} |`;
-      }),
-    '',
-  ];
-  const dashAuto = dashAutoLines.join('\n');
-
-  const featureAutoLines = [];
-  featureAutoLines.push('## Features');
-  featureAutoLines.push('');
-  const features = Array.isArray(reg.features) ? reg.features : [];
-  const byFeature = new Map();
-  for (const t of regTasks) {
-    const fid = String(t.feature_id || 'F-000');
-    const list = byFeature.get(fid) || [];
-    list.push(t);
-    byFeature.set(fid, list);
-  }
-  for (const f of features.slice().sort((a, b) => String(a.id).localeCompare(String(b.id)))) {
-    if (!f || typeof f !== 'object') continue;
-    const fid = String(f.id || '');
-    const title = String(f.title || '');
-    const list = (byFeature.get(fid) || []).slice().sort((a, b) => String(a.id).localeCompare(String(b.id)));
-    featureAutoLines.push(`### ${fid} ${title}`.trim());
-    featureAutoLines.push('');
-    if (list.length === 0) {
-      featureAutoLines.push('- (no tasks)');
-      featureAutoLines.push('');
-      continue;
-    }
-    featureAutoLines.push('| Task | Status | Dev Docs |');
-    featureAutoLines.push('| --- | --- | --- |');
-    for (const t of list) {
-      const label = `${t.id} ${t.slug || ''}`.trim();
-      featureAutoLines.push(`| ${label} | ${t.status || ''} | ${t.dev_docs_path || ''} |`);
-    }
-    featureAutoLines.push('');
-  }
-  const featureAuto = featureAutoLines.join('\n').trimEnd() + '\n';
+  const dashboardProjection = renderDashboardProjection(reg);
 
   function updateDerived(filePath, blockId, content) {
     const base = readText(filePath);
-    const existedOnDisk = base !== null;
-    if (!base) {
-      warnings.push(
+    if (base === null) {
+      errors.push(
         `Missing derived view file: ${toPosix(path.relative(repoRoot, filePath))} ` +
           '(run the repository task-system installer from its skill source).'
       );
       return;
     }
 
-    // For files that already existed on disk, refuse full-file replacement when markers
-    // are missing (prevents destroying manual notes). Freshly created templates are safe.
-    const next = replaceAutoBlock(base, blockId, content, filePath, !existedOnDisk);
+    const next = replaceAutoBlock(base, blockId, content);
     if (next === null) {
-      // Markers missing in existing file; skipped to prevent data loss.
-      warnings.push(
-        `Skipped update of ${toPosix(path.relative(repoRoot, filePath))}: missing AUTO-GENERATED markers for "${blockId}". Restore the markers before retrying sync.`
+      errors.push(
+        `Missing AUTO-GENERATED markers for "${blockId}" in ` +
+          `${toPosix(path.relative(repoRoot, filePath))}. ` +
+          'Restore the file from the task-system installer before retrying sync.'
       );
       return;
     }
@@ -492,8 +437,15 @@ export function cmdSync({ repoRoot, dryRun, apply }) {
     planWrite(filePath, next, { op: 'update', note: `regen ${blockId}` });
   }
 
-  updateDerived(dashboardPath, 'dashboard', dashAuto);
-  updateDerived(featureMapPath, 'feature-map', featureAuto);
+  updateDerived(dashboardPath, 'dashboard', dashboardProjection);
+  if (readText(featureMapPath) === null) {
+    errors.push(
+      'Missing derived view file: .ai/project/feature-map.md ' +
+        '(run the repository task-system installer from its skill source).'
+    );
+  } else {
+    planWrite(featureMapPath, renderFeatureMap(reg), { op: 'update', note: 'regen feature-map' });
+  }
 
   // Do not mutate the worktree until every input and derived output has been calculated.
   // This prevents a validation failure in a later bundle from leaving earlier metadata or hub
@@ -515,7 +467,7 @@ export function cmdSync({ repoRoot, dryRun, apply }) {
   return finish();
 }
 
-export function cmdMap({ repoRoot, taskId, featureId, requirementId, dryRun, apply }) {
+export function cmdMap({ repoRoot, taskId, featureId, dryRun, apply }) {
   const errors = [];
   const actions = [];
 
@@ -536,18 +488,8 @@ export function cmdMap({ repoRoot, taskId, featureId, requirementId, dryRun, app
     return { ok: false, errors, actions };
   }
 
-  if (!featureId && !requirementId) {
-    errors.push('At least one of --feature or --requirement is required.');
-    return { ok: false, errors, actions };
-  }
-
-  // Validate ID formats.
-  if (featureId && !FEATURE_ID_RE.test(featureId)) {
-    errors.push(`Invalid --feature ID format (expected F-###, got "${featureId}").`);
-    return { ok: false, errors, actions };
-  }
-  if (requirementId && !REQUIREMENT_ID_RE.test(requirementId)) {
-    errors.push(`Invalid --requirement ID format (expected R-###, got "${requirementId}").`);
+  if (!FEATURE_ID_RE.test(featureId || '')) {
+    errors.push(`Invalid or missing --feature (expected F-###, got "${featureId || ''}").`);
     return { ok: false, errors, actions };
   }
 
@@ -558,7 +500,8 @@ export function cmdMap({ repoRoot, taskId, featureId, requirementId, dryRun, app
   }
 
   const reg = loaded.registry;
-  errors.push(...getRegistryLayoutErrors(reg));
+  errors.push(...getRegistryWriteErrors(reg));
+  errors.push(...collectProjectGraphFromAllWorktrees(repoRoot).errors);
   if (errors.length > 0) return { ok: false, errors, actions };
   const registryPath = loaded.path;
 
@@ -570,41 +513,13 @@ export function cmdMap({ repoRoot, taskId, featureId, requirementId, dryRun, app
     return { ok: false, errors, actions };
   }
 
-  // Validate feature exists
-  if (featureId) {
-    const featureExists = Array.isArray(reg.features) && reg.features.some((f) => f && f.id === featureId);
-    if (!featureExists) {
-      errors.push(`Feature "${featureId}" not found in registry.`);
-      return { ok: false, errors, actions };
-    }
+  const featureExists = Array.isArray(reg.features) && reg.features.some((f) => f && f.id === featureId);
+  if (!featureExists) {
+    errors.push(`Feature "${featureId}" not found in registry.`);
+    return { ok: false, errors, actions };
   }
 
-  // Validate requirement and its Feature relationship.
-  if (requirementId) {
-    const requirement = Array.isArray(reg.requirements)
-      ? reg.requirements.find((item) => item && item.id === requirementId)
-      : null;
-    if (!requirement) {
-      errors.push(`Requirement "${requirementId}" not found in registry. Allocate it first.`);
-      return { ok: false, errors, actions };
-    }
-    const targetFeatureId = featureId || String(taskEntry.feature_id || '').trim();
-    const requirementFeatureId = String(requirement.feature_id || '').trim();
-    if (targetFeatureId !== requirementFeatureId) {
-      errors.push(
-        `Requirement "${requirementId}" belongs to Feature ${requirementFeatureId || '(missing)'}, ` +
-          `but task ${taskId} would belong to ${targetFeatureId || '(missing)'}.`
-      );
-      return { ok: false, errors, actions };
-    }
-  }
-
-  const currentRequirements = Array.isArray(taskEntry.requirement_ids)
-    ? taskEntry.requirement_ids.map((value) => String(value))
-    : [];
-  const mappingWouldChange =
-    (featureId && String(taskEntry.feature_id || '') !== featureId) ||
-    (requirementId && !currentRequirements.includes(requirementId));
+  const mappingWouldChange = String(taskEntry.feature_id || '') !== featureId;
   if (logicalTask && logicalTask.occurrence_count > 1 && mappingWouldChange) {
     errors.push(
       `Task ${taskId} occurs in ${logicalTask.occurrence_count} linked worktrees. ` +
@@ -616,17 +531,9 @@ export function cmdMap({ repoRoot, taskId, featureId, requirementId, dryRun, app
 
   // Apply mappings
   const changes = [];
-  if (featureId && taskEntry.feature_id !== featureId) {
+  if (taskEntry.feature_id !== featureId) {
     changes.push(`feature_id: ${taskEntry.feature_id || '(none)'} -> ${featureId}`);
     taskEntry.feature_id = featureId;
-  }
-  if (requirementId) {
-    const reqIds = Array.isArray(taskEntry.requirement_ids) ? taskEntry.requirement_ids : [];
-    if (!reqIds.includes(requirementId)) {
-      reqIds.push(requirementId);
-      taskEntry.requirement_ids = reqIds;
-      changes.push(`requirement_ids: added ${requirementId}`);
-    }
   }
 
   if (changes.length === 0) {
@@ -636,6 +543,9 @@ export function cmdMap({ repoRoot, taskId, featureId, requirementId, dryRun, app
 
   taskEntry.updated = today();
   actions.push({ op: 'update', target: 'task', id: taskId, changes });
+
+  errors.push(...getRegistryWriteErrors(reg));
+  if (errors.length > 0) return { ok: false, errors, actions: [] };
 
   if (dryRun || !apply) {
     header('Planned changes:');
@@ -665,20 +575,81 @@ function normalizeFeatureTitle(value) {
   return String(value || '').trim().replace(/\s+/g, ' ').toLowerCase();
 }
 
-function collectMilestonesFromAllWorktrees(repoRoot) {
-  const rows = [];
+function normalizeProjectItemField(field, value) {
+  const normalized = String(value || '').trim();
+  return field === 'title' ? normalized.replace(/\s+/g, ' ') : normalized;
+}
+
+function collectProjectGraphFromAllWorktrees(repoRoot, { repairingRepoRoot = null } = {}) {
+  const milestones = [];
+  const features = [];
+  const errors = [];
   for (const worktree of listGitWorktrees(repoRoot)) {
-    const registry = loadRegistry(worktree.path).registry;
-    if (!registry || !Array.isArray(registry.milestones)) continue;
+    const loaded = loadRegistry(worktree.path);
+    if (!loaded.registry) {
+      if (!loaded.error) continue;
+      errors.push(
+        `Cannot read project registry in linked worktree ${toPosix(worktree.path)}: ` +
+          `${loaded.error}.`
+      );
+      continue;
+    }
+    const canRepairTaskProjections =
+      repairingRepoRoot && path.resolve(worktree.path) === path.resolve(repairingRepoRoot);
+    const registryErrors = getRegistryDataErrors(loaded.registry, {
+      validateTasks: !canRepairTaskProjections,
+    });
+    if (registryErrors.length > 0) {
+      errors.push(
+        ...registryErrors.map(
+          (error) => `Linked worktree ${toPosix(worktree.path)} has invalid registry data: ${error}`
+        )
+      );
+      continue;
+    }
+    const registry = loaded.registry;
     for (const milestone of registry.milestones) {
-      if (!milestone || typeof milestone !== 'object') continue;
-      const id = String(milestone.id || '').trim();
-      const title = String(milestone.title || '').trim();
-      if (!MILESTONE_ID_RE.test(id)) continue;
-      rows.push({ ...milestone, id, title });
+      milestones.push({
+        ...milestone,
+        id: String(milestone.id).trim(),
+        title: String(milestone.title || '').trim(),
+        worktree_path: worktree.path,
+        worktree_branch: worktree.branch,
+      });
+    }
+    for (const feature of registry.features) {
+      features.push({
+        ...feature,
+        id: String(feature.id).trim(),
+        title: String(feature.title || '').trim(),
+        worktree_path: worktree.path,
+        worktree_branch: worktree.branch,
+      });
     }
   }
-  return rows;
+  for (const [label, rows, fields] of [
+    ['Milestone', milestones, ['title', 'status', 'description']],
+    ['Feature', features, ['title', 'milestone_id', 'status', 'description']],
+  ]) {
+    const rowsById = new Map();
+    for (const row of rows) {
+      const grouped = rowsById.get(row.id) || [];
+      grouped.push(row);
+      rowsById.set(row.id, grouped);
+    }
+    for (const [id, grouped] of rowsById) {
+      const differing = fields.filter(
+        (field) =>
+          new Set(grouped.map((row) => normalizeProjectItemField(field, row[field]))).size > 1
+      );
+      if (differing.length > 0) {
+        errors.push(
+          `${label} ID ${id} has different ${differing.join(', ')} values across linked worktrees.`
+        );
+      }
+    }
+  }
+  return { milestones, features, errors };
 }
 
 export function cmdMilestone({ repoRoot, title, description, dryRun, apply, json }) {
@@ -697,23 +668,12 @@ export function cmdMilestone({ repoRoot, title, description, dryRun, apply, json
       actions,
     };
   }
-  errors.push(...getRegistryLayoutErrors(loaded.registry));
+  errors.push(...getRegistryWriteErrors(loaded.registry));
+  const projectGraph = collectProjectGraphFromAllWorktrees(repoRoot);
+  errors.push(...projectGraph.errors);
   if (errors.length > 0) return { ok: false, errors, actions };
 
-  const allMilestones = collectMilestonesFromAllWorktrees(repoRoot);
-  const titlesById = new Map();
-  for (const milestone of allMilestones) {
-    const titles = titlesById.get(milestone.id) || new Set();
-    titles.add(normalizeFeatureTitle(milestone.title));
-    titlesById.set(milestone.id, titles);
-  }
-  for (const [id, titles] of titlesById) {
-    if (titles.size > 1) {
-      errors.push(`Milestone ID ${id} has different titles across linked worktrees.`);
-    }
-  }
-  if (errors.length > 0) return { ok: false, errors, actions };
-
+  const allMilestones = projectGraph.milestones;
   const titleMatches = allMilestones.filter(
     (milestone) => normalizeFeatureTitle(milestone.title) === normalizedTitle
   );
@@ -730,10 +690,8 @@ export function cmdMilestone({ repoRoot, title, description, dryRun, apply, json
   }
 
   const registry = loaded.registry;
-  if (!Array.isArray(registry.milestones)) registry.milestones = [];
   let milestone = null;
   let created = false;
-
   if (matchingIds.length === 1) {
     const id = matchingIds[0];
     milestone = registry.milestones.find((item) => item && item.id === id) || null;
@@ -742,16 +700,16 @@ export function cmdMilestone({ repoRoot, title, description, dryRun, apply, json
       milestone = {
         id,
         title: source.title,
-        status: MILESTONE_STATUS.has(String(source.status || '')) ? source.status : 'planned',
-        description: String(source.description || description || '').trim(),
+        status: source.status,
+        description: String(source.description || '').trim(),
       };
       registry.milestones.push(milestone);
       actions.push({ op: 'copy', target: 'milestone', id, note: 'found in linked worktree' });
     }
   } else {
     let max = 0;
-    for (const id of titlesById.keys()) {
-      const number = Number(id.slice(2));
+    for (const row of allMilestones) {
+      const number = Number(row.id.slice(2));
       if (Number.isFinite(number) && number > max) max = number;
     }
     if (max >= 999) {
@@ -772,6 +730,8 @@ export function cmdMilestone({ repoRoot, title, description, dryRun, apply, json
   registry.milestones.sort((left, right) =>
     String(left?.id || '').localeCompare(String(right?.id || ''))
   );
+  errors.push(...getRegistryWriteErrors(registry));
+  if (errors.length > 0) return { ok: false, errors, actions: [] };
   if (apply && !dryRun && actions.length > 0) {
     writeTextIfChanged(loaded.path, renderJson(registry));
   }
@@ -779,6 +739,7 @@ export function cmdMilestone({ repoRoot, title, description, dryRun, apply, json
   const result = {
     id: milestone.id,
     title: milestone.title,
+    description: String(milestone.description || ''),
     status: String(milestone.status || 'planned'),
     created,
     changed: actions.length > 0,
@@ -790,28 +751,6 @@ export function cmdMilestone({ repoRoot, title, description, dryRun, apply, json
   else info(`[dry-run] Milestone ${milestone.id} would be available: ${milestone.title}`);
 
   return { ok: true, errors, actions, milestone: result };
-}
-
-function collectFeaturesFromAllWorktrees(repoRoot) {
-  const rows = [];
-  for (const worktree of listGitWorktrees(repoRoot)) {
-    const registry = loadRegistry(worktree.path).registry;
-    if (!registry || !Array.isArray(registry.features)) continue;
-    for (const feature of registry.features) {
-      if (!feature || typeof feature !== 'object') continue;
-      const id = String(feature.id || '').trim();
-      const title = String(feature.title || '').trim();
-      if (!FEATURE_ID_RE.test(id)) continue;
-      rows.push({
-        ...feature,
-        id,
-        title,
-        worktree_path: worktree.path,
-        worktree_branch: worktree.branch,
-      });
-    }
-  }
-  return rows;
 }
 
 export function cmdFeature({ repoRoot, title, description, dryRun, apply, json }) {
@@ -830,23 +769,14 @@ export function cmdFeature({ repoRoot, title, description, dryRun, apply, json }
       actions,
     };
   }
-  errors.push(...getRegistryLayoutErrors(loaded.registry));
+  errors.push(...getRegistryWriteErrors(loaded.registry));
   if (errors.length > 0) return { ok: false, errors, actions };
 
-  const allFeatures = collectFeaturesFromAllWorktrees(repoRoot);
-  const titlesById = new Map();
-  for (const feature of allFeatures) {
-    const titles = titlesById.get(feature.id) || new Set();
-    titles.add(normalizeFeatureTitle(feature.title));
-    titlesById.set(feature.id, titles);
-  }
-  for (const [id, titles] of titlesById) {
-    if (titles.size > 1) {
-      errors.push(`Feature ID ${id} has different titles across linked worktrees.`);
-    }
-  }
+  const projectGraph = collectProjectGraphFromAllWorktrees(repoRoot);
+  errors.push(...projectGraph.errors);
   if (errors.length > 0) return { ok: false, errors, actions };
 
+  const allFeatures = projectGraph.features;
   const titleMatches = allFeatures.filter(
     (feature) => normalizeFeatureTitle(feature.title) === normalizedTitle
   );
@@ -872,17 +802,27 @@ export function cmdFeature({ repoRoot, title, description, dryRun, apply, json }
       feature = {
         id,
         title: source.title,
-        milestone_id: String(source.milestone_id || 'M-000'),
-        status: FEATURE_STATUS.has(String(source.status || '')) ? source.status : 'planned',
-        description: String(source.description || description || '').trim(),
+        milestone_id: String(source.milestone_id),
+        status: source.status,
+        description: String(source.description || '').trim(),
       };
+      if (!registry.milestones.some((item) => item && item.id === feature.milestone_id)) {
+        return {
+          ok: false,
+          errors: [
+            `Feature ${id} belongs to Milestone ${feature.milestone_id}, which is not present in ` +
+              'the current registry. Resolve that Milestone first.',
+          ],
+          actions: [],
+        };
+      }
       registry.features.push(feature);
       actions.push({ op: 'copy', target: 'feature', id, note: 'found in linked worktree' });
     }
   } else {
     let max = 0;
-    for (const id of titlesById.keys()) {
-      const n = Number(id.slice(2));
+    for (const row of allFeatures) {
+      const n = Number(row.id.slice(2));
       if (Number.isFinite(n) && n > max) max = n;
     }
     if (max >= 999) {
@@ -903,6 +843,9 @@ export function cmdFeature({ repoRoot, title, description, dryRun, apply, json }
 
   registry.features.sort((a, b) => String(a?.id || '').localeCompare(String(b?.id || '')));
 
+  errors.push(...getRegistryWriteErrors(registry));
+  if (errors.length > 0) return { ok: false, errors, actions: [] };
+
   if (apply && !dryRun && actions.length > 0) {
     writeTextIfChanged(loaded.path, renderJson(registry));
   }
@@ -910,6 +853,8 @@ export function cmdFeature({ repoRoot, title, description, dryRun, apply, json }
   const result = {
     id: feature.id,
     title: feature.title,
+    description: String(feature.description || ''),
+    milestone_id: String(feature.milestone_id || ''),
     status: String(feature.status || 'planned'),
     created,
     changed: actions.length > 0,
@@ -922,162 +867,4 @@ export function cmdFeature({ repoRoot, title, description, dryRun, apply, json }
   else info(`[dry-run] Feature ${feature.id} would be available: ${feature.title}`);
 
   return { ok: true, errors, actions, feature: result };
-}
-
-function collectRequirementsFromAllWorktrees(repoRoot) {
-  const rows = [];
-  for (const worktree of listGitWorktrees(repoRoot)) {
-    const registry = loadRegistry(worktree.path).registry;
-    if (!registry || !Array.isArray(registry.requirements)) continue;
-    for (const requirement of registry.requirements) {
-      if (!requirement || typeof requirement !== 'object') continue;
-      const id = String(requirement.id || '').trim();
-      const title = String(requirement.title || '').trim();
-      const featureId = String(requirement.feature_id || '').trim();
-      if (!REQUIREMENT_ID_RE.test(id)) continue;
-      rows.push({
-        ...requirement,
-        id,
-        title,
-        feature_id: featureId,
-        worktree_path: worktree.path,
-        worktree_branch: worktree.branch,
-      });
-    }
-  }
-  return rows;
-}
-
-export function cmdRequirement({ repoRoot, title, featureId, description, dryRun, apply, json }) {
-  const errors = [];
-  const actions = [];
-  const normalizedTitle = normalizeFeatureTitle(title);
-  if (!normalizedTitle) {
-    return { ok: false, errors: ['Missing --title for requirement resolution.'], actions };
-  }
-  if (!FEATURE_ID_RE.test(featureId || '')) {
-    return {
-      ok: false,
-      errors: [`Invalid or missing --feature (expected F-###, got "${featureId || ''}").`],
-      actions,
-    };
-  }
-
-  const loaded = loadRegistry(repoRoot);
-  if (!loaded.registry) {
-    return {
-      ok: false,
-      errors: [`Failed to load registry: ${loaded.error || 'registry not found'}`],
-      actions,
-    };
-  }
-  errors.push(...getRegistryLayoutErrors(loaded.registry));
-  if (errors.length > 0) return { ok: false, errors, actions };
-
-  const registry = loaded.registry;
-  const parentExists =
-    Array.isArray(registry.features) &&
-    registry.features.some((feature) => feature && feature.id === featureId);
-  if (!parentExists) {
-    return { ok: false, errors: [`Feature "${featureId}" not found in registry.`], actions };
-  }
-
-  const allRequirements = collectRequirementsFromAllWorktrees(repoRoot);
-  const identitiesById = new Map();
-  for (const requirement of allRequirements) {
-    const identities = identitiesById.get(requirement.id) || new Set();
-    identities.add(`${requirement.feature_id}\u0000${normalizeFeatureTitle(requirement.title)}`);
-    identitiesById.set(requirement.id, identities);
-  }
-  for (const [id, identities] of identitiesById) {
-    if (identities.size > 1) {
-      errors.push(`Requirement ID ${id} has different Feature/title identities across linked worktrees.`);
-    }
-  }
-  if (errors.length > 0) return { ok: false, errors, actions };
-
-  const matches = allRequirements.filter(
-    (requirement) =>
-      requirement.feature_id === featureId &&
-      normalizeFeatureTitle(requirement.title) === normalizedTitle
-  );
-  const matchingIds = [...new Set(matches.map((requirement) => requirement.id))];
-  if (matchingIds.length > 1) {
-    return {
-      ok: false,
-      errors: [
-        `Requirement title "${title}" under ${featureId} maps to multiple IDs across linked worktrees: ` +
-          `${matchingIds.join(', ')}.`,
-      ],
-      actions,
-    };
-  }
-
-  if (!Array.isArray(registry.requirements)) registry.requirements = [];
-  let requirement = null;
-  let created = false;
-
-  if (matchingIds.length === 1) {
-    const id = matchingIds[0];
-    requirement = registry.requirements.find((item) => item && item.id === id) || null;
-    if (!requirement) {
-      const source = matches[0];
-      requirement = {
-        id,
-        title: source.title,
-        feature_id: featureId,
-        status: REQUIREMENT_STATUS.has(String(source.status || '')) ? source.status : 'planned',
-        description: String(source.description || description || '').trim(),
-      };
-      registry.requirements.push(requirement);
-      actions.push({ op: 'copy', target: 'requirement', id, note: 'found in linked worktree' });
-    }
-  } else {
-    let max = 0;
-    for (const id of identitiesById.keys()) {
-      const n = Number(id.slice(2));
-      if (Number.isFinite(n) && n > max) max = n;
-    }
-    if (max >= 999) {
-      return { ok: false, errors: ['Exhausted requirement IDs (R-001..R-999).'], actions };
-    }
-    const id = `R-${String(max + 1).padStart(3, '0')}`;
-    requirement = {
-      id,
-      title: String(title).trim().replace(/\s+/g, ' '),
-      feature_id: featureId,
-      status: 'planned',
-      description: String(description || '').trim(),
-    };
-    registry.requirements.push(requirement);
-    actions.push({ op: 'create', target: 'requirement', id });
-    created = true;
-  }
-
-  registry.requirements.sort((a, b) => String(a?.id || '').localeCompare(String(b?.id || '')));
-
-  if (apply && !dryRun && actions.length > 0) {
-    writeTextIfChanged(loaded.path, renderJson(registry));
-  }
-
-  const result = {
-    id: requirement.id,
-    title: requirement.title,
-    feature_id: requirement.feature_id,
-    status: String(requirement.status || 'planned'),
-    created,
-    changed: actions.length > 0,
-    mode: apply && !dryRun ? 'apply' : 'dry-run',
-  };
-
-  if (json) console.log(JSON.stringify(result));
-  else if (actions.length === 0) {
-    ok(`[ok] Requirement ${requirement.id} already exists: ${requirement.title}`);
-  } else if (apply && !dryRun) {
-    ok(`[ok] Requirement ${requirement.id} is available: ${requirement.title}`);
-  } else {
-    info(`[dry-run] Requirement ${requirement.id} would be available: ${requirement.title}`);
-  }
-
-  return { ok: true, errors, actions, requirement: result };
 }

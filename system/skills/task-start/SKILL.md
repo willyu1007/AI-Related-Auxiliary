@@ -59,29 +59,20 @@ Open and register a durable task bundle before implementation begins.
    node .ai/scripts/ctl-project-governance.mjs sync --apply
    ```
 
-   Read the allocated ID from `.ai-task.json`; never choose one manually. For a new project capability, inspect the registry and Feature Briefs for the same intent. Reuse the existing Feature when appropriate; otherwise allocate one under the shared cross-worktree lock:
+   Read the allocated ID from `.ai-task.json`; never choose one manually. For a new project capability, inspect registry Feature titles and descriptions for the same intent. Reuse the existing Feature when appropriate; otherwise allocate one under the shared cross-worktree lock:
 
    ```bash
    node .ai/scripts/ctl-project-governance.mjs feature --title "<feature title>" --description "<intent>" --apply --json
    ```
 
-   When the project graph needs a named Requirement, resolve it within the parent Feature before
-   mapping. Never choose or pass a missing Requirement ID directly to the mapping command:
-
-   ```bash
-   node .ai/scripts/ctl-project-governance.mjs requirement --title "<requirement title>" --feature F-### --description "<intent>" --apply --json
-   ```
-
-   Map the task to existing project objects, refresh the Feature's manual brief in
-   `.ai/project/feature-map.md`, and regenerate derived views:
+   Map the task to the existing Feature and regenerate derived views:
 
    ```bash
    node .ai/scripts/ctl-project-governance.mjs map --task T-### --feature F-### --apply
-   node .ai/scripts/ctl-project-governance.mjs map --task T-### --feature F-### --requirement R-### --apply  # when resolved
    node .ai/scripts/ctl-project-governance.mjs sync --apply
    ```
 
-   Use `F-000` only when triage is genuinely deferred and record that choice in the Feature brief. Never hand-edit an AUTO block.
+   Use `F-000` only when no Feature mapping is confirmed yet, and report that unresolved triage explicitly. Never hand-edit an AUTO block.
 
 8. **Verify uniqueness and validity.** Re-query the exact slug across worktrees, then lint:
 

@@ -63,7 +63,7 @@ description: >-
 
 A fresh session reading `01-status.md` must be able to state the task's goal, state, blocker, and first action. Reading `00-roadmap.md` next must reveal kickoff readiness, unresolved top-level choices, why the current direction was chosen, relevant cross-task boundaries, and the remaining route. Anything required to answer those questions that exists only in session memory must be recorded before stopping.
 
-Use `./templates/full-pass-checklist.md` for the compact checklist and `./examples/sample-full-pass.md` for a worked example.
+Use `./templates/full-pass-checklist.md` for the compact checklist.
 
 ## Rules
 

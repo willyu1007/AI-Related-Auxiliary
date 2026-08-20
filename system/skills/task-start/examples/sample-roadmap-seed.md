@@ -30,10 +30,9 @@
 
 ## Task relationships
 
-| Task / proposed work | Relationship from this task | Owned boundary / exchanged contract | Coordination condition |
+| Task | Relationship from this task | Owned boundary / exchanged contract | Coordination condition |
 |---|---|---|---|
 | T-021 | depends-on | Owns the shared flag client contract consumed here | Confirm the stable evaluation API before implementation kickoff |
-| proposed:checkout-regression-coverage | follow-up | Would own broader regression coverage beyond this task's focused checks | Open only if discovery shows the existing suite cannot cover both flag states |
 
 ## Implementation plan
 

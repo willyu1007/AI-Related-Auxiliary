@@ -16,7 +16,7 @@ Summarize each distinct issue once:
 
 | Issue | Authoritative source | Affected worktree / path | Impact | Suggested repair |
 |---|---|---|---|---|
-| <!-- lint or dry-run finding --> | <!-- task bundle / registry / manual Feature Brief --> | <!-- exact location --> | <!-- stale status, mapping, derived view, or conflict --> | <!-- specific maintenance action --> |
+| <!-- lint or dry-run finding --> | <!-- task bundle / registry Feature or mapping --> | <!-- exact location --> | <!-- stale status, mapping, derived view, or conflict --> | <!-- specific maintenance action --> |
 
 Separate current-worktree generated drift from another worktree's uncommitted task record. Do not recommend overwriting the latter from the current worktree. If no issue appears, report that the checked state is consistent and name the commands used.
 

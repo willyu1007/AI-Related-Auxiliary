@@ -24,6 +24,6 @@ node .ai/scripts/ctl-project-governance.mjs query --json
 
 ## Rules
 - List all tasks from query results
-- Sort by status priority: in-progress > blocked > planned > done
+- Sort by status for readability: in-progress, blocked, planned, done, archived
 - For `conflict: true`, show the occurrence paths and differing facts instead of one worktree/path
 - Report `kickoff_status` for active tasks; use `—` for archived tasks

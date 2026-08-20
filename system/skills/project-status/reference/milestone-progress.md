@@ -43,7 +43,7 @@ for task evidence across linked worktrees.
   from the number of tasks.
 - A Milestone marked `done` while any Feature is not `done` or `cut` is inconsistent.
 - A Feature marked `done` or `cut` while it has `planned`, `in-progress`, or `blocked` tasks is
-  inconsistent unless the documented scope explains why those tasks moved elsewhere.
+  inconsistent. Re-map, finish, or otherwise resolve those tasks before accepting the Feature status.
 - When a non-empty Milestone has only `done` or `cut` Features and no active mapped tasks, report
   it as possibly ready for acceptance. Do not mark it `done`; the stage outcome still needs human
   confirmation.

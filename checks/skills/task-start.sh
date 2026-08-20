@@ -17,6 +17,9 @@ CTL="$AUX_ROOT/system/skills/task-start/assets/project/.ai/scripts/ctl-project-g
 
 # The repository starts with nothing: one command out of the skill must leave it fully provisioned.
 if [ -d .ai ] || [ -d dev-docs ]; then fail "target repo is not empty before install"; fi
+PREINSTALL_WT="${TMPDIR:-/tmp}/aux-preinstall-wt.$$"
+git -c user.email=ci@local -c user.name=ci commit --allow-empty -qm "test base"
+git worktree add -q "$PREINSTALL_WT" -b test/preinstall-sibling
 node "$INSTALLER" --repo-root . >/dev/null
 
 for f in .ai/scripts/ctl-project-governance.mjs \
@@ -43,6 +46,10 @@ for f in registry.json dashboard.md feature-map.md; do
 done
 node -e "const r=require('./.ai/project/registry.json');process.exit(Object.hasOwn(r,'task_doc_roots')?1:0)" \
   || fail "registry retained configurable task roots"
+node .ai/scripts/ctl-project-governance.mjs sync --apply >/dev/null \
+  || fail "first sync was blocked by a linked worktree created before governance installation"
+git worktree remove --force "$PREINSTALL_WT"
+git branch -D test/preinstall-sibling >/dev/null 2>&1 || true
 
 # Only the repository's top-level dev-docs directory is a task root.
 mkdir -p modules/foo/dev-docs/active/ignored
@@ -170,6 +177,22 @@ fi
 mv registry.tmp .ai/project/registry.json
 
 cp .ai/project/registry.json registry.tmp
+node -e "const fs=require('fs');const p='.ai/project/registry.json';const r=JSON.parse(fs.readFileSync(p,'utf8'));r.requirements=[];fs.writeFileSync(p,JSON.stringify(r,null,2)+'\n')"
+registry_hash_before="$(git hash-object .ai/project/registry.json)"
+if node .ai/scripts/ctl-project-governance.mjs lint >/dev/null 2>&1; then
+  fail "lint accepted the removed project-level requirements collection"
+fi
+if node .ai/scripts/ctl-project-governance.mjs sync --apply >/dev/null 2>&1; then
+  fail "sync accepted the removed project-level requirements collection"
+fi
+if node .ai/scripts/ctl-project-governance.mjs feature --title "Invalid graph allocation" --apply >/dev/null 2>&1; then
+  fail "feature allocation accepted the removed project-level requirements collection"
+fi
+[ "$registry_hash_before" = "$(git hash-object .ai/project/registry.json)" ] \
+  || fail "a rejected project-graph write changed the registry"
+mv registry.tmp .ai/project/registry.json
+
+cp .ai/project/registry.json registry.tmp
 node -e "const fs=require('fs');const p='.ai/project/registry.json';const r=JSON.parse(fs.readFileSync(p,'utf8'));r.tasks.push({id:'T-999',slug:'nested',status:'planned',dev_docs_path:'modules/foo/dev-docs/active/nested',feature_id:'F-000'});fs.writeFileSync(p,JSON.stringify(r,null,2)+'\n')"
 registry_hash_before="$(git hash-object .ai/project/registry.json)"
 if node .ai/scripts/ctl-project-governance.mjs lint >/dev/null 2>&1; then
@@ -210,6 +233,19 @@ node "$INSTALLER" --repo-root . >/dev/null
 node -e "const r=require('./.ai/project/registry.json');process.exit(r.smoke_marker===true?0:1)" \
   || fail "skill-source installer overwrote existing hub data"
 
+cp .ai/project/dashboard.md dashboard.tmp
+sed -i '/AUTO-GENERATED:START dashboard/d' .ai/project/dashboard.md
+derived_state_before="$(git hash-object .ai/project/registry.json .ai/project/dashboard.md .ai/project/feature-map.md)"
+if node .ai/scripts/ctl-project-governance.mjs lint >/dev/null 2>&1; then
+  fail "lint accepted a derived dashboard without its generation markers"
+fi
+if node .ai/scripts/ctl-project-governance.mjs sync --apply >/dev/null 2>&1; then
+  fail "sync accepted a derived dashboard without its generation markers"
+fi
+[ "$derived_state_before" = "$(git hash-object .ai/project/registry.json .ai/project/dashboard.md .ai/project/feature-map.md)" ] \
+  || fail "failed derived-view validation changed governance state"
+mv dashboard.tmp .ai/project/dashboard.md
+
 # Single-project layout: no per-project subdirectory, no project key in the registry.
 if [ -d .ai/project/main ]; then fail "installer created a per-project subdirectory"; fi
 node -e "const r=require('./.ai/project/registry.json');process.exit(Object.hasOwn(r,'project')?1:0)" \
@@ -220,6 +256,18 @@ node -e "const fs=require('fs');const p='.ai/project/registry.json';const r=JSON
 node .ai/scripts/ctl-project-governance.mjs sync --apply >/dev/null
 node -e "const r=require('./.ai/project/registry.json');process.exit(r.ideas.some(x=>x.idea==='Remember export')?0:1)" \
   || fail "sync discarded a lightweight Idea"
+cp .ai/project/registry.json registry.tmp
+node -e "const fs=require('fs');const p='.ai/project/registry.json';const r=JSON.parse(fs.readFileSync(p,'utf8'));r.ideas=[{idea:'Remember export',status:'planned'}];fs.writeFileSync(p,JSON.stringify(r,null,2)+'\n')"
+registry_hash_before="$(git hash-object .ai/project/registry.json)"
+if node .ai/scripts/ctl-project-governance.mjs lint >/dev/null 2>&1; then
+  fail "lint accepted a heavyweight Idea record"
+fi
+if node .ai/scripts/ctl-project-governance.mjs sync --apply >/dev/null 2>&1; then
+  fail "sync accepted a heavyweight Idea record"
+fi
+[ "$registry_hash_before" = "$(git hash-object .ai/project/registry.json)" ] \
+  || fail "rejected Idea validation changed the registry"
+mv registry.tmp .ai/project/registry.json
 
 mkdir -p dev-docs/active/sample
 printf '# Roadmap\n\n## Scope and constraints\n- Scope: smoke test\n\n## Decision alignment\nNone.\n\n## Task relationships\nNone.\n\n## Implementation plan\n\n### Phase 1 — verify\n- Outcome: smoke test passes\n- Approach: exercise governance end to end\n- Planned changes:\n  1. Run the smoke workflow\n- Affected boundaries / entry points: governance script\n- Dependencies: none\n- Exit criteria: smoke test passes\n- Verification: run lint\n- Recovery: restore the fixture\n\n## Kickoff gate\n- Status: ready\n- [x] Every user-owned choice that blocks implementation is decided.\n- [x] Settled design and interfaces are reflected in `02-architecture.md`.\n- [x] The first implementation phase is executable with exit, verification, and recovery criteria.\n- [x] Every current completion condition has a decisive planned check in `verification.md`.\n\n## Risks and recovery\nNone.\n\n## Phase closeout\nCommit the verified fixture.\n' \
@@ -415,6 +463,12 @@ if node .ai/scripts/ctl-project-governance.mjs lint >/dev/null 2>&1; then
   fail "lint accepted an unfilled roadmap template placeholder"
 fi
 mv dev-docs/active/sample/00-roadmap.tmp dev-docs/active/sample/00-roadmap.md
+cp dev-docs/active/sample/00-roadmap.md dev-docs/active/sample/00-roadmap.tmp
+printf '\nproposed:old-follow-up\n' >> dev-docs/active/sample/00-roadmap.md
+if node .ai/scripts/ctl-project-governance.mjs lint >/dev/null 2>&1; then
+  fail "lint accepted a removed proposed task relationship"
+fi
+mv dev-docs/active/sample/00-roadmap.tmp dev-docs/active/sample/00-roadmap.md
 
 # resume must resolve the active task and carry the current status head.
 node .ai/scripts/ctl-project-governance.mjs resume > resume.json
@@ -455,8 +509,6 @@ printf '%s\n' "$sync_dry_run_output" | grep -q 'update: .ai/project/registry.jso
   || fail "sync dry-run did not plan a registry update for changed bundle state"
 node .ai/scripts/ctl-project-governance.mjs milestone --title "Dry-run milestone" --dry-run >/dev/null
 node .ai/scripts/ctl-project-governance.mjs feature --title "Dry-run feature" --dry-run >/dev/null
-node .ai/scripts/ctl-project-governance.mjs requirement --title "Dry-run requirement" \
-  --feature F-000 --dry-run >/dev/null
 dry_run_state_after="$(git status --porcelain=v1 --untracked-files=all; git hash-object \
   .ai/project/registry.json .ai/project/dashboard.md .ai/project/feature-map.md \
   dev-docs/active/sample/.ai-task.json dev-docs/active/sample/01-status.md)"
@@ -471,6 +523,10 @@ grep -q '"created":true' feature.json || fail "feature command did not report cr
 node .ai/scripts/ctl-project-governance.mjs feature --title "Smoke capability" --apply --json > feature.json
 grep -q '"id":"F-001"' feature.json || fail "feature command was not idempotent"
 grep -q '"created":false' feature.json || fail "feature command recreated an existing title"
+grep -q '"description":"Exercise feature allocation"' feature.json \
+  || fail "feature JSON omitted its authoritative description"
+grep -q '"milestone_id":"M-000"' feature.json \
+  || fail "feature JSON omitted its owning Milestone"
 rm -f feature.json
 
 map_dry_run_before="$(git status --porcelain=v1 --untracked-files=all; git hash-object \
@@ -494,6 +550,19 @@ node .ai/scripts/ctl-project-governance.mjs map --task T-001 --feature F-001 --a
 node .ai/scripts/ctl-project-governance.mjs sync --apply >/dev/null
 node -e "const r=require('./.ai/project/registry.json');process.exit(r.tasks.some(x=>x.id==='T-001'&&x.feature_id==='F-001')?0:1)" \
   || fail "map did not retain the feature mapping"
+grep -q 'Exercise feature allocation' .ai/project/feature-map.md \
+  || fail "generated Feature view did not project the registry description"
+printf '# Feature Map\n\n<!-- AUTO-GENERATED:START feature-map -->\n## Feature Briefs\n\nOld manual Feature authority.\n<!-- AUTO-GENERATED:END feature-map -->\n' \
+  > .ai/project/feature-map.md
+if node .ai/scripts/ctl-project-governance.mjs lint >/dev/null 2>&1; then
+  fail "lint accepted stale manual content inside the generated Feature map"
+fi
+node .ai/scripts/ctl-project-governance.mjs sync --apply >/dev/null
+if grep -q 'Old manual Feature authority' .ai/project/feature-map.md; then
+  fail "sync retained the removed manual Feature authority"
+fi
+grep -q 'Exercise feature allocation' .ai/project/feature-map.md \
+  || fail "Feature map regeneration lost the registry description"
 
 # A task derives its Milestone through its Feature; task projections never own milestone_id.
 node .ai/scripts/ctl-project-governance.mjs milestone --title "Smoke milestone" \
@@ -505,6 +574,8 @@ node .ai/scripts/ctl-project-governance.mjs milestone --title "Smoke milestone" 
 grep -q '"id":"M-001"' milestone.json || fail "milestone command changed an existing title ID"
 grep -q '"created":false' milestone.json || fail "milestone command recreated an existing title"
 grep -q '"changed":false' milestone.json || fail "milestone command rewrote an existing title"
+grep -q '"description":"Exercise derived milestone mapping"' milestone.json \
+  || fail "Milestone JSON omitted its authoritative description"
 rm -f milestone.json
 node -e "const fs=require('fs');const p='.ai/project/registry.json';const r=JSON.parse(fs.readFileSync(p,'utf8'));r.features.find(x=>x.id==='F-001').milestone_id='M-001';r.tasks.find(x=>x.id==='T-001').milestone_id='M-999';fs.writeFileSync(p,JSON.stringify(r,null,2)+'\n')"
 if node .ai/scripts/ctl-project-governance.mjs lint >/dev/null 2>&1; then
@@ -518,64 +589,51 @@ rm -f milestone-query.json
 
 # Declared project status remains manual, but lint must expose obvious contradictions.
 node -e "const fs=require('fs');const p='.ai/project/registry.json';const r=JSON.parse(fs.readFileSync(p,'utf8'));r.milestones.find(x=>x.id==='M-001').status='done';fs.writeFileSync(p,JSON.stringify(r,null,2)+'\n')"
-node .ai/scripts/ctl-project-governance.mjs lint > milestone-lint.txt \
-  || fail "Milestone contradiction was treated as a structural error"
+if node .ai/scripts/ctl-project-governance.mjs lint > milestone-lint.txt 2>&1; then
+  fail "lint accepted a done Milestone with non-terminal Features"
+fi
 grep -q 'Milestone M-001 is done but has non-terminal Features: F-001' milestone-lint.txt \
   || fail "lint did not report the Milestone/Feature status contradiction"
-if node .ai/scripts/ctl-project-governance.mjs lint --strict >/dev/null 2>&1; then
-  fail "lint --strict accepted the Milestone/Feature status contradiction"
-fi
 node -e "const fs=require('fs');const p='.ai/project/registry.json';const r=JSON.parse(fs.readFileSync(p,'utf8'));r.milestones.find(x=>x.id==='M-001').status='planned';fs.writeFileSync(p,JSON.stringify(r,null,2)+'\n')"
 rm -f milestone-lint.txt
 
-node -e "const fs=require('fs');const p='.ai/project/registry.json';const r=JSON.parse(fs.readFileSync(p,'utf8'));r.features.find(x=>x.id==='F-001').status='done';fs.writeFileSync(p,JSON.stringify(r,null,2)+'\n')"
-node .ai/scripts/ctl-project-governance.mjs lint > feature-lint.txt \
-  || fail "Feature contradiction was treated as a structural error"
-grep -q 'Feature F-001 is done but has active mapped Tasks: T-001' feature-lint.txt \
+node -e "const fs=require('fs');const p='.ai/project/registry.json';const r=JSON.parse(fs.readFileSync(p,'utf8'));r.features.find(x=>x.id==='F-001').status='done';r.tasks.find(x=>x.id==='T-001').status='planned';fs.writeFileSync(p,JSON.stringify(r,null,2)+'\n')"
+if node .ai/scripts/ctl-project-governance.mjs lint > feature-lint.txt 2>&1; then
+  fail "lint accepted a done Feature with non-terminal mapped Tasks"
+fi
+grep -q 'Feature F-001 is done but has non-terminal mapped Tasks: T-001' feature-lint.txt \
   || fail "lint did not report the Feature/Task status contradiction"
-node -e "const fs=require('fs');const p='.ai/project/registry.json';const r=JSON.parse(fs.readFileSync(p,'utf8'));r.features.find(x=>x.id==='F-001').status='planned';fs.writeFileSync(p,JSON.stringify(r,null,2)+'\n')"
+node -e "const fs=require('fs');const p='.ai/project/registry.json';const r=JSON.parse(fs.readFileSync(p,'utf8'));r.features.find(x=>x.id==='F-001').status='planned';r.tasks.find(x=>x.id==='T-001').status='in-progress';fs.writeFileSync(p,JSON.stringify(r,null,2)+'\n')"
 rm -f feature-lint.txt
 node .ai/scripts/ctl-project-governance.mjs lint --strict >/dev/null \
   || fail "lint failed after restoring consistent Milestone status"
 
-# Requirements use the same locked, monotonic allocation model as features. Mapping only accepts
-# an existing requirement; it must not silently invent a user-supplied ID.
-node .ai/scripts/ctl-project-governance.mjs requirement --title "Smoke requirement" \
-  --feature F-001 --description "Exercise requirement allocation" --apply --json > requirement.json
-grep -q '"id":"R-001"' requirement.json || fail "requirement command did not allocate R-001"
-grep -q '"created":true' requirement.json || fail "requirement command did not report creation"
-node .ai/scripts/ctl-project-governance.mjs requirement --title "Smoke requirement" \
-  --feature F-001 --apply --json > requirement.json
-grep -q '"id":"R-001"' requirement.json || fail "requirement command was not idempotent"
-grep -q '"created":false' requirement.json || fail "requirement command recreated an existing title"
-rm -f requirement.json
-node .ai/scripts/ctl-project-governance.mjs map --task T-001 --requirement R-001 --apply >/dev/null
-node -e "const r=require('./.ai/project/registry.json');process.exit(r.tasks.some(x=>x.id==='T-001'&&x.requirement_ids.includes('R-001'))?0:1)" \
-  || fail "map did not record the requirement"
-node -e "const fs=require('fs');const p='.ai/project/registry.json';const r=JSON.parse(fs.readFileSync(p,'utf8'));r.features.find(x=>x.id==='F-001').status='done';fs.writeFileSync(p,JSON.stringify(r,null,2)+'\n')"
-node .ai/scripts/ctl-project-governance.mjs lint > feature-requirement-lint.txt \
-  || fail "Feature/Requirement contradiction was treated as a structural error"
-grep -q 'Feature F-001 is done but has non-terminal Requirements: R-001' feature-requirement-lint.txt \
-  || fail "lint did not report the Feature/Requirement status contradiction"
-node -e "const fs=require('fs');const p='.ai/project/registry.json';const r=JSON.parse(fs.readFileSync(p,'utf8'));r.features.find(x=>x.id==='F-001').status='planned';fs.writeFileSync(p,JSON.stringify(r,null,2)+'\n')"
-rm -f feature-requirement-lint.txt
-node -e "const fs=require('fs');const p='.ai/project/registry.json';const r=JSON.parse(fs.readFileSync(p,'utf8'));r.requirements.find(x=>x.id==='R-001').status='cut';fs.writeFileSync(p,JSON.stringify(r,null,2)+'\n')"
-node .ai/scripts/ctl-project-governance.mjs lint > requirement-lint.txt \
-  || fail "Requirement contradiction was treated as a structural error"
-grep -q 'Requirement R-001 is cut but has active mapped Tasks: T-001' requirement-lint.txt \
-  || fail "lint did not report the Requirement/Task status contradiction"
-node -e "const fs=require('fs');const p='.ai/project/registry.json';const r=JSON.parse(fs.readFileSync(p,'utf8'));r.requirements.find(x=>x.id==='R-001').status='planned';fs.writeFileSync(p,JSON.stringify(r,null,2)+'\n')"
-rm -f requirement-lint.txt
-if node .ai/scripts/ctl-project-governance.mjs map --task T-001 --requirement R-999 --apply >/dev/null 2>&1; then
-  fail "map silently created a missing requirement"
+# Removed project-graph fields are rejected instead of being interpreted as a second mapping model.
+cp .ai/project/registry.json registry.tmp
+node -e "const fs=require('fs');const p='.ai/project/registry.json';const r=JSON.parse(fs.readFileSync(p,'utf8'));r.tasks.find(x=>x.id==='T-001').requirement_ids=[];fs.writeFileSync(p,JSON.stringify(r,null,2)+'\n')"
+registry_hash_before="$(git hash-object .ai/project/registry.json)"
+if node .ai/scripts/ctl-project-governance.mjs lint >/dev/null 2>&1; then
+  fail "lint accepted the removed task requirement_ids field"
 fi
+if node .ai/scripts/ctl-project-governance.mjs sync --apply >/dev/null 2>&1; then
+  fail "sync accepted the removed task requirement_ids field"
+fi
+[ "$registry_hash_before" = "$(git hash-object .ai/project/registry.json)" ] \
+  || fail "a rejected removed-field write changed the registry"
+mv registry.tmp .ai/project/registry.json
 
 # Registry IDs and references are integrity constraints, not advisory metadata.
 cp .ai/project/registry.json registry.tmp
 node -e "const fs=require('fs');const p='.ai/project/registry.json';const r=JSON.parse(fs.readFileSync(p,'utf8'));r.features.find(x=>x.id==='F-002').id='F-001';fs.writeFileSync(p,JSON.stringify(r,null,2)+'\n')"
+registry_hash_before="$(git hash-object .ai/project/registry.json)"
 if node .ai/scripts/ctl-project-governance.mjs lint >/dev/null 2>&1; then
   fail "lint accepted duplicate feature IDs"
 fi
+if node .ai/scripts/ctl-project-governance.mjs feature --title "Must not allocate" --apply >/dev/null 2>&1; then
+  fail "feature allocation accepted an invalid existing project graph"
+fi
+[ "$registry_hash_before" = "$(git hash-object .ai/project/registry.json)" ] \
+  || fail "rejected project-item allocation changed an invalid registry"
 mv registry.tmp .ai/project/registry.json
 cp .ai/project/registry.json registry.tmp
 node -e "const fs=require('fs');const p='.ai/project/registry.json';const r=JSON.parse(fs.readFileSync(p,'utf8'));r.tasks.find(x=>x.id==='T-001').feature_id='F-999';fs.writeFileSync(p,JSON.stringify(r,null,2)+'\n')"
@@ -592,7 +650,7 @@ mv registry.tmp .ai/project/registry.json
 # point: branching both worktrees from HEAD would let the shared registry answer, and the test
 # would pass even with history scanning removed.
 cp .ai/project/registry.json registry.worktree.tmp
-node -e "const fs=require('fs');const p='.ai/project/registry.json';const r=JSON.parse(fs.readFileSync(p,'utf8'));const t=r.tasks.find(x=>x.id==='T-001');t.feature_id='F-000';t.requirement_ids=[];fs.writeFileSync(p,JSON.stringify(r,null,2)+'\n')"
+node -e "const fs=require('fs');const p='.ai/project/registry.json';const r=JSON.parse(fs.readFileSync(p,'utf8'));r.tasks.find(x=>x.id==='T-001').feature_id='F-000';fs.writeFileSync(p,JSON.stringify(r,null,2)+'\n')"
 BASE=$(git rev-parse HEAD)
 
 prepare_worktree_task() { # <path> <branch> <slug>
@@ -652,26 +710,52 @@ ID_B=$(grep -oE 'T-[0-9]{3}' "$WT_B/dev-docs/active/beta/.ai-task.json")
 IDS=$(printf '%s\n%s\n' "$ID_A" "$ID_B" | sort | tr '\n' ' ')
 [ "$IDS" = "T-002 T-003 " ] || fail "parallel worktrees allocated '$IDS', expected T-002 and T-003"
 
-( cd "$WT_A" && node .ai/scripts/ctl-project-governance.mjs requirement \
-    --title "Alpha requirement" --feature F-000 --apply --json > requirement.json ) &
+( cd "$WT_A" && node .ai/scripts/ctl-project-governance.mjs feature \
+    --title "Alpha feature" --description "Parallel feature allocation" --apply --json > feature.json ) &
 PID_A=$!
-( cd "$WT_B" && node .ai/scripts/ctl-project-governance.mjs requirement \
-    --title "Beta requirement" --feature F-000 --apply --json > requirement.json ) &
+( cd "$WT_B" && node .ai/scripts/ctl-project-governance.mjs feature \
+    --title "Beta feature" --description "Parallel feature allocation" --apply --json > feature.json ) &
 PID_B=$!
 wait "$PID_A"
 wait "$PID_B"
 
-REQ_A=$(sed -n 's/.*"id":"\(R-[0-9][0-9][0-9]\)".*/\1/p' "$WT_A/requirement.json")
-REQ_B=$(sed -n 's/.*"id":"\(R-[0-9][0-9][0-9]\)".*/\1/p' "$WT_B/requirement.json")
-[ "$REQ_A" != "$REQ_B" ] || fail "parallel worktrees both allocated $REQ_A"
-REQ_IDS=$(printf '%s\n%s\n' "$REQ_A" "$REQ_B" | sort | tr '\n' ' ')
-[ "$REQ_IDS" = "R-002 R-003 " ] \
-  || fail "parallel worktrees allocated '$REQ_IDS', expected R-002 and R-003"
+FEATURE_A=$(sed -n 's/.*"id":"\(F-[0-9][0-9][0-9]\)".*/\1/p' "$WT_A/feature.json")
+FEATURE_B=$(sed -n 's/.*"id":"\(F-[0-9][0-9][0-9]\)".*/\1/p' "$WT_B/feature.json")
+[ "$FEATURE_A" != "$FEATURE_B" ] || fail "parallel worktrees both allocated $FEATURE_A"
+FEATURE_IDS=$(printf '%s\n%s\n' "$FEATURE_A" "$FEATURE_B" | sort | tr '\n' ' ')
+[ "$FEATURE_IDS" = "F-003 F-004 " ] \
+  || fail "parallel worktrees allocated '$FEATURE_IDS', expected F-003 and F-004"
+
+( cd "$WT_B" && node .ai/scripts/ctl-project-governance.mjs feature \
+    --title "Alpha feature" --apply --json > feature-copy.json )
+grep -q "\"id\":\"$FEATURE_A\"" "$WT_B/feature-copy.json" \
+  || fail "feature command did not copy the linked-worktree identity"
+cp "$WT_A/.ai/project/registry.json" "$WT_A/registry.semantic.tmp"
+( cd "$WT_A" && node -e "const fs=require('fs');const p='.ai/project/registry.json';const r=JSON.parse(fs.readFileSync(p,'utf8'));r.features.find(x=>x.id==='$FEATURE_A').description='Divergent meaning';fs.writeFileSync(p,JSON.stringify(r,null,2)+'\n')" )
+feature_conflict_hash_before="$(git hash-object "$WT_B/.ai/project/registry.json")"
+if ( cd "$WT_B" && node .ai/scripts/ctl-project-governance.mjs feature \
+    --title "Alpha feature" --apply >/dev/null 2>&1 ); then
+  fail "feature allocation ignored a cross-worktree semantic conflict"
+fi
+[ "$feature_conflict_hash_before" = "$(git hash-object "$WT_B/.ai/project/registry.json")" ] \
+  || fail "Feature semantic conflict handling changed the target registry"
+mv "$WT_A/registry.semantic.tmp" "$WT_A/.ai/project/registry.json"
+
+cp "$WT_B/.ai/project/registry.json" "$WT_B/registry.parent.tmp"
+( cd "$WT_B" && node -e "const fs=require('fs');const p='.ai/project/registry.json';const r=JSON.parse(fs.readFileSync(p,'utf8'));r.features.push({id:'F-099',title:'Parented feature',milestone_id:'$MILESTONE_B',status:'planned',description:'Requires its owning Milestone'});fs.writeFileSync(p,JSON.stringify(r,null,2)+'\n')" )
+missing_parent_hash_before="$(git hash-object "$WT_A/.ai/project/registry.json")"
+if ( cd "$WT_A" && node .ai/scripts/ctl-project-governance.mjs feature \
+    --title "Parented feature" --apply >/dev/null 2>&1 ); then
+  fail "feature copy wrote without its owning Milestone"
+fi
+[ "$missing_parent_hash_before" = "$(git hash-object "$WT_A/.ai/project/registry.json")" ] \
+  || fail "missing-parent Feature copy changed the target registry"
+mv "$WT_B/registry.parent.tmp" "$WT_B/.ai/project/registry.json"
 
 # The committed T-001 bundle appears in all three worktrees. Equal occurrences are one logical
 # query row; a divergent occurrence is one conflicted row with no selected top-level fact source.
 node .ai/scripts/ctl-project-governance.mjs query --id T-001 --json > shared-task.json
-node -e "const q=require('./shared-task.json');const t=q[0];process.exit(q.length===1&&!t.conflict&&t.occurrence_count===3&&t.worktrees.length===3&&Array.isArray(t.requirement_ids)&&t.requirement_ids.length===0?0:1)" \
+node -e "const q=require('./shared-task.json');const t=q[0];process.exit(q.length===1&&!t.conflict&&t.occurrence_count===3&&t.worktrees.length===3?0:1)" \
   || fail "query did not merge equal worktree occurrences"
 duplicate_map_state_before="$(git status --porcelain=v1 --untracked-files=all; git hash-object \
   .ai/project/registry.json .ai/project/dashboard.md .ai/project/feature-map.md)"
@@ -687,22 +771,6 @@ duplicate_map_state_after="$(git status --porcelain=v1 --untracked-files=all; gi
   .ai/project/registry.json .ai/project/dashboard.md .ai/project/feature-map.md)"
 [ "$duplicate_map_state_before" = "$duplicate_map_state_after" ] \
   || fail "duplicate-occurrence map guards changed governance state"
-
-( cd "$WT_A" && node -e "const fs=require('fs');const p='.ai/project/registry.json';const r=JSON.parse(fs.readFileSync(p,'utf8'));r.tasks.find(x=>x.id==='T-001').requirement_ids=['R-001'];fs.writeFileSync(p,JSON.stringify(r,null,2)+'\n')" )
-node .ai/scripts/ctl-project-governance.mjs query --id T-001 --json > requirement-conflict.json
-node -e "const q=require('./requirement-conflict.json');const c=q[0].conflicts.find(x=>x.field==='requirement_ids');process.exit(q[0].conflict&&c?0:1)" \
-  || fail "query did not expose divergent task Requirement mappings"
-requirement_conflict_state_before="$(git status --porcelain=v1 --untracked-files=all; git hash-object \
-  .ai/project/registry.json "$WT_A/.ai/project/registry.json")"
-if node .ai/scripts/ctl-project-governance.mjs sync --apply >/dev/null 2>&1; then
-  fail "sync wrote while Requirement mappings diverged across worktrees"
-fi
-requirement_conflict_state_after="$(git status --porcelain=v1 --untracked-files=all; git hash-object \
-  .ai/project/registry.json "$WT_A/.ai/project/registry.json")"
-[ "$requirement_conflict_state_before" = "$requirement_conflict_state_after" ] \
-  || fail "Requirement conflict handling changed governance state"
-( cd "$WT_A" && node -e "const fs=require('fs');const p='.ai/project/registry.json';const r=JSON.parse(fs.readFileSync(p,'utf8'));delete r.tasks.find(x=>x.id==='T-001').requirement_ids;fs.writeFileSync(p,JSON.stringify(r,null,2)+'\n')" )
-rm -f requirement-conflict.json
 
 sed -i 's/State: in-progress/State: blocked/' "$WT_A/dev-docs/active/sample/01-status.md"
 node .ai/scripts/ctl-project-governance.mjs query --id T-001 --json > conflicted-task.json
@@ -755,4 +823,4 @@ node -e "const r=require('./.ai/project/registry.json');process.exit(r.tasks.som
   || fail "archive status not propagated"
 node .ai/scripts/ctl-project-governance.mjs lint --strict >/dev/null || fail "lint failed after archive"
 
-echo "install/guidance refresh, strict CLI/data guards, single task root, pending seed example, kickoff/completion gates, roadmap and registry lint, resume, validation-atomic sync, Milestone progress and feature/requirement mapping, lightweight Ideas, JSON round-trip, worktree allocation and query reconciliation, archive"
+echo "install/guidance refresh, strict CLI/data guards, single task root, pending seed example, kickoff/completion gates, roadmap and registry lint, resume, validation-atomic sync, Milestone progress and Feature mapping, lightweight Ideas, JSON round-trip, worktree allocation and query reconciliation, archive"
