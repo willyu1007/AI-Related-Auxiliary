@@ -23,7 +23,8 @@ The hub consumes these task facts:
   recovery context.
 - Archive location supplies effective `archived` state; an archived bundle contains exactly
   `.ai-task.json` and `summary.md`.
-- `done` requires kickoff `ready` and a non-empty, fully checked completion checklist.
+- `done` requires kickoff `ready`, a non-empty fully checked completion checklist, and one
+  matching `pass` row with decisive evidence for every completion condition.
 
 ## Project graph
 
@@ -61,8 +62,8 @@ The hub consumes these task facts:
   precedence over discovery; only immediate children of `active/` and `archive/` are task bundles.
 - Allocation and write-mode mapping use the shared governance lock under Git's common directory.
 - Task allocation considers metadata in every linked worktree, the current registry, and task
-  trailers across branch history. Feature and Requirement allocation considers every linked
-  worktree registry.
+  trailers across branch history. Milestone, Feature, and Requirement allocation considers every
+  linked worktree registry.
 - Cross-worktree search returns one logical row per valid task ID and preserves its occurrences in
   `worktrees`. Equal copies collapse into that row. `conflict: true` means one or more task facts
   differ; the differing top-level facts are unset and `conflicts` preserves the evidence. Do not

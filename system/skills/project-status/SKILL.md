@@ -43,7 +43,7 @@ Pick by what was asked, then follow that reference's **Data Source** commands:
 
    Report the commit timeline, worktree warnings, and any disagreement between the packet and the documented status. An empty timeline means progress is unknown, not zero; `git log --grep="^Task: T-###"` is the same evidence without the packet around it.
 
-5. **For semantic questions**, quote the `Semantic Feature Briefs` section of `.ai/project/feature-map.md`. `dashboard.md` supplies the focus index only, never the semantic body.
+5. **For semantic questions**, quote the `Feature Briefs` section of `.ai/project/feature-map.md`. `dashboard.md` supplies the focus index only, never the semantic body.
 
 6. **Answer from the template.** When the reference is archive readiness, treat `State: done` as a claim and report the first missing gate rather than changing anything. End with at least one command the user can run.
 

@@ -2,9 +2,10 @@
 name: project-hub-maintain
 description: >-
   Use when the user asks to archive or close a verified task, apply selected
-  archive transitions, apply a confirmed project-stage mapping, or repair
-  project-hub registry, mapping, or derived-view drift. Not for choosing a
-  stage goal or for read-only status, audit, or archive-readiness questions.
+  archive transitions, apply a confirmed Milestone mapping or Feature or
+  Requirement lifecycle change, or repair project-hub registry, mapping, or
+  derived-view drift. Not for choosing project scope or for read-only status,
+  audit, or archive-readiness questions.
 ---
 
 ## Route
@@ -12,7 +13,7 @@ description: >-
 | Intent | Workflow |
 |---|---|
 | Close or archive a selected verified task | Archive task |
-| Record a confirmed Milestone or change which Features it owns | Maintain project stage |
+| Record a confirmed Milestone, change which Features it owns, or apply a confirmed Feature or Requirement status | Maintain project graph |
 | Repair registry, mapping, or generated-view drift | Repair hub drift |
 
 The task bundle owns execution truth. The hub is a semantic map and derived projection; it does not replace checkpoint synchronization.
@@ -78,27 +79,50 @@ Archiving is an approved destructive transition from a working record to a compa
 - Approval is absent or differs from the proposed scope: leave the active bundle intact.
 - Hub refresh or lint fails: do not commit a partial transition.
 
-## Maintain project stage
+## Maintain project graph
 
-Use this only after the stage outcome and affected Features are confirmed. The hub records the
-decision; it does not decide product scope.
+Use this only after the project outcome, ownership, or lifecycle claim is confirmed. The hub
+records the decision; it does not decide product scope or infer a rollup from task counts.
 
-1. Inspect `.ai/project/registry.json` in every linked worktree. Stop on an uncommitted semantic
-   edit or conflicting meaning for the same ID.
-2. For a new stage, allocate the next unused monotonic `M-###` across those registries; `M-000` is
-   reserved. Add only `id`, `title`, `status: planned`, and a concise outcome in `description`.
-3. Show the exact Milestone record and Feature `milestone_id` changes. Apply only the confirmed
-   scope. Do not add Milestone fields to task entries or create a separate Milestone document.
-4. For a status change to `done`, require the outcome to be accepted and every in-scope Feature to
-   be `done` or `cut`. Active or blocked mapped tasks are conflicting evidence to resolve first.
-5. Regenerate derived views and validate:
+1. Inspect `git status --short`, query the affected tasks across linked worktrees, and inspect
+   `.ai/project/registry.json` in every linked worktree. Stop on foreign work, a conflicted task
+   row, an uncommitted semantic edit, or conflicting meaning for the same project ID.
+2. For a new stage, allocate its monotonic ID under the shared Git-common-dir lock; `M-000` is
+   reserved:
+
+   ```bash
+   node .ai/scripts/ctl-project-governance.mjs milestone --title "<stage outcome>" --description "<accepted outcome>" --apply --json
+   ```
+
+   The command creates only `id`, `title`, `status: planned`, and `description`; never choose an
+   `M-###` manually.
+3. Show the exact Milestone record, Feature `milestone_id` changes, and any Feature or Requirement
+   status changes before editing. Apply only the confirmed scope. Do not add Milestone fields to
+   task entries or create a separate Milestone document.
+4. Treat project-item statuses as explicit claims:
+
+   - `planned` means accepted for the graph but not actively advancing;
+   - `in-progress` means its confirmed outcome is actively advancing;
+   - `blocked` requires a named external dependency or input;
+   - `done` requires the Feature, Requirement, or Milestone outcome to be accepted;
+   - `cut` requires an explicit descoping decision and applies only to Features or Requirements.
+
+   Task states and verification are evidence, never an automatic status rollup. Before setting a
+   Feature or Requirement to `done` or `cut`, resolve its active or blocked mapped tasks and make
+   the acceptance or descoping decision explicit. A `done` Milestone also requires every in-scope
+   Feature to be `done` or `cut`, and a `done` Feature requires its in-scope Requirements to be
+   `done` or `cut`.
+5. Regenerate derived views, validate, and inspect the diff:
 
    ```bash
    node .ai/scripts/ctl-project-governance.mjs sync --apply
    node .ai/scripts/ctl-project-governance.mjs lint
    ```
 
-Report the stage outcome, affected Features, progress contradictions, and exact files changed.
+6. Stage only the confirmed registry and generated-view paths, preserve foreign changes, and
+   commit the coherent graph update. Include a `Task: T-###` trailer only when exactly one tracked
+   task owns the change. Report the outcome, affected project items, progress contradictions,
+   commit, and remaining worktree changes.
 
 ## Repair hub drift
 
@@ -125,6 +149,8 @@ node .ai/scripts/ctl-project-governance.mjs lint
 - Regenerate AUTO sections; never hand-edit them.
 - Do not alter an active task's goal or `State:` as part of hub repair.
 - If drift originates from another worktree's uncommitted bundle, report its worktree and coordinate there instead of overwriting it here.
+- After a successful repair, inspect the diff, stage only the repaired hub paths, and commit the
+  coherent repair when repository policy permits. Preserve and report every foreign path.
 
 ## Boundaries
 

@@ -10,6 +10,8 @@ import path from 'node:path';
 import {
   FEATURE_ID_RE,
   FEATURE_STATUS,
+  MILESTONE_ID_RE,
+  MILESTONE_STATUS,
   REQUIREMENT_ID_RE,
   REQUIREMENT_STATUS,
   TASK_ID_RE,
@@ -22,6 +24,7 @@ import {
   loadRegistry,
   normalizeEol,
   parseTaskMeta,
+  queryTasks,
   readText,
   resolveConfiguredRoots,
   runGit,
@@ -35,6 +38,25 @@ const warn = (message) => console.warn(message);
 const ok = (message) => console.log(message);
 const info = (message) => console.log(message);
 const header = (message) => console.log(message);
+
+function getTaskConflictErrors(repoRoot, taskId = null) {
+  return getTaskConflictErrorsFromRows(queryTasks({ repoRoot, id: taskId }));
+}
+
+function getTaskConflictErrorsFromRows(tasks) {
+  return tasks
+    .filter((task) => task.id && task.conflict)
+    .map((task) => {
+      const fields = task.conflicts.map((conflict) => conflict.field).join(', ');
+      const occurrences = task.worktrees
+        .map((worktree) => `${worktree.worktree_branch}@${worktree.worktree_path}`)
+        .join('; ');
+      return (
+        `Cross-worktree task conflict for ${task.id} (${fields}). ` +
+        `Resolve the divergent occurrences before writing: ${occurrences}.`
+      );
+    });
+}
 
 function today() {
   // Always use YYYY-MM-DD in local time.
@@ -177,6 +199,12 @@ export function cmdSync({ repoRoot, dryRun, apply }) {
     }
     return { ok: succeeded, errors, warnings, actions };
   };
+
+  const taskConflicts = getTaskConflictErrors(repoRoot);
+  if (taskConflicts.length > 0) {
+    errors.push(...taskConflicts);
+    return finish();
+  }
 
   const registryPath = getRegistryPath(repoRoot);
   if (!exists(registryPath)) {
@@ -490,6 +518,13 @@ export function cmdMap({ repoRoot, taskId, featureId, requirementId, dryRun, app
     return { ok: false, errors, actions };
   }
 
+  const taskRows = queryTasks({ repoRoot, id: taskId });
+  const taskConflicts = getTaskConflictErrorsFromRows(taskRows);
+  if (taskConflicts.length > 0) {
+    errors.push(...taskConflicts);
+    return { ok: false, errors, actions };
+  }
+
   if (!featureId && !requirementId) {
     errors.push('At least one of --feature or --requirement is required.');
     return { ok: false, errors, actions };
@@ -551,6 +586,22 @@ export function cmdMap({ repoRoot, taskId, featureId, requirementId, dryRun, app
     }
   }
 
+  const logicalTask = taskRows[0] || null;
+  const currentRequirements = Array.isArray(taskEntry.requirement_ids)
+    ? taskEntry.requirement_ids.map((value) => String(value))
+    : [];
+  const mappingWouldChange =
+    (featureId && String(taskEntry.feature_id || '') !== featureId) ||
+    (requirementId && !currentRequirements.includes(requirementId));
+  if (logicalTask && logicalTask.occurrence_count > 1 && mappingWouldChange) {
+    errors.push(
+      `Task ${taskId} occurs in ${logicalTask.occurrence_count} linked worktrees. ` +
+        'A single-worktree mapping change would create divergent task facts; resolve to one ' +
+        'writable occurrence or update every occurrence as one coordinated edit.'
+    );
+    return { ok: false, errors, actions };
+  }
+
   // Apply mappings
   const changes = [];
   if (featureId && taskEntry.feature_id !== featureId) {
@@ -600,6 +651,131 @@ export function cmdMap({ repoRoot, taskId, featureId, requirementId, dryRun, app
 
 function normalizeFeatureTitle(value) {
   return String(value || '').trim().replace(/\s+/g, ' ').toLowerCase();
+}
+
+function collectMilestonesFromAllWorktrees(repoRoot) {
+  const rows = [];
+  for (const worktree of listGitWorktrees(repoRoot)) {
+    const registry = loadRegistry(worktree.path).registry;
+    if (!registry || !Array.isArray(registry.milestones)) continue;
+    for (const milestone of registry.milestones) {
+      if (!milestone || typeof milestone !== 'object') continue;
+      const id = String(milestone.id || '').trim();
+      const title = String(milestone.title || '').trim();
+      if (!MILESTONE_ID_RE.test(id)) continue;
+      rows.push({ ...milestone, id, title });
+    }
+  }
+  return rows;
+}
+
+export function cmdMilestone({ repoRoot, title, description, dryRun, apply, json }) {
+  const errors = [];
+  const actions = [];
+  const normalizedTitle = normalizeFeatureTitle(title);
+  if (!normalizedTitle) {
+    return { ok: false, errors: ['Missing --title for milestone resolution.'], actions };
+  }
+
+  const loaded = loadRegistry(repoRoot);
+  if (!loaded.registry) {
+    return {
+      ok: false,
+      errors: [`Failed to load registry: ${loaded.error || 'registry not found'}`],
+      actions,
+    };
+  }
+
+  const allMilestones = collectMilestonesFromAllWorktrees(repoRoot);
+  const titlesById = new Map();
+  for (const milestone of allMilestones) {
+    const titles = titlesById.get(milestone.id) || new Set();
+    titles.add(normalizeFeatureTitle(milestone.title));
+    titlesById.set(milestone.id, titles);
+  }
+  for (const [id, titles] of titlesById) {
+    if (titles.size > 1) {
+      errors.push(`Milestone ID ${id} has different titles across linked worktrees.`);
+    }
+  }
+  if (errors.length > 0) return { ok: false, errors, actions };
+
+  const titleMatches = allMilestones.filter(
+    (milestone) => normalizeFeatureTitle(milestone.title) === normalizedTitle
+  );
+  const matchingIds = [...new Set(titleMatches.map((milestone) => milestone.id))];
+  if (matchingIds.length > 1) {
+    return {
+      ok: false,
+      errors: [
+        `Milestone title "${title}" maps to multiple IDs across linked worktrees: ` +
+          `${matchingIds.join(', ')}.`,
+      ],
+      actions,
+    };
+  }
+
+  const registry = loaded.registry;
+  if (!Array.isArray(registry.milestones)) registry.milestones = [];
+  let milestone = null;
+  let created = false;
+
+  if (matchingIds.length === 1) {
+    const id = matchingIds[0];
+    milestone = registry.milestones.find((item) => item && item.id === id) || null;
+    if (!milestone) {
+      const source = titleMatches[0];
+      milestone = {
+        id,
+        title: source.title,
+        status: MILESTONE_STATUS.has(String(source.status || '')) ? source.status : 'planned',
+        description: String(source.description || description || '').trim(),
+      };
+      registry.milestones.push(milestone);
+      actions.push({ op: 'copy', target: 'milestone', id, note: 'found in linked worktree' });
+    }
+  } else {
+    let max = 0;
+    for (const id of titlesById.keys()) {
+      const number = Number(id.slice(2));
+      if (Number.isFinite(number) && number > max) max = number;
+    }
+    if (max >= 999) {
+      return { ok: false, errors: ['Exhausted milestone IDs (M-001..M-999).'], actions };
+    }
+    const id = `M-${String(max + 1).padStart(3, '0')}`;
+    milestone = {
+      id,
+      title: String(title).trim().replace(/\s+/g, ' '),
+      status: 'planned',
+      description: String(description || '').trim(),
+    };
+    registry.milestones.push(milestone);
+    actions.push({ op: 'create', target: 'milestone', id });
+    created = true;
+  }
+
+  registry.milestones.sort((left, right) =>
+    String(left?.id || '').localeCompare(String(right?.id || ''))
+  );
+  if (apply && !dryRun && actions.length > 0) {
+    writeTextIfChanged(loaded.path, renderJson(registry));
+  }
+
+  const result = {
+    id: milestone.id,
+    title: milestone.title,
+    status: String(milestone.status || 'planned'),
+    created,
+    changed: actions.length > 0,
+    mode: apply && !dryRun ? 'apply' : 'dry-run',
+  };
+  if (json) console.log(JSON.stringify(result));
+  else if (actions.length === 0) ok(`[ok] Milestone ${milestone.id} already exists: ${milestone.title}`);
+  else if (apply && !dryRun) ok(`[ok] Milestone ${milestone.id} is available: ${milestone.title}`);
+  else info(`[dry-run] Milestone ${milestone.id} would be available: ${milestone.title}`);
+
+  return { ok: true, errors, actions, milestone: result };
 }
 
 function collectFeaturesFromAllWorktrees(repoRoot) {

@@ -528,6 +528,9 @@ function collectAllWorktreeTaskOccurrences(repoRoot) {
       const projection = registryTasks.get(task.id) || {};
       rows.push({
         feature_id: String(projection.feature_id || ''),
+        requirement_ids: Array.isArray(projection.requirement_ids)
+          ? projection.requirement_ids.map((value) => String(value))
+          : [],
         milestone_id: featureMilestones.get(String(projection.feature_id || '')) || '',
         title: String(projection.title || ''),
         ...task,
@@ -548,6 +551,7 @@ const QUERY_FACT_FIELDS = [
   'slug',
   'dev_docs_path',
   'feature_id',
+  'requirement_ids',
   'milestone_id',
   'title',
   'updated',
@@ -561,7 +565,7 @@ const QUERY_FACT_FIELDS = [
 ];
 
 function normalizeQueryFact(field, value) {
-  if (field === 'keywords') {
+  if (field === 'keywords' || field === 'requirement_ids') {
     return [...new Set(Array.isArray(value) ? value.map((item) => String(item)) : [])].sort();
   }
   return value === undefined ? null : value;
@@ -634,7 +638,7 @@ function mergeTaskOccurrences(repoRoot, rows) {
   });
 }
 
-export function cmdQuery({ repoRoot, id, status, text, json }) {
+export function queryTasks({ repoRoot, id = null, status = null, text = null }) {
   function includesText(value, needle) {
     if (!needle) return true;
     return String(value || '').toLowerCase().includes(String(needle).toLowerCase());
@@ -650,7 +654,7 @@ export function cmdQuery({ repoRoot, id, status, text, json }) {
       const parts = [];
       for (const field of [
         'id', 'slug', 'title', 'description', 'goal', 'status', 'dev_docs_path',
-        'feature_id', 'milestone_id', 'worktree_path', 'worktree_branch',
+        'feature_id', 'requirement_ids', 'milestone_id', 'worktree_path', 'worktree_branch',
       ]) {
         parts.push(String(task[field] || ''));
       }
@@ -662,7 +666,11 @@ export function cmdQuery({ repoRoot, id, status, text, json }) {
     return true;
   }
 
-  const rows = mergeTaskOccurrences(repoRoot, collectAllWorktreeTaskOccurrences(repoRoot)).filter(taskMatches);
+  return mergeTaskOccurrences(repoRoot, collectAllWorktreeTaskOccurrences(repoRoot)).filter(taskMatches);
+}
+
+export function cmdQuery({ repoRoot, id, status, text, json }) {
+  const rows = queryTasks({ repoRoot, id, status, text });
   if (json) console.log(JSON.stringify(rows));
   else formatJsonLines(rows);
   return { ok: true, rows };

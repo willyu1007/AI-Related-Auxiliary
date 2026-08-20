@@ -27,7 +27,7 @@ cat .ai/project/dashboard.md
 - Next governance checkpoint:
 
 **Evidence**
-- feature-map: <Semantic Feature Briefs reference>
+- feature-map: <Feature Briefs reference>
 - dashboard: <Focus index reference, optional>
 
 **Recommended Next Step**: <one concrete action>
@@ -35,7 +35,7 @@ Command: `<executable command>`
 ```
 
 ## Rules
-- Only report semantics explicitly documented in `feature-map.md` `Semantic Feature Briefs`.
+- Only report semantics explicitly documented in `feature-map.md` `Feature Briefs`.
 - Treat `dashboard.md` as index context only; do not use it as semantic body source.
 - If semantic fields are missing, report `unknown` and suggest where to update.
 - Keep status facts and semantic statements separate.

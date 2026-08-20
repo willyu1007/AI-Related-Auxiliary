@@ -12,7 +12,13 @@ Converge one living roadmap without creating a second planning authority.
 
 ## Workflow
 
-1. **Recover the task and evidence.** Read `dev-docs/README.md`, resolve exactly one existing task, and inspect its status, roadmap, settled architecture, linked commits, relevant worktree changes, and repository evidence. If no tracked task exists, stop; this workflow does not create one.
+1. **Recover the task and evidence.** Read `dev-docs/README.md`, then resolve exactly one existing
+   task across linked worktrees with an exact ID query or request-text query. A result with
+   `conflict: true` is a stop condition: show its occurrences and differing facts instead of
+   choosing a source. Continue in another worktree only when the environment can target it safely
+   and the request clearly identifies it. Inspect the resolved status, roadmap, settled
+   architecture, linked commits, relevant worktree changes, and repository evidence. If no
+   tracked task exists, stop; this workflow does not create one.
 
 2. **Classify the planning moment.** Use the same roadmap for all three cases:
 
@@ -42,7 +48,11 @@ Converge one living roadmap without creating a second planning authority.
 
    Check all kickoff items, set `Status: ready`, and make `01-status.md` point to the first unfinished implementation action. Never use `ready` to mean merely that a discussion occurred.
 
-6. **Checkpoint the semantic change.** Refresh and validate governance, inspect the generated diff, and commit the coherent planning checkpoint with the task trailer. Batch tightly related decisions; do not create a commit for wording-only churn.
+6. **Checkpoint the semantic change.** Refresh and validate governance, inspect the entire
+   worktree, and separate this task's paths from foreign changes. Stage only the planning bundle
+   and governance paths caused by this task, using explicit paths; never absorb an unrelated
+   staged or dirty change. Commit the coherent planning checkpoint with the task trailer. Batch
+   tightly related decisions; do not create a commit for wording-only churn.
 
    ```bash
    node .ai/scripts/ctl-project-governance.mjs sync --apply

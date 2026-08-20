@@ -53,7 +53,7 @@ Open and register a durable task bundle before implementation begins.
    node .ai/scripts/ctl-project-governance.mjs sync --apply
    ```
 
-   Read the allocated ID from `.ai-task.json`; never choose one manually. For a new project capability, inspect the registry and Semantic Feature Briefs for the same intent. Reuse the existing Feature when appropriate; otherwise allocate one under the shared cross-worktree lock:
+   Read the allocated ID from `.ai-task.json`; never choose one manually. For a new project capability, inspect the registry and Feature Briefs for the same intent. Reuse the existing Feature when appropriate; otherwise allocate one under the shared cross-worktree lock:
 
    ```bash
    node .ai/scripts/ctl-project-governance.mjs feature --title "<feature title>" --description "<intent>" --apply --json

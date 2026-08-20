@@ -222,7 +222,8 @@ printf '# Roadmap\n\n## Scope and constraints\n- Scope: smoke test\n\n## Decisio
 printf '# Status\n\n## Goal\nSmoke test.\n\n## Progress\n- State: in-progress\n- Current phase: verify\n- Next step: wire verification\n- Blocker: none\n\n## Done when\n- [ ] Smoke test passes\n' \
   > dev-docs/active/sample/01-status.md
 printf '# Architecture\n' > dev-docs/active/sample/02-architecture.md
-printf '# Verification\n\n## Completion matrix\n' > dev-docs/active/sample/verification.md
+printf '# Verification\n\n## Completion matrix\n\n| Completion condition | Check / procedure | Latest result | Evidence / limitation |\n|---|---|---|---|\n| Smoke test passes | Run the governance smoke workflow | not-run | Awaiting the final smoke result |\n\n## Outstanding verification\n\n- Run the governance smoke workflow.\n' \
+  > dev-docs/active/sample/verification.md
 printf '# Pitfalls\n\n| Hazard | Evidence | Prevention | Applies until |\n|---|---|---|---|\n| Repeating a stale path | failed run | use the supported path | guard is encoded |\n' > dev-docs/active/sample/pitfalls.md
 
 git checkout -q -b feat/T-001-sample
@@ -242,6 +243,13 @@ lint_status_before="$(git status --porcelain=v1 --untracked-files=all)"
 node .ai/scripts/ctl-project-governance.mjs lint --strict >/dev/null || fail "lint --strict failed"
 lint_status_after="$(git status --porcelain=v1 --untracked-files=all)"
 [ "$lint_status_before" = "$lint_status_after" ] || fail "lint modified repository state"
+
+# The canonical top-level entry points remain the one semantic authority for every task root.
+mv dev-docs/README.md dev-docs/README.tmp
+missing_root_doc_output="$(node .ai/scripts/ctl-project-governance.mjs lint 2>&1 || true)"
+printf '%s\n' "$missing_root_doc_output" | grep -q 'Canonical task-document entry point dev-docs/README.md is missing' \
+  || fail "lint did not report a missing canonical README"
+mv dev-docs/README.tmp dev-docs/README.md
 
 # Malformed JSON is reported as task data corruption; lint and sync must fail cleanly.
 cp dev-docs/active/sample/.ai-task.json dev-docs/active/sample/.ai-task.tmp
@@ -304,13 +312,37 @@ if node .ai/scripts/ctl-project-governance.mjs lint >/dev/null 2>&1; then
 fi
 mv registry.tmp .ai/project/registry.json
 
-# A task cannot claim completion while its completion conditions remain unchecked.
+# A task cannot claim completion without checked conditions and decisive verification evidence.
 cp dev-docs/active/sample/01-status.md dev-docs/active/sample/01-status.tmp
+cp dev-docs/active/sample/verification.md dev-docs/active/sample/verification.tmp
 sed -i 's/State: in-progress/State: done/' dev-docs/active/sample/01-status.md
-if node .ai/scripts/ctl-project-governance.mjs lint >/dev/null 2>&1; then
+node .ai/scripts/ctl-project-governance.mjs sync --apply >/dev/null
+if done_lint_output="$(node .ai/scripts/ctl-project-governance.mjs lint 2>&1)"; then
   fail "lint accepted a done task with unchecked completion conditions"
 fi
+printf '%s\n' "$done_lint_output" | grep -q 'Done when is not fully checked' \
+  || fail "lint did not identify unchecked completion conditions"
+sed -i 's/- \[ \] Smoke test passes/- [x] Smoke test passes/' \
+  dev-docs/active/sample/01-status.md
+if done_lint_output="$(node .ai/scripts/ctl-project-governance.mjs lint 2>&1)"; then
+  fail "lint accepted a done task without passed verification"
+fi
+printf '%s\n' "$done_lint_output" | grep -q 'verification is not pass' \
+  || fail "lint did not identify incomplete verification evidence"
+sed -i 's/| Smoke test passes | Run the governance smoke workflow | not-run | Awaiting the final smoke result |/| Smoke test passes | Run the governance smoke workflow | pass | Smoke workflow passed in this fixture |/' \
+  dev-docs/active/sample/verification.md
+node .ai/scripts/ctl-project-governance.mjs lint --strict >/dev/null \
+  || fail "lint rejected a done task with checked conditions and passed evidence"
+sed -i 's/| pass | Smoke workflow passed in this fixture |/| pass |  |/' \
+  dev-docs/active/sample/verification.md
+if done_lint_output="$(node .ai/scripts/ctl-project-governance.mjs lint 2>&1)"; then
+  fail "lint accepted a done task without verification evidence"
+fi
+printf '%s\n' "$done_lint_output" | grep -q 'verification evidence / limitation is empty' \
+  || fail "lint did not identify empty done evidence"
 mv dev-docs/active/sample/01-status.tmp dev-docs/active/sample/01-status.md
+mv dev-docs/active/sample/verification.tmp dev-docs/active/sample/verification.md
+node .ai/scripts/ctl-project-governance.mjs sync --apply >/dev/null
 
 # A pending seed is valid before kickoff, but ready requires every gate item.
 cp dev-docs/active/sample/00-roadmap.md dev-docs/active/sample/00-roadmap.tmp
@@ -337,6 +369,38 @@ if node .ai/scripts/ctl-project-governance.mjs lint >/dev/null 2>&1; then
   fail "lint accepted ready kickoff with an unchecked gate"
 fi
 mv dev-docs/active/sample/00-roadmap.tmp dev-docs/active/sample/00-roadmap.md
+
+# A ready kickoff requires a populated verification row and concrete planned check per condition.
+cp dev-docs/active/sample/verification.md dev-docs/active/sample/verification.tmp
+printf '# Verification\n\n## Completion matrix\n' > dev-docs/active/sample/verification.md
+if node .ai/scripts/ctl-project-governance.mjs lint >/dev/null 2>&1; then
+  fail "lint accepted ready kickoff without a verification plan"
+fi
+mv dev-docs/active/sample/verification.tmp dev-docs/active/sample/verification.md
+
+# Verification rows are a one-to-one, executable contract for each completion condition.
+cp dev-docs/active/sample/verification.md dev-docs/active/sample/verification.tmp
+sed -i '/| Smoke test passes | Run the governance smoke workflow | not-run |/a\
+| Smoke test passes | Run the governance smoke workflow | not-run | Duplicate row |' \
+  dev-docs/active/sample/verification.md
+verification_lint_output="$(node .ai/scripts/ctl-project-governance.mjs lint 2>&1 || true)"
+printf '%s\n' "$verification_lint_output" | grep -q 'duplicate verification matrix rows' \
+  || fail "lint did not reject duplicate verification rows"
+mv dev-docs/active/sample/verification.tmp dev-docs/active/sample/verification.md
+
+cp dev-docs/active/sample/verification.md dev-docs/active/sample/verification.tmp
+sed -i 's/| Run the governance smoke workflow |/|  |/' dev-docs/active/sample/verification.md
+verification_lint_output="$(node .ai/scripts/ctl-project-governance.mjs lint 2>&1 || true)"
+printf '%s\n' "$verification_lint_output" | grep -q 'Verification check / procedure is missing' \
+  || fail "lint did not reject an empty verification procedure"
+mv dev-docs/active/sample/verification.tmp dev-docs/active/sample/verification.md
+
+cp dev-docs/active/sample/verification.md dev-docs/active/sample/verification.tmp
+sed -i 's/| not-run |/| unknown |/' dev-docs/active/sample/verification.md
+verification_lint_output="$(node .ai/scripts/ctl-project-governance.mjs lint 2>&1 || true)"
+printf '%s\n' "$verification_lint_output" | grep -q 'Invalid verification result "unknown"' \
+  || fail "lint did not reject an invalid verification result"
+mv dev-docs/active/sample/verification.tmp dev-docs/active/sample/verification.md
 
 # A roadmap must be usable, not a copied template with unresolved placeholders.
 cp dev-docs/active/sample/00-roadmap.md dev-docs/active/sample/00-roadmap.tmp
@@ -383,6 +447,7 @@ dry_run_state_before="$(git status --porcelain=v1 --untracked-files=all; git has
 sync_dry_run_output="$(node .ai/scripts/ctl-project-governance.mjs sync --dry-run)"
 printf '%s\n' "$sync_dry_run_output" | grep -q 'update: .ai/project/registry.json' \
   || fail "sync dry-run did not plan a registry update for changed bundle state"
+node .ai/scripts/ctl-project-governance.mjs milestone --title "Dry-run milestone" --dry-run >/dev/null
 node .ai/scripts/ctl-project-governance.mjs feature --title "Dry-run feature" --dry-run >/dev/null
 node .ai/scripts/ctl-project-governance.mjs requirement --title "Dry-run requirement" \
   --feature F-000 --dry-run >/dev/null
@@ -425,7 +490,17 @@ node -e "const r=require('./.ai/project/registry.json');process.exit(r.tasks.som
   || fail "map did not retain the feature mapping"
 
 # A task derives its Milestone through its Feature; task projections never own milestone_id.
-node -e "const fs=require('fs');const p='.ai/project/registry.json';const r=JSON.parse(fs.readFileSync(p,'utf8'));r.milestones.push({id:'M-001',title:'Smoke milestone',status:'planned',description:'Exercise derived milestone mapping.'});r.features.find(x=>x.id==='F-001').milestone_id='M-001';r.tasks.find(x=>x.id==='T-001').milestone_id='M-999';fs.writeFileSync(p,JSON.stringify(r,null,2)+'\n')"
+node .ai/scripts/ctl-project-governance.mjs milestone --title "Smoke milestone" \
+  --description "Exercise derived milestone mapping" --apply --json > milestone.json
+grep -q '"id":"M-001"' milestone.json || fail "milestone command did not allocate M-001"
+grep -q '"created":true' milestone.json || fail "milestone command did not report creation"
+node .ai/scripts/ctl-project-governance.mjs milestone --title "Smoke milestone" \
+  --apply --json > milestone.json
+grep -q '"id":"M-001"' milestone.json || fail "milestone command changed an existing title ID"
+grep -q '"created":false' milestone.json || fail "milestone command recreated an existing title"
+grep -q '"changed":false' milestone.json || fail "milestone command rewrote an existing title"
+rm -f milestone.json
+node -e "const fs=require('fs');const p='.ai/project/registry.json';const r=JSON.parse(fs.readFileSync(p,'utf8'));r.features.find(x=>x.id==='F-001').milestone_id='M-001';r.tasks.find(x=>x.id==='T-001').milestone_id='M-999';fs.writeFileSync(p,JSON.stringify(r,null,2)+'\n')"
 if node .ai/scripts/ctl-project-governance.mjs lint >/dev/null 2>&1; then
   fail "lint accepted task-owned milestone_id"
 fi
@@ -471,6 +546,20 @@ rm -f requirement.json
 node .ai/scripts/ctl-project-governance.mjs map --task T-001 --requirement R-001 --apply >/dev/null
 node -e "const r=require('./.ai/project/registry.json');process.exit(r.tasks.some(x=>x.id==='T-001'&&x.requirement_ids.includes('R-001'))?0:1)" \
   || fail "map did not record the requirement"
+node -e "const fs=require('fs');const p='.ai/project/registry.json';const r=JSON.parse(fs.readFileSync(p,'utf8'));r.features.find(x=>x.id==='F-001').status='done';fs.writeFileSync(p,JSON.stringify(r,null,2)+'\n')"
+node .ai/scripts/ctl-project-governance.mjs lint > feature-requirement-lint.txt \
+  || fail "Feature/Requirement contradiction was treated as a structural error"
+grep -q 'Feature F-001 is done but has non-terminal Requirements: R-001' feature-requirement-lint.txt \
+  || fail "lint did not report the Feature/Requirement status contradiction"
+node -e "const fs=require('fs');const p='.ai/project/registry.json';const r=JSON.parse(fs.readFileSync(p,'utf8'));r.features.find(x=>x.id==='F-001').status='planned';fs.writeFileSync(p,JSON.stringify(r,null,2)+'\n')"
+rm -f feature-requirement-lint.txt
+node -e "const fs=require('fs');const p='.ai/project/registry.json';const r=JSON.parse(fs.readFileSync(p,'utf8'));r.requirements.find(x=>x.id==='R-001').status='cut';fs.writeFileSync(p,JSON.stringify(r,null,2)+'\n')"
+node .ai/scripts/ctl-project-governance.mjs lint > requirement-lint.txt \
+  || fail "Requirement contradiction was treated as a structural error"
+grep -q 'Requirement R-001 is cut but has active mapped Tasks: T-001' requirement-lint.txt \
+  || fail "lint did not report the Requirement/Task status contradiction"
+node -e "const fs=require('fs');const p='.ai/project/registry.json';const r=JSON.parse(fs.readFileSync(p,'utf8'));r.requirements.find(x=>x.id==='R-001').status='planned';fs.writeFileSync(p,JSON.stringify(r,null,2)+'\n')"
+rm -f requirement-lint.txt
 if node .ai/scripts/ctl-project-governance.mjs map --task T-001 --requirement R-999 --apply >/dev/null 2>&1; then
   fail "map silently created a missing requirement"
 fi
@@ -496,6 +585,8 @@ mv registry.tmp .ai/project/registry.json
 # worktree's T-002 exists solely on its own branch. Only git history reveals it -- which is the
 # point: branching both worktrees from HEAD would let the shared registry answer, and the test
 # would pass even with history scanning removed.
+cp .ai/project/registry.json registry.worktree.tmp
+node -e "const fs=require('fs');const p='.ai/project/registry.json';const r=JSON.parse(fs.readFileSync(p,'utf8'));const t=r.tasks.find(x=>x.id==='T-001');t.feature_id='F-000';t.requirement_ids=[];fs.writeFileSync(p,JSON.stringify(r,null,2)+'\n')"
 BASE=$(git rev-parse HEAD)
 
 prepare_worktree_task() { # <path> <branch> <slug>
@@ -513,6 +604,34 @@ WT_B="${TMPDIR:-/tmp}/aux-wt-b.$$"
 
 prepare_worktree_task "$WT_A" feat/sib-a alpha
 prepare_worktree_task "$WT_B" feat/sib-b beta
+
+( cd "$WT_A" && node .ai/scripts/ctl-project-governance.mjs milestone \
+    --title "Alpha milestone" --apply --json > milestone.json ) &
+PID_A=$!
+( cd "$WT_B" && node .ai/scripts/ctl-project-governance.mjs milestone \
+    --title "Beta milestone" --apply --json > milestone.json ) &
+PID_B=$!
+wait "$PID_A"
+wait "$PID_B"
+MILESTONE_A=$(sed -n 's/.*"id":"\(M-[0-9][0-9][0-9]\)".*/\1/p' "$WT_A/milestone.json")
+MILESTONE_B=$(sed -n 's/.*"id":"\(M-[0-9][0-9][0-9]\)".*/\1/p' "$WT_B/milestone.json")
+[ "$MILESTONE_A" != "$MILESTONE_B" ] \
+  || fail "parallel worktrees both allocated $MILESTONE_A"
+MILESTONE_IDS=$(printf '%s\n%s\n' "$MILESTONE_A" "$MILESTONE_B" | sort | tr '\n' ' ')
+[ "$MILESTONE_IDS" = "M-002 M-003 " ] \
+  || fail "parallel worktrees allocated '$MILESTONE_IDS', expected M-002 and M-003"
+( cd "$WT_B" && node .ai/scripts/ctl-project-governance.mjs milestone \
+    --title "Alpha milestone" --apply --json > milestone-copy.json )
+grep -q "\"id\":\"$MILESTONE_A\"" "$WT_B/milestone-copy.json" \
+  || fail "milestone command did not copy the linked-worktree identity"
+grep -q '"created":false' "$WT_B/milestone-copy.json" \
+  || fail "copied Milestone was incorrectly reported as newly created"
+grep -q '"changed":true' "$WT_B/milestone-copy.json" \
+  || fail "copied Milestone was not reported as a local registry change"
+( cd "$WT_B" && node .ai/scripts/ctl-project-governance.mjs milestone \
+    --title "Alpha milestone" --apply --json > milestone-copy.json )
+grep -q '"changed":false' "$WT_B/milestone-copy.json" \
+  || fail "copied Milestone was not idempotent"
 
 ( cd "$WT_A" && node .ai/scripts/ctl-project-governance.mjs sync --apply >/dev/null ) &
 PID_A=$!
@@ -545,11 +664,39 @@ REQ_IDS=$(printf '%s\n%s\n' "$REQ_A" "$REQ_B" | sort | tr '\n' ' ')
 
 # The committed T-001 bundle appears in all three worktrees. Equal occurrences are one logical
 # query row; a divergent occurrence is one conflicted row with no selected top-level fact source.
-cp .ai/project/registry.json registry.tmp
-node -e "const fs=require('fs');const p='.ai/project/registry.json';const r=JSON.parse(fs.readFileSync(p,'utf8'));r.tasks.find(x=>x.id==='T-001').feature_id='F-000';fs.writeFileSync(p,JSON.stringify(r,null,2)+'\n')"
 node .ai/scripts/ctl-project-governance.mjs query --id T-001 --json > shared-task.json
-node -e "const q=require('./shared-task.json');const t=q[0];process.exit(q.length===1&&!t.conflict&&t.occurrence_count===3&&t.worktrees.length===3?0:1)" \
+node -e "const q=require('./shared-task.json');const t=q[0];process.exit(q.length===1&&!t.conflict&&t.occurrence_count===3&&t.worktrees.length===3&&Array.isArray(t.requirement_ids)&&t.requirement_ids.length===0?0:1)" \
   || fail "query did not merge equal worktree occurrences"
+duplicate_map_state_before="$(git status --porcelain=v1 --untracked-files=all; git hash-object \
+  .ai/project/registry.json .ai/project/dashboard.md .ai/project/feature-map.md)"
+node .ai/scripts/ctl-project-governance.mjs map --task T-001 --feature F-000 --apply >/dev/null \
+  || fail "map rejected a no-op for equal duplicate task occurrences"
+if duplicate_map_output="$(node .ai/scripts/ctl-project-governance.mjs map \
+  --task T-001 --feature F-001 --apply 2>&1)"; then
+  fail "map created divergence between equal duplicate task occurrences"
+fi
+printf '%s\n' "$duplicate_map_output" | grep -q 'occurs in 3 linked worktrees' \
+  || fail "map did not explain the duplicate-occurrence stop condition"
+duplicate_map_state_after="$(git status --porcelain=v1 --untracked-files=all; git hash-object \
+  .ai/project/registry.json .ai/project/dashboard.md .ai/project/feature-map.md)"
+[ "$duplicate_map_state_before" = "$duplicate_map_state_after" ] \
+  || fail "duplicate-occurrence map guards changed governance state"
+
+( cd "$WT_A" && node -e "const fs=require('fs');const p='.ai/project/registry.json';const r=JSON.parse(fs.readFileSync(p,'utf8'));r.tasks.find(x=>x.id==='T-001').requirement_ids=['R-001'];fs.writeFileSync(p,JSON.stringify(r,null,2)+'\n')" )
+node .ai/scripts/ctl-project-governance.mjs query --id T-001 --json > requirement-conflict.json
+node -e "const q=require('./requirement-conflict.json');const c=q[0].conflicts.find(x=>x.field==='requirement_ids');process.exit(q[0].conflict&&c?0:1)" \
+  || fail "query did not expose divergent task Requirement mappings"
+requirement_conflict_state_before="$(git status --porcelain=v1 --untracked-files=all; git hash-object \
+  .ai/project/registry.json "$WT_A/.ai/project/registry.json")"
+if node .ai/scripts/ctl-project-governance.mjs sync --apply >/dev/null 2>&1; then
+  fail "sync wrote while Requirement mappings diverged across worktrees"
+fi
+requirement_conflict_state_after="$(git status --porcelain=v1 --untracked-files=all; git hash-object \
+  .ai/project/registry.json "$WT_A/.ai/project/registry.json")"
+[ "$requirement_conflict_state_before" = "$requirement_conflict_state_after" ] \
+  || fail "Requirement conflict handling changed governance state"
+( cd "$WT_A" && node -e "const fs=require('fs');const p='.ai/project/registry.json';const r=JSON.parse(fs.readFileSync(p,'utf8'));delete r.tasks.find(x=>x.id==='T-001').requirement_ids;fs.writeFileSync(p,JSON.stringify(r,null,2)+'\n')" )
+rm -f requirement-conflict.json
 
 sed -i 's/State: in-progress/State: blocked/' "$WT_A/dev-docs/active/sample/01-status.md"
 node .ai/scripts/ctl-project-governance.mjs query --id T-001 --json > conflicted-task.json
@@ -558,8 +705,27 @@ node -e "const q=require('./conflicted-task.json');const t=q[0];const c=t.confli
 node .ai/scripts/ctl-project-governance.mjs query --status blocked --json > conflicted-filter.json
 node -e "const q=require('./conflicted-filter.json');process.exit(q.some(x=>x.id==='T-001'&&x.conflict)?0:1)" \
   || fail "status filter hid a matching conflicted occurrence"
+
+conflict_state_before="$(git status --porcelain=v1 --untracked-files=all; git hash-object \
+  .ai/project/registry.json .ai/project/dashboard.md .ai/project/feature-map.md \
+  dev-docs/active/sample/.ai-task.json "$WT_A/dev-docs/active/sample/01-status.md")"
+if conflict_sync_output="$(node .ai/scripts/ctl-project-governance.mjs sync --apply 2>&1)"; then
+  fail "sync wrote while a task had divergent worktree facts"
+fi
+printf '%s\n' "$conflict_sync_output" | grep -q 'Cross-worktree task conflict for T-001' \
+  || fail "sync did not report the divergent task"
+if node .ai/scripts/ctl-project-governance.mjs map --task T-001 --feature F-000 --apply \
+  >/dev/null 2>&1; then
+  fail "map wrote while its task had divergent worktree facts"
+fi
+conflict_state_after="$(git status --porcelain=v1 --untracked-files=all; git hash-object \
+  .ai/project/registry.json .ai/project/dashboard.md .ai/project/feature-map.md \
+  dev-docs/active/sample/.ai-task.json "$WT_A/dev-docs/active/sample/01-status.md")"
+[ "$conflict_state_before" = "$conflict_state_after" ] \
+  || fail "a write command changed governance state during a worktree conflict"
+
 sed -i 's/State: blocked/State: in-progress/' "$WT_A/dev-docs/active/sample/01-status.md"
-mv registry.tmp .ai/project/registry.json
+mv registry.worktree.tmp .ai/project/registry.json
 rm -f shared-task.json conflicted-task.json conflicted-filter.json
 
 node .ai/scripts/ctl-project-governance.mjs query --text alpha --json > worktrees.json

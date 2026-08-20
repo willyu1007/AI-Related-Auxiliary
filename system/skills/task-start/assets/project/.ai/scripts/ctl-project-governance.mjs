@@ -33,6 +33,7 @@ import {
 import {
   cmdFeature,
   cmdMap,
+  cmdMilestone,
   cmdRequirement,
   cmdSync,
   withGovernanceWriteLock,
@@ -97,6 +98,15 @@ Commands:
     --apply                   Apply the mapping change
     Map a task to a Feature or Requirement. Its Milestone is derived from the Feature.
 
+  milestone
+    --repo-root <path>        Repo root (default: auto-detect; fallback: cwd)
+    --title <text>            Exact Milestone title to find or create (required)
+    --description <text>      Outcome used only when creating a Milestone
+    --dry-run                 Show what would change without writing
+    --apply                   Ensure the Milestone exists in the current registry
+    --json                    Output the resolved Milestone as JSON
+    Resolve an existing Milestone by title or allocate one across linked worktrees.
+
   feature
     --repo-root <path>        Repo root (default: auto-detect; fallback: cwd)
     --title <text>            Exact feature title to find or create (required)
@@ -120,6 +130,7 @@ Examples:
   node .ai/scripts/ctl-project-governance.mjs lint
   node .ai/scripts/ctl-project-governance.mjs sync --dry-run
   node .ai/scripts/ctl-project-governance.mjs sync --apply
+  node .ai/scripts/ctl-project-governance.mjs milestone --title "Public beta" --apply --json
   node .ai/scripts/ctl-project-governance.mjs feature --title "OAuth providers" --apply --json
   node .ai/scripts/ctl-project-governance.mjs requirement --title "Google sign-in" --feature F-002 --apply --json
   node .ai/scripts/ctl-project-governance.mjs map --task T-001 --feature F-002 --apply
@@ -139,6 +150,11 @@ const COMMAND_OPTIONS = Object.freeze({
   map: {
     values: ['repo-root', 'task', 'feature', 'requirement'],
     flags: ['dry-run', 'apply'],
+    conflicts: [['dry-run', 'apply']],
+  },
+  milestone: {
+    values: ['repo-root', 'title', 'description'],
+    flags: ['dry-run', 'apply', 'json'],
     conflicts: [['dry-run', 'apply']],
   },
   feature: {
@@ -358,6 +374,37 @@ function main() {
         console.error(
           `[error] Requirement resolution aborted: ${error?.message || String(error)}`
         );
+        process.exit(1);
+      }
+
+      if (!res.ok) {
+        header('Errors:');
+        for (const error of res.errors) console.log(`- ${error}`);
+      }
+      process.exit(res.ok ? 0 : 1);
+      break;
+    }
+    case 'milestone': {
+      const title = opts.title ? String(opts.title) : '';
+      const description = opts.description ? String(opts.description) : '';
+      const dryRun = !!opts['dry-run'];
+      const apply = !!opts.apply;
+      if (!dryRun && !apply) info('No mode specified; defaulting to --dry-run.');
+
+      let res;
+      try {
+        const runMilestone = () =>
+          cmdMilestone({
+            repoRoot,
+            title,
+            description,
+            dryRun: dryRun || !apply,
+            apply: apply && !dryRun,
+            json: !!opts.json,
+          });
+        res = apply && !dryRun ? withGovernanceWriteLock(repoRoot, runMilestone) : runMilestone();
+      } catch (error) {
+        console.error(`[error] Milestone resolution aborted: ${error?.message || String(error)}`);
         process.exit(1);
       }
 

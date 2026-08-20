@@ -118,6 +118,115 @@ function validateRoadmap(roadmapRaw) {
   return errors;
 }
 
+const VERIFICATION_RESULTS = new Set(['pass', 'fail', 'blocked', 'not-run']);
+
+function getDoneWhenItems(statusRaw) {
+  const items = [];
+  for (const line of getMarkdownSectionLines(statusRaw, 'Done when')) {
+    const match = line.trim().match(/^\-\s*\[(x|X|\s)\]\s+(.+)$/);
+    if (!match) continue;
+    const condition = cleanMarkdownValue(match[2]);
+    if (!condition) continue;
+    items.push({ condition, checked: String(match[1]).toLowerCase() === 'x' });
+  }
+  return items;
+}
+
+function splitMarkdownTableRow(line) {
+  const trimmed = String(line || '').trim();
+  if (!trimmed.startsWith('|') || !trimmed.endsWith('|')) return [];
+  const cells = [];
+  let cell = '';
+  const body = trimmed.slice(1, -1);
+  for (let index = 0; index < body.length; index++) {
+    const char = body[index];
+    const next = body[index + 1];
+    if (char === '\\' && (next === '|' || next === '\\')) {
+      cell += next;
+      index += 1;
+    } else if (char === '|') {
+      cells.push(cell.trim());
+      cell = '';
+    } else {
+      cell += char;
+    }
+  }
+  cells.push(cell.trim());
+  return cells;
+}
+
+function verificationKey(value) {
+  return cleanMarkdownValue(value).replace(/\s+/g, ' ').toLowerCase();
+}
+
+function getVerificationRows(verificationRaw) {
+  const rows = new Map();
+  for (const line of getMarkdownSectionLines(verificationRaw, 'Completion matrix')) {
+    const cells = splitMarkdownTableRow(line);
+    if (cells.length < 4) continue;
+    if (cells.every((cell) => /^:?-{3,}:?$/.test(cell))) continue;
+    if (verificationKey(cells[0]) === 'completion condition') continue;
+
+    const condition = cleanMarkdownValue(cells[0]);
+    if (!condition) continue;
+    const key = verificationKey(condition);
+    const entries = rows.get(key) || [];
+    entries.push({
+      condition,
+      check: cleanMarkdownValue(cells[1]),
+      result: cleanMarkdownValue(cells[2]).toLowerCase(),
+      evidence: cleanMarkdownValue(cells[3]),
+    });
+    rows.set(key, entries);
+  }
+  return rows;
+}
+
+function validateVerificationContract({ statusRaw, roadmapRaw, verificationRaw, state }) {
+  const errors = [];
+  const kickoff = getRoadmapKickoff(roadmapRaw);
+  const conditions = getDoneWhenItems(statusRaw);
+  if (kickoff.status !== 'ready' && state !== 'done') return errors;
+
+  if (conditions.length === 0) {
+    errors.push('Kickoff is ready or State is done, but Done when has no populated completion conditions.');
+    return errors;
+  }
+
+  const verificationRows = getVerificationRows(verificationRaw);
+  for (const item of conditions) {
+    const entries = verificationRows.get(verificationKey(item.condition)) || [];
+    if (entries.length === 0) {
+      errors.push(`Completion condition has no verification matrix row: "${item.condition}".`);
+      continue;
+    }
+    if (entries.length > 1) {
+      errors.push(`Completion condition has duplicate verification matrix rows: "${item.condition}".`);
+      continue;
+    }
+
+    const row = entries[0];
+    if (!row.check) {
+      errors.push(`Verification check / procedure is missing for: "${item.condition}".`);
+    }
+    if (!VERIFICATION_RESULTS.has(row.result)) {
+      errors.push(
+        `Invalid verification result "${row.result || '(empty)'}" for "${item.condition}". ` +
+          `Allowed: ${[...VERIFICATION_RESULTS].join(', ')}.`
+      );
+    }
+    if (state === 'done') {
+      if (row.result !== 'pass') {
+        errors.push(`State is done but verification is not pass for: "${item.condition}".`);
+      }
+      if (!row.evidence) {
+        errors.push(`State is done but verification evidence / limitation is empty for: "${item.condition}".`);
+      }
+    }
+  }
+  return errors;
+}
+
 function collectRegistryIds(registry, key, label, idPattern, errors) {
   const items = registry[key];
   const ids = new Map();
@@ -278,6 +387,12 @@ export function cmdLint({ repoRoot, strict }) {
     warnings.push('No dev-docs roots discovered.');
   }
 
+  for (const file of ['README.md', 'AGENTS.md', 'CLAUDE.md']) {
+    if (!exists(path.join(repoRoot, 'dev-docs', file))) {
+      errors.push(`Canonical task-document entry point dev-docs/${file} is missing.`);
+    }
+  }
+
   const tasks = scanTasks(repoRoot, devDocsRoots);
 
   // Collect IDs and slug-to-ids mapping for cross-root checks
@@ -297,6 +412,7 @@ export function cmdLint({ repoRoot, strict }) {
     const metaRaw = readText(task.metaPath);
     const statusRaw = readText(task.statusPath);
     const roadmapRaw = readText(task.roadmapPath);
+    const verificationRaw = readText(path.join(task.absPath, 'verification.md'));
     const kickoff = roadmapRaw ? getRoadmapKickoff(roadmapRaw) : null;
 
     task.taskId = null;
@@ -354,6 +470,22 @@ export function cmdLint({ repoRoot, strict }) {
 
     if (task.phase === 'active' && task.effectiveStatus === 'done' && kickoff?.status !== 'ready') {
       errors.push(`${formatTaskRef(task)}: State is done but roadmap kickoff is not ready.`);
+    }
+
+    if (
+      task.phase === 'active' &&
+      statusRaw !== null &&
+      roadmapRaw !== null &&
+      verificationRaw !== null
+    ) {
+      for (const verificationError of validateVerificationContract({
+        statusRaw,
+        roadmapRaw,
+        verificationRaw,
+        state: task.effectiveStatus,
+      })) {
+        errors.push(`${formatTaskRef(task)}: ${verificationError}`);
+      }
     }
 
     if (metaRaw === null) {
@@ -475,6 +607,7 @@ export function cmdLint({ repoRoot, strict }) {
     validateRegistryStatuses(registry.tasks, 'Task', TASK_STATUS, errors, true);
 
     const features = Array.isArray(registry.features) ? registry.features : [];
+    const requirements = Array.isArray(registry.requirements) ? registry.requirements : [];
     const tasks = Array.isArray(registry.tasks) ? registry.tasks : [];
     for (const milestone of Array.isArray(registry.milestones) ? registry.milestones : []) {
       if (!milestone || typeof milestone !== 'object' || milestone.status !== 'done') continue;
@@ -493,6 +626,18 @@ export function cmdLint({ repoRoot, strict }) {
     for (const feature of features) {
       if (!feature || typeof feature !== 'object' || !['done', 'cut'].includes(feature.status)) continue;
       const featureId = String(feature.id || '');
+      if (feature.status === 'done') {
+        const incompleteRequirements = requirements
+          .filter((requirement) => requirement && String(requirement.feature_id || '') === featureId)
+          .filter((requirement) => !['done', 'cut'].includes(String(requirement.status || '')))
+          .map((requirement) => String(requirement.id || '(missing ID)'));
+        if (incompleteRequirements.length > 0) {
+          warnings.push(
+            `Feature ${featureId} is done but has non-terminal Requirements: ` +
+              `${incompleteRequirements.join(', ')}.`
+          );
+        }
+      }
       const activeTasks = tasks
         .filter((task) => task && String(task.feature_id || '') === featureId)
         .filter((task) => ['planned', 'in-progress', 'blocked'].includes(String(task.status || '')))
@@ -500,6 +645,30 @@ export function cmdLint({ repoRoot, strict }) {
       if (activeTasks.length > 0) {
         warnings.push(
           `Feature ${featureId} is ${feature.status} but has active mapped Tasks: ${activeTasks.join(', ')}.`
+        );
+      }
+    }
+
+    for (const requirement of requirements) {
+      if (
+        !requirement ||
+        typeof requirement !== 'object' ||
+        !['done', 'cut'].includes(requirement.status)
+      ) continue;
+      const requirementId = String(requirement.id || '');
+      const activeTasks = tasks
+        .filter(
+          (task) =>
+            task &&
+            Array.isArray(task.requirement_ids) &&
+            task.requirement_ids.some((id) => String(id) === requirementId)
+        )
+        .filter((task) => ['planned', 'in-progress', 'blocked'].includes(String(task.status || '')))
+        .map((task) => String(task.id || '(missing ID)'));
+      if (activeTasks.length > 0) {
+        warnings.push(
+          `Requirement ${requirementId} is ${requirement.status} but has active mapped Tasks: ` +
+            `${activeTasks.join(', ')}.`
         );
       }
     }
