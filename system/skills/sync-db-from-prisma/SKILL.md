@@ -1,130 +1,52 @@
 ---
 name: sync-db-from-prisma
-description: Use when a user asks to add, modify, or remove persistent models in prisma/schema.prisma; create or apply Prisma migrations; or resolve repo-to-database drift. Covers only repository-to-database Prisma SSOT workflows, not database-to-code db pull, data backfills, ordinary data CRUD, or task-record synchronization.
+description: Create or update the repository's Prisma schema as the database-structure source of truth, or synchronize Prisma schema changes and migrations from the repository to target databases.
 ---
 
 # Sync Database from Prisma
 
-Treat `prisma/schema.prisma` as the only schema source of truth (SSOT). The direction is always repository to database. Carry a schema change through reviewable migration evidence, an explicit write approval, environment-appropriate application, and verification.
-
-The gate is the whole skill. Every command below is Prisma's own; nothing here reimplements what Prisma already does.
-
-## Hard Preconditions
-
-Stop unless all of these are true:
-
-- The target repository contains `prisma/schema.prisma`.
-- That file is the project's database schema SSOT.
-- The requested direction is repository to database.
-- The target environment (`dev`, `staging`, or `prod`) is known.
-- Credentials remain in the target process environment. Never place a connection string, password, token, or unredacted credential in chat or evidence.
-
-`<this-skill>` means the absolute directory containing this `SKILL.md`. Resolve it from the loaded skill location; the evidence templates below are read from there.
+The project-configured Prisma schema is the repository's database-structure source of truth. Work may update the schema and migration history, synchronize existing repository changes to a target database, or both. Synchronization flows from the repository to the database.
 
 ## Workflow
 
-### A. Confirm scope and evidence location
+### 1. Inspect and route
 
-1. Restate the intended persistent-model change, target environment, target database identity in redacted form, and acceptance criteria.
-2. Inspect the target repository's local instructions and Prisma configuration.
-3. If the repository tracks tasks and this change belongs to one, use:
-   `dev-docs/active/<slug>/artifacts/db/`.
-4. Otherwise use `.ai/.tmp/db-sync/<run-id>/`.
-5. Copy the five files from `./templates/` into that evidence directory. Evidence contains commands, decisions, and redacted summaries—not credentials.
+Inspect the repository's local instructions, Prisma configuration, schema location, migration history, package manager, and existing scripts. Determine whether the task requires a repository schema change, target database synchronization, or both.
 
-### B. Change and validate the Prisma SSOT
+### 2. Update the repository schema
 
-1. Edit `prisma/schema.prisma` and any repository/domain mappings affected by the intended contract.
-2. Respect the project's existing boundaries. Avoid leaking generated Prisma types into business code unless the project deliberately uses that architecture.
-3. Run:
+Run this branch when the requested database structure changes.
 
-```bash
-pnpm exec prisma format
-pnpm exec prisma validate
-```
+1. Update the project-configured Prisma schema and the application mappings, fixtures, or tests affected by its contract.
+2. Follow the repository's existing package manager, scripts, schema layout, and migration strategy.
+3. Format and validate the schema, and regenerate the Prisma Client when required by the project's Prisma version and workflow.
+4. When the repository uses versioned migrations, generate a development migration according to the task scope. Use `prisma migrate dev --create-only --name <name>` when database synchronization is not part of the task or when the SQL must be edited before application.
+5. Review generated migration SQL for unintended drops, type changes, constraint failures, table rewrites, or data changes that require a separate backfill.
 
-Do not proceed while either command fails.
+This branch may finish with repository changes only; it does not require synchronizing a database unless that is part of the task.
 
-### C. Preview and review the migration
+### 3. Synchronize the target database
 
-Prefer a versioned migration preview in a development environment:
+Run this branch when repository-defined schema changes need to reach a database. Resolve the target environment and connection configuration, then use the repository's existing command or the matching Prisma workflow:
 
-```bash
-pnpm exec prisma migrate dev --create-only --name <slug>
-```
+- Development with versioned migrations: `prisma migrate dev`.
+- Staging or production: `prisma migrate deploy`.
+- Prototyping without migration history, or a provider that does not use Prisma Migrate: `prisma db push`.
 
-Before running it, obtain explicit approval to use the named development and shadow databases. `--create-only` creates migration files without applying the newly generated migration, but `migrate dev` is not a read-only or connection-free command: it uses the development and shadow databases and may reconcile existing migration history. This preview authorization is limited to those named development resources and is **not** approval to apply the proposed migration.
+A synchronization-only task assumes that the Prisma schema and migration history already agree. If a new migration is required, return to the repository-update branch first. Use `prisma migrate status` or `prisma migrate diff` when the current migration state or schema drift needs diagnosis before synchronization.
 
-When `--create-only` is unsuitable, use an appropriate `pnpm exec prisma migrate diff ...` command with explicit from/to inputs. Prisma has no universal migration dry-run: inspect exactly which inputs the selected command reads and whether it needs a connection. Obtain approval before using any database-backed input; an offline schema-to-migrations-directory comparison does not require a database authorization.
+Inspect the pending migration or Prisma warning before accepting destructive changes. Confirm an ambiguous target or an unapproved destructive or production write instead of guessing.
 
-Review every generated `migration.sql`. Record additions, alterations, removals, locks or rewrite risks, data-loss risk, and a destructive-change assessment in `01-schema-diff-preview.md`. Record the rollout, rollback, and verification plan in `02-migration-plan.md`. Read `./reference/migrate-vs-push.md` when selecting a strategy.
+When both branches apply, update the repository schema and migration history before synchronizing the target database.
 
-### D. Obtain explicit write approval
+### 4. Verify
 
-After reviewing the preview, ask for separate explicit approval before applying to the target database. Confirm:
+For repository changes, run the project-relevant schema validation, Client generation when used, and affected tests. After database synchronization, check migration status when migrations are used and run the relevant integration or smoke checks. Report the applied migrations or schema result, verification result, and any remaining data migration work.
 
-- target environment and redacted target identity;
-- whether destructive operations are present and accepted;
-- backup or snapshot readiness, or explicit risk acceptance;
-- apply strategy and exact command class (`migrate dev`, `migrate deploy`, or the exceptional `db push`).
+### Parallel work
 
-Preview authorization is not apply approval. If apply approval is missing, ambiguous, or for another environment, stop before the target write.
+Give each worktree that runs `prisma migrate dev` or `prisma db push` its own development database, and isolate any explicitly configured shadow database. Parallel branches may create migrations independently; after integration, reconcile the final Prisma schema and migration history and validate the combined history against an isolated database. Keep a single writer for Prisma schema and migration files on a shared branch, and serialize migration writes to each shared staging or production database.
 
-### E. Apply by environment
+## Scope
 
-After approval, log commands and results in `03-execution-log.md`.
-
-Development:
-
-```bash
-pnpm exec prisma migrate dev
-```
-
-Staging or production:
-
-```bash
-pnpm exec prisma migrate deploy
-```
-
-Use `pnpm exec prisma db push` only when the user explicitly chooses it for a disposable environment and accepts that it does not create versioned migration history. Never substitute it silently when migration generation is difficult.
-
-### F. Verify the applied state
-
-Run:
-
-```bash
-pnpm exec prisma migrate status
-```
-
-Then run the relevant repository tests, integration checks, and application smoke checks. Capture the result and remaining risks in `04-post-verify.md`. A successful command is not sufficient if the application contract or relevant behavior fails.
-
-### G. Refresh repository mappings
-
-Finish any affected repository adapters, domain mappings, fixtures, and tests that were not safely completed before application. Commit them with the schema and migration changes according to the target repository's policy.
-
-## Reading the schema
-
-When something needs the database shape — an agent included — read `prisma/schema.prisma`. It is declarative, structured, and it is the SSOT itself, so there is no generated projection to keep fresh and no second copy that can be stale. See `./reference/prisma-ssot.md`.
-
-What the file does not answer, Prisma's own tooling does: `prisma migrate status` for what the target database has applied, `prisma migrate diff` for the gap between two named states.
-
-## Completion Checklist
-
-- [ ] Target environment and redacted target identity are recorded.
-- [ ] Prisma format and validation pass.
-- [ ] Migration SQL and destructive assessment were reviewed.
-- [ ] Explicit apply approval is recorded before any database write.
-- [ ] The environment-appropriate strategy was applied.
-- [ ] Migration status and relevant tests pass.
-- [ ] Repository/domain mappings remain coherent where applicable.
-- [ ] Evidence contains no credentials.
-
-## Boundaries
-
-- Never execute a database-backed preview or target write automatically or without authorization for the named database resources. Preview authorization never implies apply approval.
-- Never run `db pull` or make the database authoritative.
-- Do not perform data backfills or transformations; plan and approve those separately.
-- Do not use this workflow for ordinary data CRUD or task-record synchronization.
-- Never store secrets in chat, evidence, or migration files.
-- Default to versioned migrations; permit `db push` only as the explicit disposable-environment exception.
-- Respect project boundaries; avoid leaking generated Prisma types unless the project deliberately uses that architecture. Do not impose a universal layered architecture.
+Database-to-repository introspection and ordinary data CRUD are outside this workflow. Treat required backfills as explicit data-migration or application work alongside the schema change rather than as an automatic effect of schema synchronization.
