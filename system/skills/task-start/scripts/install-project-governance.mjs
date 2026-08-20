@@ -2,13 +2,15 @@
 /**
  * Install or refresh the repository task-governance system.
  *
- * This file is intentionally self-contained so it still works when runtime modules are absent or
- * stale. Fixed assets are refreshed; project-owned hub data is created only when missing.
+ * This runs from the skill source, independent of any target-repository runtime copy. Fixed assets
+ * are refreshed; project-owned hub data is created only when missing.
  */
 
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+
+import { getUnsupportedGovernanceFiles } from '../assets/project/.ai/scripts/lib/governance-read.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const SHIPPED_ROOT = path.resolve(__dirname, '..', 'assets', 'project');
@@ -116,34 +118,13 @@ function isPathInside(parent, candidate) {
   );
 }
 
-function listImmediateChildDirs(dirPath) {
-  try {
-    return fs
-      .readdirSync(dirPath, { withFileTypes: true })
-      .filter((entry) => entry.isDirectory())
-      .map((entry) => entry.name)
-      .sort();
-  } catch {
-    return [];
-  }
-}
-
 function assertGovernanceLayout(repoRoot) {
-  const unsupported = [];
-  const taskReadme = path.join(repoRoot, 'dev-docs', 'README.md');
-  if (exists(taskReadme)) unsupported.push(taskReadme);
-  const registryYaml = path.join(repoRoot, '.ai', 'project', 'registry.yaml');
-  if (exists(registryYaml)) unsupported.push(registryYaml);
-  const root = path.join(repoRoot, 'dev-docs');
-  for (const phase of ['active', 'archive']) {
-    for (const slug of listImmediateChildDirs(path.join(root, phase))) {
-      const metadata = path.join(root, phase, slug, '.ai-task.yaml');
-      if (exists(metadata)) unsupported.push(metadata);
-    }
-  }
+  const unsupported = getUnsupportedGovernanceFiles(repoRoot);
   if (unsupported.length === 0) return;
 
-  const paths = unsupported.map((file) => `  - ${toPosix(path.relative(repoRoot, file))}`).join('\n');
+  const paths = unsupported
+    .map((item) => `  - ${item.file} @ ${item.worktree_path}`)
+    .join('\n');
   fail(
     '[error] Unsupported task-governance files conflict with the current single-path layout. ' +
       'Remove them before continuing:\n' +

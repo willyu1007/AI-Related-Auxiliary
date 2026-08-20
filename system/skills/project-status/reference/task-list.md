@@ -15,7 +15,7 @@ node .ai/scripts/ctl-project-governance.mjs query --json
 
 | Task ID | Name | Status | Kickoff | Feature | Worktree | Path |
 |---------|------|--------|---------|---------|----------|------|
-| T-001 | <slug> | <status> | pending / ready | F-xxx | <worktree> | dev-docs/active/<slug>/ |
+| <T-###> | <slug> | <status> | pending / ready | <F-###> | <worktree> | dev-docs/active/<slug>/ |
 
 **Quick actions**:
 - View details: open the row's `status_doc_path` under its `worktree_path`

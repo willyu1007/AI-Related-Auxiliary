@@ -61,14 +61,103 @@ node .ai/scripts/ctl-project-governance.mjs sync --apply >/dev/null
   || fail "sync wrote task metadata outside the top-level dev-docs root"
 rm -rf modules
 
-printf '# Conflicting task-document entry\n' > dev-docs/README.md
-if node .ai/scripts/ctl-project-governance.mjs lint >/dev/null 2>&1; then
-  fail "lint accepted a second task-document authority"
-fi
-if node "$INSTALLER" --repo-root . >/dev/null 2>&1; then
-  fail "installer accepted a second task-document authority"
-fi
-rm dev-docs/README.md
+UNSUPPORTED_GOVERNANCE_FILES="
+dev-docs/README.md
+.ai/project/registry.yaml
+.ai/project/CONTRACT.md
+.ai/project/task-index.md
+.ai/project/changelog.md
+.ai/project/templates/task-index.md
+.ai/project/templates/changelog.md
+.ai/project/templates/registry.yaml
+.ai/scripts/install-project-governance.mjs
+.ai/scripts/lib/colors.mjs
+.ai/scripts/lib/yaml-lite.mjs
+"
+GUARD_OUTPUT="${TMPDIR:-/tmp}/aux-governance-guard.$$"
+governance_snapshot() { # <unsupported-file>
+  git status --porcelain=v1 --untracked-files=all
+  git hash-object \
+    dev-docs/AGENTS.md dev-docs/CLAUDE.md \
+    dev-docs/active/.gitkeep dev-docs/archive/.gitkeep \
+    .ai/project/AGENTS.md .ai/project/CLAUDE.md \
+    .ai/project/registry.json .ai/project/dashboard.md .ai/project/feature-map.md \
+    .ai/project/templates/registry.json \
+    .ai/project/templates/dashboard.md \
+    .ai/project/templates/feature-map.md \
+    .ai/scripts/ctl-project-governance.mjs \
+    .ai/scripts/lib/governance-read.mjs \
+    .ai/scripts/lib/governance-lint.mjs \
+    .ai/scripts/lib/governance-write.mjs \
+    "$1"
+}
+
+for file in $UNSUPPORTED_GOVERNANCE_FILES; do
+  mkdir -p "$(dirname "$file")"
+  printf 'unsupported governance authority\n' > "$file"
+  guard_before="$(governance_snapshot "$file")"
+  if node .ai/scripts/ctl-project-governance.mjs lint > "$GUARD_OUTPUT" 2>&1; then
+    fail "lint accepted unsupported governance file $file"
+  fi
+  grep -Fq "  - $file @" "$GUARD_OUTPUT" \
+    || fail "lint did not identify unsupported governance file $file"
+  if node .ai/scripts/ctl-project-governance.mjs sync --apply > "$GUARD_OUTPUT" 2>&1; then
+    fail "sync accepted unsupported governance file $file"
+  fi
+  if node "$INSTALLER" --repo-root . > "$GUARD_OUTPUT" 2>&1; then
+    fail "installer accepted unsupported governance file $file"
+  fi
+  [ -e "$file" ] || fail "failed installer deleted unsupported file $file"
+  [ "$guard_before" = "$(governance_snapshot "$file")" ] \
+    || fail "rejected governance file $file still allowed repository writes"
+  rm -f "$file"
+done
+
+# Project-owned hooks are allowed, but the removed task-governance hooks must not remain active.
+mkdir -p .githooks
+printf '#!/bin/sh\necho project hook\n' > .githooks/pre-commit
+node .ai/scripts/ctl-project-governance.mjs lint --strict >/dev/null \
+  || fail "lint rejected an unrelated project-owned Git hook"
+printf '%s\n' 'ctl-project-governance.mjs task-exists --task' > .githooks/prepare-commit-msg
+node .ai/scripts/ctl-project-governance.mjs lint --strict >/dev/null \
+  || fail "lint treated one hook signature as removed governance automation"
+rm .githooks/prepare-commit-msg
+
+REMOVED_GOVERNANCE_HOOKS="
+.githooks/prepare-commit-msg
+.githooks/commit-msg
+.githooks/pre-commit
+.githooks/install.mjs
+"
+for file in $REMOVED_GOVERNANCE_HOOKS; do
+  case "$file" in
+    .githooks/prepare-commit-msg|.githooks/commit-msg)
+      printf '%s\n' 'ctl-project-governance.mjs task-exists --task' 'SKIP_TASK_TRAILER' > "$file"
+      ;;
+    .githooks/pre-commit)
+      printf '%s\n' 'Detected dev-docs changes, running ctl-project-governance sync' \
+        "git add ':(glob)**/.ai-task.json'" > "$file"
+      ;;
+    .githooks/install.mjs)
+      printf '%s\n' 'node .githooks/install.mjs [--uninstall] [--check]' \
+        "Uses Git's core.hooksPath to point to .githooks/" > "$file"
+      ;;
+  esac
+  guard_before="$(governance_snapshot "$file")"
+  if node .ai/scripts/ctl-project-governance.mjs lint > "$GUARD_OUTPUT" 2>&1; then
+    fail "lint accepted removed task-governance hook $file"
+  fi
+  grep -Fq "  - $file @" "$GUARD_OUTPUT" \
+    || fail "lint did not identify removed task-governance hook $file"
+  if node "$INSTALLER" --repo-root . > "$GUARD_OUTPUT" 2>&1; then
+    fail "installer accepted removed task-governance hook $file"
+  fi
+  [ "$guard_before" = "$(governance_snapshot "$file")" ] \
+    || fail "rejected task-governance hook $file still allowed repository writes"
+  rm -f "$file"
+done
+rmdir .githooks
+rm -f "$GUARD_OUTPUT"
 
 cp dev-docs/CLAUDE.md dev-docs/CLAUDE.tmp
 printf '# Task documentation\n\nAGENTS.md is also relevant.\n' > dev-docs/CLAUDE.md
@@ -136,10 +225,18 @@ mkdir -p fixtures/yaml-example
 printf 'fixture: true\n' > fixtures/yaml-example/.ai-task.yaml
 node "$INSTALLER" --repo-root . >/dev/null \
   || fail "installer treated an unrelated YAML fixture as task metadata"
+node .ai/scripts/ctl-project-governance.mjs lint --strict >/dev/null \
+  || fail "lint treated an unrelated YAML fixture as task metadata"
 rm -rf fixtures
 
 mkdir -p dev-docs/active/yaml-task
 printf 'task_id: T-999\n' > dev-docs/active/yaml-task/.ai-task.yaml
+if node .ai/scripts/ctl-project-governance.mjs lint >/dev/null 2>&1; then
+  fail "lint accepted YAML metadata in a task bundle"
+fi
+if node .ai/scripts/ctl-project-governance.mjs query --json >/dev/null 2>&1; then
+  fail "runtime query ignored YAML metadata in a task bundle"
+fi
 printf '\nyaml-guard-marker\n' >> dev-docs/AGENTS.md
 if node "$INSTALLER" --repo-root . >/dev/null 2>&1; then
   fail "installer accepted YAML metadata in a task bundle"
@@ -641,7 +738,7 @@ rm -f feature-lint.txt
 node .ai/scripts/ctl-project-governance.mjs lint --strict >/dev/null \
   || fail "lint failed after restoring consistent Milestone status"
 
-# Task projections have one generated shape; lint rejects drift and sync rebuilds it canonically.
+# Task projections have one generated shape; lint rejects drift and sync rebuilds that exact shape.
 cp .ai/project/registry.json registry.tmp
 node -e "const fs=require('fs');const p='.ai/project/registry.json';const r=JSON.parse(fs.readFileSync(p,'utf8'));r.tasks.find(x=>x.id==='T-001').unexpected=[];fs.writeFileSync(p,JSON.stringify(r,null,2)+'\n')"
 if node .ai/scripts/ctl-project-governance.mjs lint >/dev/null 2>&1; then
@@ -710,6 +807,26 @@ WT_B="${TMPDIR:-/tmp}/aux-wt-b.$$"
 
 prepare_worktree_task "$WT_A" feat/sib-a alpha
 prepare_worktree_task "$WT_B" feat/sib-b beta
+
+printf 'task_id: T-099\n' > "$WT_A/dev-docs/active/alpha/.ai-task.yaml"
+linked_guard_status_before="$(git -C "$WT_B" status --porcelain=v1 --untracked-files=all)"
+linked_guard_registry_before="$(git hash-object "$WT_B/.ai/project/registry.json")"
+if ( cd "$WT_B" && node .ai/scripts/ctl-project-governance.mjs query --json > "$GUARD_OUTPUT" 2>&1 ); then
+  fail "query ignored unsupported YAML metadata in a linked worktree"
+fi
+grep -Fq 'dev-docs/active/alpha/.ai-task.yaml @' "$GUARD_OUTPUT" \
+  || fail "linked-worktree guard did not identify the unsupported YAML metadata"
+if ( cd "$WT_B" && node .ai/scripts/ctl-project-governance.mjs sync --apply > "$GUARD_OUTPUT" 2>&1 ); then
+  fail "sync accepted unsupported YAML metadata in a linked worktree"
+fi
+if node "$INSTALLER" --repo-root "$WT_B" > "$GUARD_OUTPUT" 2>&1; then
+  fail "installer accepted unsupported YAML metadata in a linked worktree"
+fi
+[ "$linked_guard_status_before" = "$(git -C "$WT_B" status --porcelain=v1 --untracked-files=all)" ] \
+  || fail "linked-worktree guard changed the target worktree"
+[ "$linked_guard_registry_before" = "$(git hash-object "$WT_B/.ai/project/registry.json")" ] \
+  || fail "linked-worktree guard changed the target registry"
+rm "$WT_A/dev-docs/active/alpha/.ai-task.yaml" "$GUARD_OUTPUT"
 
 ( cd "$WT_A" && node .ai/scripts/ctl-project-governance.mjs milestone \
     --title "Alpha milestone" --apply --json > milestone.json ) &

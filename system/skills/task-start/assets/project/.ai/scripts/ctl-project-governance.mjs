@@ -27,6 +27,7 @@ import {
   cmdQuery,
   cmdResume,
   findRepoRoot,
+  getUnsupportedGovernanceFiles,
 } from './lib/governance-read.mjs';
 import {
   cmdFeature,
@@ -41,9 +42,6 @@ function die(message, exitCode = 1) {
   console.error(message);
   process.exit(exitCode);
 }
-
-const info = (message) => console.log(message);
-const header = (message) => console.log(message);
 
 function usage(exitCode = 0) {
   const msg = `
@@ -210,6 +208,16 @@ function main() {
   const repoRoot =
     opts['repo-root'] ? path.resolve(opts['repo-root']) : findRepoRoot(process.cwd()) || path.resolve(process.cwd());
 
+  if (command !== 'lint') {
+    const unsupported = getUnsupportedGovernanceFiles(repoRoot);
+    if (unsupported.length > 0) {
+      die(
+        '[error] Unsupported task-governance files conflict with the current single-path layout:\n' +
+          unsupported.map((item) => `  - ${item.file} @ ${item.worktree_path}`).join('\n')
+      );
+    }
+  }
+
   switch (command) {
     case 'lint': {
       const strict = !!opts.strict;
@@ -221,7 +229,7 @@ function main() {
       const dryRun = !!opts['dry-run'];
       const apply = !!opts.apply;
       if (!dryRun && !apply) {
-        info('No mode specified; defaulting to --dry-run.');
+        console.log('No mode specified; defaulting to --dry-run.');
       }
       let res;
       try {
@@ -291,7 +299,7 @@ function main() {
       const dryRun = !!opts['dry-run'];
       const apply = !!opts.apply;
       if (!dryRun && !apply) {
-        info('No mode specified; defaulting to --dry-run.');
+        console.log('No mode specified; defaulting to --dry-run.');
       }
       let res;
       try {
@@ -309,7 +317,7 @@ function main() {
         process.exit(1);
       }
       if (!res.ok) {
-        header('Errors:');
+        console.log('Errors:');
         for (const e of res.errors) console.log(`- ${e}`);
       }
       process.exit(res.ok ? 0 : 1);
@@ -320,7 +328,7 @@ function main() {
       const description = opts.description ? String(opts.description) : '';
       const dryRun = !!opts['dry-run'];
       const apply = !!opts.apply;
-      if (!dryRun && !apply) info('No mode specified; defaulting to --dry-run.');
+      if (!dryRun && !apply) console.log('No mode specified; defaulting to --dry-run.');
 
       let res;
       try {
@@ -340,7 +348,7 @@ function main() {
       }
 
       if (!res.ok) {
-        header('Errors:');
+        console.log('Errors:');
         for (const error of res.errors) console.log(`- ${error}`);
       }
       process.exit(res.ok ? 0 : 1);
@@ -351,7 +359,7 @@ function main() {
       const description = opts.description ? String(opts.description) : '';
       const dryRun = !!opts['dry-run'];
       const apply = !!opts.apply;
-      if (!dryRun && !apply) info('No mode specified; defaulting to --dry-run.');
+      if (!dryRun && !apply) console.log('No mode specified; defaulting to --dry-run.');
 
       let res;
       try {
@@ -371,7 +379,7 @@ function main() {
       }
 
       if (!res.ok) {
-        header('Errors:');
+        console.log('Errors:');
         for (const error of res.errors) console.log(`- ${error}`);
       }
       process.exit(res.ok ? 0 : 1);

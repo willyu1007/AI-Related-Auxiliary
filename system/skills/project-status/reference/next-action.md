@@ -11,7 +11,7 @@ node .ai/scripts/ctl-project-governance.mjs query --json
 For the selected task, read its bounded recovery packet:
 
 ```bash
-node .ai/scripts/ctl-project-governance.mjs resume --repo-root <worktree_path> --task T-xxx
+node .ai/scripts/ctl-project-governance.mjs resume --repo-root <worktree_path> --task <T-###>
 ```
 
 ## Action Rules
@@ -30,7 +30,7 @@ node .ai/scripts/ctl-project-governance.mjs resume --repo-root <worktree_path> -
 ## Recommended Next Steps
 
 **Priority 1**: <action>
-- Task: T-xxx <slug>
+- Task: <T-###> <slug>
 - Current status: <status>
 - Action: <what to do>
 - Command: `<executable command>`

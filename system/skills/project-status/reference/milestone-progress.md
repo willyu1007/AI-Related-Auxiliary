@@ -19,13 +19,13 @@ for task evidence across linked worktrees.
 ```markdown
 ## Stage Progress
 
-**Milestone**: M-xxx <title>
+**Milestone**: <M-###> <title>
 **Declared status**: <status>
 **Stage outcome**: <description or unknown>
 
 | Feature | Declared status | Planned | In progress | Blocked | Done/archived | Signal |
 |---------|-----------------|---------|-------------|---------|---------------|--------|
-| F-xxx <title> | <status> | N | N | N | N | <evidence or inconsistency> |
+| <F-###> <title> | <status> | N | N | N | N | <evidence or inconsistency> |
 
 **Stage signal**: <active, blocked, possibly ready for acceptance, inconsistent, or unknown>
 **Recommended next step**: <one concrete action>

@@ -15,7 +15,7 @@ node .ai/scripts/ctl-project-governance.mjs query --status blocked --json
 
 | Task ID | Name | Reason | Suggested Action |
 |---------|------|--------|------------------|
-| T-xxx | <slug> | <reason if known> | <suggestion> |
+| <T-###> | <slug> | <reason if known> | <suggestion> |
 
 **Steps to unblock**:
 1. <specific action>

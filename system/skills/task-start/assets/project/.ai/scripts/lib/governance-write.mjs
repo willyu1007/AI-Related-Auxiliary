@@ -30,14 +30,6 @@ import {
 } from './governance-read.mjs';
 import { getRegistryDataErrors } from './governance-lint.mjs';
 
-const ok = (message) => console.log(message);
-const info = (message) => console.log(message);
-const header = (message) => console.log(message);
-
-function getTaskRowErrors(repoRoot, taskId = null) {
-  return getTaskRowErrorsFromRows(queryTasks({ repoRoot, id: taskId }));
-}
-
 function getTaskRowErrorsFromRows(tasks) {
   const errors = [];
   for (const task of tasks) {
@@ -74,28 +66,6 @@ function getRegistryWriteErrors(registry) {
         `Registry task ${String(task.id || '(no-id)')} has unsupported dev_docs_path "${devDocsPath}"; task bundles must be immediate children of top-level dev-docs/active or dev-docs/archive.`
       );
     }
-  }
-  return errors;
-}
-
-function getSyncTaskShapeErrors(registry) {
-  const errors = [];
-  if (!Array.isArray(registry.tasks)) {
-    return ['Registry "tasks" must be a list.'];
-  }
-  const seen = new Set();
-  for (const task of registry.tasks) {
-    if (!task || typeof task !== 'object' || Array.isArray(task)) {
-      errors.push('Task entry must be a mapping.');
-      continue;
-    }
-    const id = String(task.id || '').trim();
-    if (!TASK_ID_RE.test(id)) {
-      errors.push(`Task ID "${id}" does not match the required format.`);
-      continue;
-    }
-    if (seen.has(id)) errors.push(`Duplicate Task ID "${id}" in registry.`);
-    seen.add(id);
   }
   return errors;
 }
@@ -214,14 +184,14 @@ export function cmdSync({ repoRoot, dryRun, apply }) {
   const finish = () => {
     const succeeded = errors.length === 0;
     if (!succeeded) {
-      header('Errors:');
+      console.log('Errors:');
       for (const error of errors) console.log(`- ${error}`);
     }
     if (warnings.length > 0) {
-      header('Warnings:');
+      console.log('Warnings:');
       for (const warning of warnings) console.log(`- ${warning}`);
     }
-    if (succeeded) ok('[ok] Sync complete.');
+    if (succeeded) console.log('[ok] Sync complete.');
     else console.log('[error] Sync failed.');
 
     for (const action of actions) {
@@ -232,7 +202,7 @@ export function cmdSync({ repoRoot, dryRun, apply }) {
     return { ok: succeeded, errors, warnings, actions };
   };
 
-  const taskConflicts = getTaskRowErrors(repoRoot);
+  const taskConflicts = getTaskRowErrorsFromRows(queryTasks({ repoRoot }));
   if (taskConflicts.length > 0) {
     errors.push(...taskConflicts);
     return finish();
@@ -252,7 +222,6 @@ export function cmdSync({ repoRoot, dryRun, apply }) {
     return finish();
   }
   const reg = loaded.registry;
-  errors.push(...getSyncTaskShapeErrors(reg));
   errors.push(...collectProjectGraphFromAllWorktrees(repoRoot, { repairingRepoRoot: repoRoot }).errors);
   if (errors.length > 0) return finish();
 
@@ -262,19 +231,12 @@ export function cmdSync({ repoRoot, dryRun, apply }) {
   const existingIds = new Set();
   for (const task of tasks) {
     const raw = readText(task.metaPath);
-    if (!raw) continue;
-    const meta = parseTaskMeta(raw);
-    if (TASK_ID_RE.test(meta.task_id)) existingIds.add(meta.task_id);
+    if (raw === null) continue;
+    existingIds.add(parseTaskMeta(raw).task_id);
   }
 
   // Also include any IDs already present in the registry to avoid reusing historical IDs.
-  if (Array.isArray(reg.tasks)) {
-    for (const t of reg.tasks) {
-      if (!t || typeof t !== 'object') continue;
-      const id = String(t.id || '').trim();
-      if (TASK_ID_RE.test(id)) existingIds.add(id);
-    }
-  }
+  for (const task of reg.tasks) existingIds.add(task.id);
 
   // And IDs linked from any branch's history. The working tree is blind to other branches, so a
   // linked worktree would otherwise reallocate an ID a sibling worktree already committed.
@@ -524,7 +486,7 @@ export function cmdMap({ repoRoot, taskId, featureId, dryRun, apply }) {
   }
 
   if (changes.length === 0) {
-    ok(`[ok] Task ${taskId} already has the specified mapping. No changes needed.`);
+    console.log(`[ok] Task ${taskId} already has the specified mapping. No changes needed.`);
     return { ok: true, errors, actions };
   }
 
@@ -535,13 +497,13 @@ export function cmdMap({ repoRoot, taskId, featureId, dryRun, apply }) {
   if (errors.length > 0) return { ok: false, errors, actions: [] };
 
   if (dryRun || !apply) {
-    header('Planned changes:');
+    console.log('Planned changes:');
     for (const a of actions) {
       const changesStr = a.changes ? `: ${a.changes.join(', ')}` : '';
       const noteStr = a.note ? ` (${a.note})` : '';
       console.log(`  ${a.op} ${a.target} ${a.id}${changesStr}${noteStr}`);
     }
-    info('(dry-run mode; use --apply to write changes)');
+    console.log('(dry-run mode; use --apply to write changes)');
     return { ok: true, errors, actions };
   }
 
@@ -552,7 +514,7 @@ export function cmdMap({ repoRoot, taskId, featureId, dryRun, apply }) {
     actions.push({ op: 'write', path: registryPath });
   }
 
-  ok(`[ok] Mapped ${taskId}:`);
+  console.log(`[ok] Mapped ${taskId}:`);
   for (const c of changes) console.log(`  - ${c}`);
 
   return { ok: true, errors, actions };
@@ -560,11 +522,6 @@ export function cmdMap({ repoRoot, taskId, featureId, dryRun, apply }) {
 
 function normalizeFeatureTitle(value) {
   return String(value || '').trim().replace(/\s+/g, ' ').toLowerCase();
-}
-
-function normalizeProjectItemField(field, value) {
-  const normalized = String(value || '').trim();
-  return field === 'title' ? normalized.replace(/\s+/g, ' ') : normalized;
 }
 
 function collectProjectGraphFromAllWorktrees(repoRoot, { repairingRepoRoot = null } = {}) {
@@ -598,8 +555,6 @@ function collectProjectGraphFromAllWorktrees(repoRoot, { repairingRepoRoot = nul
     for (const milestone of registry.milestones) {
       milestones.push({
         ...milestone,
-        id: String(milestone.id).trim(),
-        title: String(milestone.title || '').trim(),
         worktree_path: worktree.path,
         worktree_branch: worktree.branch,
       });
@@ -607,8 +562,6 @@ function collectProjectGraphFromAllWorktrees(repoRoot, { repairingRepoRoot = nul
     for (const feature of registry.features) {
       features.push({
         ...feature,
-        id: String(feature.id).trim(),
-        title: String(feature.title || '').trim(),
         worktree_path: worktree.path,
         worktree_branch: worktree.branch,
       });
@@ -626,8 +579,7 @@ function collectProjectGraphFromAllWorktrees(repoRoot, { repairingRepoRoot = nul
     }
     for (const [id, grouped] of rowsById) {
       const differing = fields.filter(
-        (field) =>
-          new Set(grouped.map((row) => normalizeProjectItemField(field, row[field]))).size > 1
+        (field) => new Set(grouped.map((row) => row[field])).size > 1
       );
       if (differing.length > 0) {
         errors.push(
@@ -688,7 +640,7 @@ export function cmdMilestone({ repoRoot, title, description, dryRun, apply, json
         id,
         title: source.title,
         status: source.status,
-        description: String(source.description || '').trim(),
+        description: source.description,
       };
       registry.milestones.push(milestone);
       actions.push({ op: 'copy', target: 'milestone', id, note: 'found in linked worktree' });
@@ -733,9 +685,9 @@ export function cmdMilestone({ repoRoot, title, description, dryRun, apply, json
     mode: apply && !dryRun ? 'apply' : 'dry-run',
   };
   if (json) console.log(JSON.stringify(result));
-  else if (actions.length === 0) ok(`[ok] Milestone ${milestone.id} already exists: ${milestone.title}`);
-  else if (apply && !dryRun) ok(`[ok] Milestone ${milestone.id} is available: ${milestone.title}`);
-  else info(`[dry-run] Milestone ${milestone.id} would be available: ${milestone.title}`);
+  else if (actions.length === 0) console.log(`[ok] Milestone ${milestone.id} already exists: ${milestone.title}`);
+  else if (apply && !dryRun) console.log(`[ok] Milestone ${milestone.id} is available: ${milestone.title}`);
+  else console.log(`[dry-run] Milestone ${milestone.id} would be available: ${milestone.title}`);
 
   return { ok: true, errors, actions, milestone: result };
 }
@@ -790,7 +742,7 @@ export function cmdFeature({ repoRoot, title, description, dryRun, apply, json }
         title: source.title,
         milestone_id: String(source.milestone_id),
         status: source.status,
-        description: String(source.description || '').trim(),
+        description: source.description,
       };
       if (!registry.milestones.some((item) => item && item.id === feature.milestone_id)) {
         return {
@@ -848,9 +800,9 @@ export function cmdFeature({ repoRoot, title, description, dryRun, apply, json }
   };
 
   if (json) console.log(JSON.stringify(result));
-  else if (actions.length === 0) ok(`[ok] Feature ${feature.id} already exists: ${feature.title}`);
-  else if (apply && !dryRun) ok(`[ok] Feature ${feature.id} is available: ${feature.title}`);
-  else info(`[dry-run] Feature ${feature.id} would be available: ${feature.title}`);
+  else if (actions.length === 0) console.log(`[ok] Feature ${feature.id} already exists: ${feature.title}`);
+  else if (apply && !dryRun) console.log(`[ok] Feature ${feature.id} is available: ${feature.title}`);
+  else console.log(`[dry-run] Feature ${feature.id} would be available: ${feature.title}`);
 
   return { ok: true, errors, actions, feature: result };
 }

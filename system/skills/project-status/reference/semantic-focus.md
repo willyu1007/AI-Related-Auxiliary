@@ -16,7 +16,7 @@ cat .ai/project/dashboard.md
 ## Semantic Focus
 
 **Primary Feature**
-- Feature: F-xxx <title>
+- Feature: <F-###> <title>
 - Description:
 - Milestone:
 - Mapped task signals:

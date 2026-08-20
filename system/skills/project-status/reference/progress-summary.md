@@ -22,10 +22,10 @@ node .ai/scripts/ctl-project-governance.mjs query --json
 | archived | N | X% |
 
 **In Progress**:
-- T-xxx <slug> - <kickoff status> - <brief description or current phase>
+- <T-###> <slug> - <kickoff status> - <brief description or current phase>
 
 **Blocked** (if any):
-- T-xxx <slug> - <blocking reason if known>
+- <T-###> <slug> - <blocking reason if known>
 
 **Recommended Next Step**: <prioritized recommendation>
 ```

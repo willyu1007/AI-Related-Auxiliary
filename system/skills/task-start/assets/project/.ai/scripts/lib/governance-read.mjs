@@ -33,6 +33,46 @@ const BUNDLE_STATUS = new Set(['planned', 'in-progress', 'blocked', 'done']);
 export const MILESTONE_STATUS = new Set(['planned', 'in-progress', 'blocked', 'done']);
 export const FEATURE_STATUS = new Set(['planned', 'in-progress', 'blocked', 'done', 'cut']);
 
+const UNSUPPORTED_GOVERNANCE_FILES = [
+  'dev-docs/README.md',
+  '.ai/project/registry.yaml',
+  '.ai/project/CONTRACT.md',
+  '.ai/project/task-index.md',
+  '.ai/project/changelog.md',
+  '.ai/project/templates/task-index.md',
+  '.ai/project/templates/changelog.md',
+  '.ai/project/templates/registry.yaml',
+  // Keep this rejection target from looking like an active shipped-script reference to static audits.
+  ['.ai', 'scripts', 'install-project-governance.mjs'].join('/'),
+  '.ai/scripts/lib/colors.mjs',
+  '.ai/scripts/lib/yaml-lite.mjs',
+];
+
+const UNSUPPORTED_GOVERNANCE_HOOKS = [
+  {
+    file: '.githooks/prepare-commit-msg',
+    signatures: ['ctl-project-governance.mjs task-exists --task', 'SKIP_TASK_TRAILER'],
+  },
+  {
+    file: '.githooks/commit-msg',
+    signatures: ['ctl-project-governance.mjs task-exists --task', 'SKIP_TASK_TRAILER'],
+  },
+  {
+    file: '.githooks/pre-commit',
+    signatures: [
+      'Detected dev-docs changes, running ctl-project-governance sync',
+      "git add ':(glob)**/.ai-task.json'",
+    ],
+  },
+  {
+    file: '.githooks/install.mjs',
+    signatures: [
+      'node .githooks/install.mjs [--uninstall] [--check]',
+      "Uses Git's core.hooksPath to point to .githooks/",
+    ],
+  },
+];
+
 export function toPosix(value) {
   return String(value).replace(/\\/g, '/');
 }
@@ -465,6 +505,35 @@ export function parseTaskMeta(metaRaw) {
     parse_error: null,
     schema_errors: schemaErrors,
   };
+}
+
+function getUnsupportedGovernanceFilesInWorktree(repoRoot) {
+  const unsupported = UNSUPPORTED_GOVERNANCE_FILES.filter((relative) =>
+    exists(path.join(repoRoot, relative))
+  );
+  for (const hook of UNSUPPORTED_GOVERNANCE_HOOKS) {
+    const raw = readText(path.join(repoRoot, hook.file));
+    if (raw !== null && hook.signatures.every((signature) => raw.includes(signature))) {
+      unsupported.push(hook.file);
+    }
+  }
+  for (const task of scanTasks(repoRoot)) {
+    const relative = path.join(task.relPath, '.ai-task.yaml');
+    if (exists(path.join(repoRoot, relative))) unsupported.push(toPosix(relative));
+  }
+  return [...new Set(unsupported.map(toPosix))].sort((a, b) => a.localeCompare(b));
+}
+
+export function getUnsupportedGovernanceFiles(repoRoot) {
+  const occurrences = [];
+  for (const worktree of listGitWorktrees(repoRoot)) {
+    for (const file of getUnsupportedGovernanceFilesInWorktree(worktree.path)) {
+      occurrences.push({ file, worktree_path: toPosix(path.resolve(worktree.path)) });
+    }
+  }
+  return occurrences.sort(
+    (a, b) => a.worktree_path.localeCompare(b.worktree_path) || a.file.localeCompare(b.file)
+  );
 }
 
 function formatJsonLines(rows) {
