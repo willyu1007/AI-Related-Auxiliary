@@ -23,6 +23,7 @@ for f in .ai/scripts/install-project-governance.mjs \
          .ai/scripts/ctl-project-governance.mjs \
          .ai/scripts/lib/governance-read.mjs \
          .ai/scripts/lib/governance-lint.mjs \
+         .ai/scripts/lib/governance-write.mjs \
          .ai/project/AGENTS.md .ai/project/CLAUDE.md .ai/project/templates/registry.json; do
   [ -f "$f" ] || fail "install did not place $f"
 done
@@ -80,6 +81,14 @@ fi
 if node .ai/scripts/ctl-project-governance.mjs resume --limit nope >/dev/null 2>&1; then
   fail "resume accepted a non-numeric commit limit"
 fi
+
+mkdir sync-missing-hub
+if node "$CTL" sync --repo-root sync-missing-hub --dry-run > sync-error.txt 2>&1; then
+  fail "sync accepted a repository without a project hub"
+fi
+grep -q 'Project hub missing' sync-error.txt || fail "sync did not render its missing-hub error"
+[ ! -e sync-missing-hub/.ai ] || fail "sync dry-run initialized a missing project hub"
+rm -rf sync-missing-hub sync-error.txt
 
 # JSON-only rejection applies to actual task bundles, not unrelated fixtures with the same name.
 mkdir -p fixtures/yaml-example
@@ -365,6 +374,24 @@ mv dev-docs/active/sample/verification.tmp dev-docs/active/sample/verification.m
 node .ai/scripts/ctl-project-governance.mjs sync --apply >/dev/null
 node .ai/scripts/ctl-project-governance.mjs lint --strict >/dev/null || fail "lint failed after re-sync"
 
+# Every non-installer write command must honor dry-run without changing tracked or untracked state.
+cp dev-docs/active/sample/01-status.md dev-docs/active/sample/01-status.dry-run.tmp
+sed -i 's/State: in-progress/State: blocked/' dev-docs/active/sample/01-status.md
+dry_run_state_before="$(git status --porcelain=v1 --untracked-files=all; git hash-object \
+  .ai/project/registry.json .ai/project/dashboard.md .ai/project/feature-map.md \
+  dev-docs/active/sample/.ai-task.json dev-docs/active/sample/01-status.md)"
+sync_dry_run_output="$(node .ai/scripts/ctl-project-governance.mjs sync --dry-run)"
+printf '%s\n' "$sync_dry_run_output" | grep -q 'update: .ai/project/registry.json' \
+  || fail "sync dry-run did not plan a registry update for changed bundle state"
+node .ai/scripts/ctl-project-governance.mjs feature --title "Dry-run feature" --dry-run >/dev/null
+node .ai/scripts/ctl-project-governance.mjs requirement --title "Dry-run requirement" \
+  --feature F-000 --dry-run >/dev/null
+dry_run_state_after="$(git status --porcelain=v1 --untracked-files=all; git hash-object \
+  .ai/project/registry.json .ai/project/dashboard.md .ai/project/feature-map.md \
+  dev-docs/active/sample/.ai-task.json dev-docs/active/sample/01-status.md)"
+[ "$dry_run_state_before" = "$dry_run_state_after" ] || fail "dry-run modified repository state"
+mv dev-docs/active/sample/01-status.dry-run.tmp dev-docs/active/sample/01-status.md
+
 # Feature creation is locked, idempotent, and can feed task mapping.
 node .ai/scripts/ctl-project-governance.mjs feature --title "Smoke capability" \
   --description "Exercise feature allocation" --apply --json > feature.json
@@ -374,6 +401,13 @@ node .ai/scripts/ctl-project-governance.mjs feature --title "Smoke capability" -
 grep -q '"id":"F-001"' feature.json || fail "feature command was not idempotent"
 grep -q '"created":false' feature.json || fail "feature command recreated an existing title"
 rm -f feature.json
+
+map_dry_run_before="$(git status --porcelain=v1 --untracked-files=all; git hash-object \
+  .ai/project/registry.json)"
+node .ai/scripts/ctl-project-governance.mjs map --task T-001 --feature F-001 --dry-run >/dev/null
+map_dry_run_after="$(git status --porcelain=v1 --untracked-files=all; git hash-object \
+  .ai/project/registry.json)"
+[ "$map_dry_run_before" = "$map_dry_run_after" ] || fail "map dry-run modified repository state"
 
 # Quoted JSON strings must survive a write/read cycle without changing identity.
 node .ai/scripts/ctl-project-governance.mjs feature --title "Quoted \"feature\"\\path" \
