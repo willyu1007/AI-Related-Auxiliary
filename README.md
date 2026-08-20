@@ -44,6 +44,7 @@ checks/          # 本仓库自己的校验，不是分发物
 | Skill | 用途 |
 |---|---|
 | `codex-*`（三个） / `html-communication` | 见各自 `SKILL.md` |
+| [research](system/skills/research/SKILL.md) | 对需要多来源、时效性或可追溯引用的外部问题做有界调查，并返回可由调用方消费的证据结论 |
 | [review-code](system/skills/review-code/SKILL.md) | 直接审查代码：圈定范围、对齐审查意图，在已授权时边审边修，并报告已修复与未解决问题 |
 | [sync-db-from-prisma](system/skills/sync-db-from-prisma/SKILL.md) | Prisma repo→DB migration 闸门：预览、单独的 apply 批准、按环境应用、验证 |
 | [manage-llm-config](system/skills/manage-llm-config/SKILL.md) | 集中管理 agent/workflow 的模型、参数、Prompt 与 Provider 配置；通过共享加载器读取 `.ai/llm` |

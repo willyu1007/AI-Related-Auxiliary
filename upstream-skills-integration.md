@@ -5,32 +5,26 @@ This document records the capabilities from
 that should be merged into this repository's existing workflows or considered
 as new skills. It intentionally omits rejected and already-covered skills.
 
+## Added skills
+
+### `research`
+
+Added a standalone research skill rather than coupling general information
+discovery to task planning. It combines upstream `research` source discipline
+with the question framing, recency boundaries, evidence mapping, and conflict
+handling from `perform-web-research` in `Template-Skill-Addon`.
+
+- Scale effort to the question: answer a bounded lookup directly and use the
+  fuller evidence workflow for multi-source, current, conflicting, or
+  source-attributed investigation.
+- Prefer sources that own the answer, use the minimum sufficient evidence, and
+  distinguish facts, inferences, conflicts, and unresolved uncertainty.
+- Return a cited answer in the conversation by default. Do not require a
+  background agent, evidence table, fixed source count, or repository artifact.
+- When delegated, return a compact evidence packet while leaving downstream
+  decisions and repository updates to the receiving agent.
+
 ## Merge into existing skills
-
-### `task-plan`: external decision evidence
-
-Absorb the durable evidence contract from `research` rather than adding a
-standalone research skill.
-
-- When a decision depends on facts outside the repository, identify the
-  question, the authoritative source types, and any relevant time boundary.
-- Prefer primary sources and distinguish established facts, inferences, and
-  unresolved uncertainty.
-- Put concise conclusions and their source pointers in the decision's closure
-  evidence. Put substantial raw material in the task bundle's `artifacts/`.
-- Research supplies evidence; it does not close a user-owned product, scope, or
-  risk decision without confirmation.
-- Do not require a subagent or create a research file for a bounded lookup that
-  can be handled directly.
-
-This keeps the flow under one authority:
-
-```text
-open decision
--> repository evidence, experiment, or external research
--> closure evidence
--> decide or replan
-```
 
 ### `task-plan` and `goal-mode`: executable migration shape
 
@@ -110,10 +104,10 @@ cherry-pick operations.
 This skill should be added when VCS conflict recovery is a recurring workflow;
 it does not need to block the higher-value merges above.
 
-## Implementation order
+## Remaining implementation order
 
-1. Merge the external-evidence and executable-migration contracts into
-   `task-plan` and `goal-mode`.
+1. Merge the executable-migration contract into `task-plan`; retain
+   `goal-mode` as the orchestration pointer.
 2. Add the handoff redaction and VCS review-baseline contracts.
 3. Design and validate `write-agent-docs`.
 4. Add `resolve-vcs-conflicts` when observed usage justifies the dedicated
