@@ -55,12 +55,9 @@ checks/          # 本仓库自己的校验，不是分发物
 
 ## 触发方式
 
-同一个技能可以两种方式触发，分类以各 description 的现行措辞为准：
+技能有两种触发方式，且同一个技能可以兼具：**用户点名**（响应用户的直接要求）与**模型自发**（工作途中识别时刻，用户没有要求这件事本身）。归属读各技能 description 的现行措辞即可，这里不维护花名册——那是会静默漂移的第二份副本。
 
-- **用户点名**（响应用户的直接要求）：task-start、task-plan、task-resume、task-handoff、project-hub-maintain、project-status、goal-mode、cleanup-project-residue、review-code、codex-implementation、codex-review、research、debug-mode、tdd、sync-db-from-prisma、manage-ui-style、html-communication
-- **模型自发**（工作途中识别时刻，用户没有要求这件事本身）：task-start、task-plan、task-sync、task-resume、task-handoff、goal-mode、review-code、codex-implementation、codex-review、codex-computer-use、research、debug-mode、tdd、wizard、resolve-vcs-conflicts、sync-db-from-prisma、manage-llm-config、manage-ui-style、get-sensitive-info、write-prompt、html-communication
-
-两个极端值得注意。只由用户点名的三个（project-hub-maintain、project-status、cleanup-project-residue）要么有破坏性、要么是问答——都不该自发发生。只由模型自发的七个（task-sync、codex-computer-use、wizard、resolve-vcs-conflicts、manage-llm-config、get-sensitive-info、write-prompt）对应的时刻没有用户话语——没人会说"现在做个检查点"，这类义务必须由处境触发，这也是它们存在的理由。
+两个极端才值得写下来。有破坏性或纯问答的技能只应由用户点名，description 里会写死 "user explicitly asks"（如 cleanup-project-residue）。反过来，有些义务对应的时刻**没有用户话语**——没人会说"现在做个检查点"或"现在把提示词写规范"——这类技能必须由处境触发，这也是它们存在的理由。
 
 `system/` 是全局 Agent 配置的版本化镜像。改动流程：
 
