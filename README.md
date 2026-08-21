@@ -53,6 +53,15 @@ checks/          # 本仓库自己的校验，不是分发物
 | [manage-ui-style](system/skills/manage-ui-style/SKILL.md) | 继承、探索并沉淀项目 UI 风格，在需要时审计和修复视觉漂移 |
 | [cleanup-project-residue](system/skills/cleanup-project-residue/SKILL.md) | 清理当前 session、任务、近期工作或全项目中的过时测试、冗余内容、语义漂移、双轨/legacy 残留和技术债；证据+批准后删除，校验门收尾 |
 
+## 触发方式
+
+同一个技能可以两种方式触发，分类以各 description 的现行措辞为准：
+
+- **用户点名**（响应用户的直接要求）：task-start、task-plan、task-resume、task-handoff、project-hub-maintain、project-status、goal-mode、cleanup-project-residue、review-code、codex-implementation、codex-review、research、debug-mode、tdd、sync-db-from-prisma、manage-ui-style、html-communication
+- **模型自发**（工作途中识别时刻，用户没有要求这件事本身）：task-start、task-plan、task-sync、task-resume、task-handoff、goal-mode、review-code、codex-implementation、codex-review、codex-computer-use、research、debug-mode、tdd、wizard、resolve-vcs-conflicts、sync-db-from-prisma、manage-llm-config、manage-ui-style、get-sensitive-info、write-prompt、html-communication
+
+两个极端值得注意。只由用户点名的三个（project-hub-maintain、project-status、cleanup-project-residue）要么有破坏性、要么是问答——都不该自发发生。只由模型自发的七个（task-sync、codex-computer-use、wizard、resolve-vcs-conflicts、manage-llm-config、get-sensitive-info、write-prompt）对应的时刻没有用户话语——没人会说"现在做个检查点"，这类义务必须由处境触发，这也是它们存在的理由。
+
 `system/` 是全局 Agent 配置的版本化镜像。改动流程：
 
 ```bash
@@ -91,5 +100,7 @@ node checks/run.mjs --only task-start    # 只冒烟测一个技能
 - 内容必须可复用：不绑定某台机器、某个密钥、某条个人路径。
 - 一条规则只定义一次。每个技能只写自己那一刀，完整的规范交给脚本的 `lint` 去机器校验——复制粘贴出来的第二份一定会静默漂移。
 - 技能之间不互相提名。要跳到别的技能时，说该做的动作，让 router 去选人。
+- 一行文字要么对齐一个模型推不出的偏好，要么抵消一个明知故犯的默认，要么是硬边界或引导；删掉后行为不变的行不该存在。
+- 理由只在支撑边界判断时保留：一句话、挂在规则上。独立成段的论证是说教。
 - 每个 Skill 都要写清边界：**不做什么**和做什么同样重要。
 - 文档要能独立读懂，不依赖未提交的本地文件。
