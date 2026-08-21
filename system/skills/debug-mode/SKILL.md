@@ -77,7 +77,9 @@ resources, or new operational ownership.
 
 When regression protection would materially prevent recurrence, read
 `references/verification-policy.md` before adding it; do not duplicate existing
-coverage.
+coverage. Once the root cause is supported and the behavior it defines has a
+stable seam, the correction itself can be driven test-first — the diagnosis is
+what makes that failing test trustworthy rather than a guess.
 
 ## Verify and clean up
 

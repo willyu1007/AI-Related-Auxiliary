@@ -43,7 +43,7 @@ Use the project's shared LLM configuration loader. If none exists, add one minim
 
 1. Start from the agent or workflow code involved in the task. Identify its LLM calls by their roles in the feature, such as `planner`, `generate`, or `review`.
 2. Follow the code's existing feature configuration reference. For a new feature, derive a stable kebab-case feature ID from its name.
-3. Move the provider, model, parameters, prompt, and tool configuration out of code into the feature directory so each value has one runtime source.
+3. Move the provider, model, parameters, prompt, and tool configuration out of code into the feature directory so each value has one runtime source. This owns where a prompt file lives and how it is referenced, never what it says. When configuration and prompt text disagree about a capability, the rendered request and its consumers decide: record what the runtime actually provides rather than declaring a tool to match the prose.
 4. Wire the feature code to the configuration, keep later changes in the same feature directory, and ensure `.ai/llm` is included in the runtime or deployment artifact.
 5. Verify JSON parsing, prompt paths, provider resolution, environment-backed credentials, removal of duplicate hard-coded values, and relevant feature behavior.
 

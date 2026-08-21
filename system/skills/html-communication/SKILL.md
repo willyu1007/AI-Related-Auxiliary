@@ -23,6 +23,8 @@ Create one portable, script-free HTML file.
 
 Present only the current result, without carrying the conversation, revision history, or decision process into the artifact.
 
+The artifact is user-facing and travels beyond this session. Report what a value means or how environments differ, never the credential, token, or private connection string itself.
+
 ## UI Mocks
 
 When delivering a UI mock:
