@@ -23,7 +23,7 @@ Use one of these command shapes:
 ARTIFACT_DIR="$(mktemp -d "${TMPDIR:-/tmp}/codex-review.XXXXXX")"
 REPORT="$ARTIFACT_DIR/report.md"
 PROMPT="$ARTIFACT_DIR/prompt.md"
-MODEL="gpt-5.6-sol"
+MODEL="<tier per the CLAUDE.md model-selection rubric>"
 SHA="<commit-sha>"
 
 # Built-in targets: choose one and do not also pass a custom prompt.
@@ -37,7 +37,7 @@ codex -C "$PWD" --model "$MODEL" review --commit "$SHA" > "$REPORT"
 codex -C "$PWD" --model "$MODEL" review - < "$PROMPT" > "$REPORT"
 ```
 
-Use `gpt-5.6-sol` for primary or additional Codex reviews unless the user or the CLAUDE.md model-selection rubric chooses another model. Keep `--model` before the `review` subcommand.
+Keep `--model` before the `review` subcommand.
 
 ## Custom Review Prompt
 

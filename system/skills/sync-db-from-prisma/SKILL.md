@@ -1,11 +1,16 @@
 ---
 name: sync-db-from-prisma
-description: Create or update the repository's Prisma schema as the database-structure source of truth, or synchronize Prisma schema changes and migrations from the repository to target databases.
+description: >-
+  Use when Prisma schema or migration work is requested — adding or changing
+  models, fields, indexes, or relations; creating or editing migrations; or
+  applying repository schema changes to a development, staging, or production
+  database. Synchronization flows from the repository to the database. Not for
+  database-to-repository introspection or ordinary data reads and writes.
 ---
 
 # Sync Database from Prisma
 
-The project-configured Prisma schema is the repository's database-structure source of truth. Work may update the schema and migration history, synchronize existing repository changes to a target database, or both. Synchronization flows from the repository to the database.
+The project-configured Prisma schema is the repository's database-structure source of truth.
 
 ## Workflow
 
@@ -49,4 +54,4 @@ Give each worktree that runs `prisma migrate dev` or `prisma db push` its own de
 
 ## Scope
 
-Database-to-repository introspection and ordinary data CRUD are outside this workflow. Treat required backfills as explicit data-migration or application work alongside the schema change rather than as an automatic effect of schema synchronization.
+Treat required backfills as explicit data-migration or application work alongside the schema change rather than as an automatic effect of schema synchronization.

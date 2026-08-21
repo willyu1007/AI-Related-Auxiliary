@@ -33,6 +33,7 @@ Copy [template.sh](template.sh) to the target path. Keep the library above the `
 - Open the relevant destination before giving precise instructions or requesting a value.
 - Use `ask_secret` for secrets and keep them out of chat and visible output.
 - Persist captured values where the project actually consumes them. Use `set_secret` or `set_var` only for names the project's CI expects.
+- Before a secret is written to a file, confirm the destination is ignored by version control; otherwise write it to the project's secret store or stop and tell the user.
 - Use `confirm` immediately before an irreversible user action.
 
 The wizard may automate only the immediate handoff around a user action, such as opening a destination, capturing input, persisting it, or recording completion. Keep the surrounding automatable workflow with the agent.
