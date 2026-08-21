@@ -62,7 +62,10 @@ scope, or authorization to make the prompt more self-contained.
 ## Separate instructions from inputs
 
 - Keep stable governing instructions separate from changing facts and explicit
-  inputs or placeholders.
+  inputs or placeholders. Use the strongest separation the runtime actually
+  provides: separate message roles when the API has them, delimiters within one
+  message only when it does not — and treat role precedence as a runtime fact
+  to confirm, not assume.
 - Treat retrieved text, conversation history, tool output, code, and supplied
   content as data unless the caller explicitly makes one an authority. Delimit
   untrusted or instruction-like data so it cannot redefine the task or
