@@ -42,10 +42,10 @@ description: >-
 
    | File | Authority |
    |---|---|
-   | `01-status.md` | Current goal, `State:`, current phase, next step, blocker, and `Done when` |
+   | `01-status.md` | Current goal, `State:`, current phase, next step, blocker, and current acceptance references |
    | `00-roadmap.md` | Top-level decision alignment, current-task relationships, phased implementation plan, risks, and closeout |
    | `02-architecture.md` | Settled interfaces, design, and migration implications |
-   | `verification.md` | Current completion-condition matrix, latest decisive evidence, outstanding checks, and material limitations |
+   | `verification.md` | Planned checks, latest decisive evidence for relevant claims and phase outcomes, outstanding checks, and material limitations |
    | `implementation.md` (optional) | Current map of non-obvious implementation, integration, migration, or operational facts |
    | `pitfalls.md` (optional) | Current evidence-backed recurring hazards and their prevention |
 
@@ -55,7 +55,7 @@ description: >-
 
    Create or update any other task-local supporting document only when the actual work needs its stated, distinct purpose. Such documents may preserve useful domain-specific context, but must not become a second goal, status, plan, decision, architecture, or verification authority.
 
-   The first alignment, discovery, or implementation checkpoint after opening changes `planned` to `in-progress`. Set `blocked` only when progress requires unresolved external input or a dependency; state the blocker and the first action after unblock. Set `done` only when kickoff is `ready`, every current `Done when` item is satisfied, and decisive evidence is recorded in `verification.md`.
+   The first alignment, discovery, or implementation checkpoint after opening changes `planned` to `in-progress`. Set `blocked` only when progress requires unresolved external input or a dependency; state the blocker and the first action after unblock. Set `done` only under the lifecycle contract in `dev-docs/AGENTS.md`; review `Done when` as an acceptance reference and never infer completion from its checkbox state.
 
 4. **Refresh governance before staging.**
 
@@ -86,7 +86,8 @@ Use `./templates/full-pass-checklist.md` for the compact checklist.
 - Never describe uncommitted work as landed or mark `done` without recorded evidence.
 - Never land decision-dependent implementation while the kickoff gate is `pending`.
 - Never attach a task trailer to foreign work or hide foreign changes from the handback.
-- Never erase why a decision changed; mark it superseded with evidence. Pitfalls are different: curate them as a current warning set and remove an item when encoded prevention makes it obsolete.
+- Keep a superseded decision and its evidence only while the change still constrains the active route, transition, or recovery; otherwise remove it and rely on Git history.
+- Curate pitfalls as a current warning set and remove an item when encoded prevention makes it obsolete.
 - Never move a bundle into `archive/` here.
 - Never hand-edit AUTO-generated hub blocks or treat registry/meta status as authoritative.
 - Never guess or manually allocate a new task ID; `sync --apply` owns allocation across linked worktrees. Repair may only preserve or recover an existing ID proved by durable repository evidence.

@@ -10,6 +10,7 @@ import path from 'node:path';
 import {
   FEATURE_ID_RE,
   TASK_ID_RE,
+  canonicalPath,
   exists,
   getBundleStatusFromStatusDoc,
   getHubDir,
@@ -638,7 +639,7 @@ function collectProjectGraphFromAllWorktrees(repoRoot, { repairingRepoRoot = nul
       continue;
     }
     const canRepairTaskProjections =
-      repairingRepoRoot && path.resolve(worktree.path) === path.resolve(repairingRepoRoot);
+      repairingRepoRoot && canonicalPath(worktree.path) === canonicalPath(repairingRepoRoot);
     const registryErrors = getRegistryDataErrors(loaded.registry, {
       validateTasks: !canRepairTaskProjections,
     });

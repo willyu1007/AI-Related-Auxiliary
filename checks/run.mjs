@@ -2,39 +2,24 @@
 /**
  * checks/run.mjs
  *
- * Self-check for this library. Two parts:
- *
- *   static  - scan system/ for dangling references, cross-linked skills,
- *             drifted global docs, and hygiene problems
- *   smoke   - run each checks/skills/<skill>.sh inside a throwaway git repo
+ * Static self-check for this library: scan system/ for dangling references,
+ * cross-linked skills, drifted global docs, and hygiene problems.
  *
  * `checks/` validates the library; `system/` is the library. Nothing under checks/ is ever copied
  * into a target project.
  *
- * Design notes:
- *   - Dependency-free (Node built-ins only).
- *   - A smoke test starts from an empty repository and provisions it by running the skill's own
- *     installer entry point, so the install path is the thing under test rather than a `cp -R` that only
- *     the test knows how to perform.
- *   - POSIX shell is required for the smoke tests.
- *
  * Usage:
- *   node checks/run.mjs                  # everything
- *   node checks/run.mjs --static         # static checks only
- *   node checks/run.mjs --smoke          # smoke tests only
- *   node checks/run.mjs --only <skill>   # restrict the smoke tests to one skill
+ *   node checks/run.mjs
  */
 
-import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SKILLS_DIR = path.join(REPO_ROOT, 'system', 'skills');
+const RESOURCES_DIR = path.join(REPO_ROOT, 'system', 'resources');
 const DOCS_DIR = path.join(REPO_ROOT, 'system', 'docs');
-const SKILL_CHECKS_DIR = path.join(REPO_ROOT, 'checks', 'skills');
 
 const NUL = String.fromCharCode(0);
 const SCRIPT_REF_RE = /\.ai\/scripts\/[a-z0-9-]+\.mjs/g;
@@ -57,7 +42,6 @@ const SKILL_CROSSLINK_ALLOWLIST = new Map([
 const c = {
   green: (s) => `\x1b[32m${s}\x1b[0m`,
   red: (s) => `\x1b[31m${s}\x1b[0m`,
-  yellow: (s) => `\x1b[33m${s}\x1b[0m`,
   dim: (s) => `\x1b[2m${s}\x1b[0m`,
   bold: (s) => `\x1b[1m${s}\x1b[0m`,
 };
@@ -94,22 +78,6 @@ function readTextOrNull(filePath) {
     return null;
   }
 }
-
-/** Skill smoke tests, named `<skill>.sh` after the skill they exercise. */
-function listSkillChecks() {
-  try {
-    return fs
-      .readdirSync(SKILL_CHECKS_DIR)
-      .filter((f) => f.endsWith('.sh'))
-      .sort();
-  } catch {
-    return [];
-  }
-}
-
-// --------------------------------------------------------------------------------------------
-// Static checks
-// --------------------------------------------------------------------------------------------
 
 function runStatic() {
   console.log(c.bold('\nStatic checks'));
@@ -177,22 +145,30 @@ function runStatic() {
     }
   }
 
-  // Who ships which control script, e.g. ".ai/scripts/foo.mjs" -> the skill that installs it. A
-  // skill ships its installable tree under assets/<bundle>/, laid out exactly as it lands in the
-  // target repository, so the path below the bundle directory is the shipped path.
-  const provider = new Map();
-  for (const abs of walk(SKILLS_DIR)) {
-    const rel = path.relative(SKILLS_DIR, abs).split(path.sep).join('/');
-    const m = rel.match(/^([^/]+)\/assets\/[^/]+\/(\.ai\/scripts\/.+)$/);
-    if (m) provider.set(m[2], m[1]);
+  // Shared resources are part of the system distribution but are not discoverable skills. Each
+  // resource owns its installer so a dependent skill cannot silently rely on an untracked tree.
+  const resourceEntries = fs.existsSync(RESOURCES_DIR)
+    ? fs.readdirSync(RESOURCES_DIR, { withFileTypes: true }).filter((entry) => entry.isDirectory())
+    : [];
+  for (const entry of resourceEntries) {
+    for (const required of ['install.mjs']) {
+      if (!fs.existsSync(path.join(RESOURCES_DIR, entry.name, required))) {
+        fail('resource-layout', `system/resources/${entry.name}/ has no ${required}`);
+      }
+    }
   }
 
-  // A skill smoke test is named after the skill it exercises, so a renamed or deleted skill leaves
-  // a test that installs nothing and passes.
-  for (const file of listSkillChecks()) {
-    const skill = path.basename(file, '.sh');
-    if (!skillByDir.has(skill)) {
-      fail('stale-check', `checks/skills/${file} exercises "${skill}", which is not a skill`);
+  // Who ships which project-local control script, e.g. ".ai/scripts/foo.mjs" -> the shared
+  // resource that installs it. The path below <resource>/project/ is the target-repository path.
+  const provider = new Map();
+  for (const abs of walk(RESOURCES_DIR)) {
+    const rel = path.relative(RESOURCES_DIR, abs).split(path.sep).join('/');
+    const match = rel.match(/^([^/]+)\/project\/(\.ai\/scripts\/.+)$/);
+    if (!match) continue;
+    if (provider.has(match[2])) {
+      fail('resource-provider', `${match[2]} is shipped by more than one system resource`);
+    } else {
+      provider.set(match[2], match[1]);
     }
   }
 
@@ -210,8 +186,8 @@ function runStatic() {
       fail('hygiene', `system/skills/${shipped} contains a machine-specific absolute path`);
     }
 
-    // Every referenced control script must be shipped by some skill. A reference to a script
-    // nothing provides is the failure mode that survives a source repo being retired.
+    // Every referenced control script must be shipped by a system resource. A reference to a
+    // script nothing provides is the failure mode that survives a source repo being retired.
     for (const ref of text.match(SCRIPT_REF_RE) || []) {
       if (!provider.has(ref)) {
         fail('dangling-ref', `system/skills/${shipped} references ${ref}, which nothing ships`);
@@ -231,77 +207,41 @@ function runStatic() {
     }
   }
 
-  if (failures.length === 0) {
-    console.log(
-    c.green('  ok') + c.dim(`  layout, hygiene, references, docs, ${skillOwner.size} skills`)
-    );
-  }
-}
+  for (const abs of walk(RESOURCES_DIR)) {
+    const shipped = path.relative(RESOURCES_DIR, abs).split(path.sep).join('/');
+    if (path.basename(abs) === '.DS_Store') {
+      fail('hygiene', `system/resources/${shipped} should not be committed`);
+    }
 
-// --------------------------------------------------------------------------------------------
-// Smoke tests
-// --------------------------------------------------------------------------------------------
-
-function runSmoke(files) {
-  console.log(c.bold('\nSmoke tests'));
-
-  for (const file of files) {
-    const name = path.basename(file, '.sh');
-    const verifyPath = path.join(SKILL_CHECKS_DIR, file);
-
-    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), `aux-${name}-`));
-    try {
-      execFileSync('git', ['init', '-q'], { cwd: tmp });
-
-      const out = execFileSync('sh', [verifyPath], {
-        cwd: tmp,
-        encoding: 'utf8',
-        stdio: ['ignore', 'pipe', 'pipe'],
-        // The test provisions the repository from the skill's own assets, so it needs the repo
-        // root to reach system/skills/<skill>/assets/.
-        env: { ...process.env, AUX_ROOT: REPO_ROOT },
-      });
-      const summary = out.trim().split('\n').filter(Boolean).pop() || '';
-      console.log(`  ${c.green('ok')}   ${name} ${c.dim(summary)}`);
-    } catch (e) {
-      const detail = [e.stdout, e.stderr].filter(Boolean).join('').trim();
-      fail('smoke', `${name} failed`);
-      console.log(`  ${c.red('FAIL')} ${name}`);
-      if (detail) console.log(detail.split('\n').map((l) => `       ${l}`).join('\n'));
-    } finally {
-      fs.rmSync(tmp, { recursive: true, force: true });
+    const text = readTextOrNull(abs);
+    if (text === null) continue;
+    if (MACHINE_PATH_RE.test(text)) {
+      fail('hygiene', `system/resources/${shipped} contains a machine-specific absolute path`);
+    }
+    for (const ref of text.match(SCRIPT_REF_RE) || []) {
+      if (!provider.has(ref)) {
+        fail('dangling-ref', `system/resources/${shipped} references ${ref}, which nothing ships`);
+      }
     }
   }
+
+  if (failures.length === 0) {
+    console.log(c.green('  ok') + c.dim(`  layout, hygiene, references, docs, ${skillOwner.size} skills, ${resourceEntries.length} resources`));
+  }
 }
 
-// --------------------------------------------------------------------------------------------
-
 function main() {
-  const args = process.argv.slice(2);
-  if (args.includes('-h') || args.includes('--help')) {
-    console.log('Usage: node checks/run.mjs [--static] [--smoke] [--only <skill>]');
+  const [arg] = process.argv.slice(2);
+  if (arg === '-h' || arg === '--help') {
+    console.log('Usage: node checks/run.mjs');
     process.exit(0);
   }
-
-  const onlyIdx = args.indexOf('--only');
-  const only = onlyIdx !== -1 ? args[onlyIdx + 1] : null;
-
-  const wantStatic = args.includes('--static') || !args.includes('--smoke');
-  const wantSmoke = args.includes('--smoke') || !args.includes('--static');
-
-  const tests = listSkillChecks();
-  if (tests.length === 0) {
-    console.error(c.red('[error] No smoke tests found under checks/skills/.'));
-    process.exit(1);
-  }
-  if (only && !tests.includes(`${only}.sh`)) {
-    const names = tests.map((f) => path.basename(f, '.sh')).join(', ');
-    console.error(c.red(`[error] No smoke test for: ${only} (have: ${names})`));
+  if (arg) {
+    console.error(c.red(`[error] Unknown option: ${arg}`));
     process.exit(1);
   }
 
-  if (wantStatic) runStatic();
-  if (wantSmoke) runSmoke(only ? [`${only}.sh`] : tests);
+  runStatic();
 
   console.log('');
   if (failures.length > 0) {

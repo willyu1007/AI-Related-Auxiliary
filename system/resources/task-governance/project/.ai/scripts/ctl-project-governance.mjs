@@ -8,7 +8,7 @@
  *
  * Design notes:
  * - Dependency-free (Node built-ins only).
- * - Ships inside the skill that provisions the hub and installs itself into the target repository.
+ * - Ships in the shared task-governance resource and is installed into the target repository.
  * - Task progress SoT remains in the dev-docs task bundle (`01-status.md`).
  * - Task bundles follow the semantics in `dev-docs/AGENTS.md`.
  * - Task identity SoT is anchored by `.ai-task.json` (`task_id`).
@@ -24,10 +24,10 @@ import {
   RESUME_MAX_SCAN_LIMIT,
   TASK_ID_RE,
   TASK_STATUS,
+  canonicalPath,
   cmdQuery,
   cmdResume,
   findRepoRoot,
-  getUnsupportedGovernanceFiles,
 } from './lib/governance-read.mjs';
 import {
   cmdFeature,
@@ -36,7 +36,6 @@ import {
   cmdSync,
   withGovernanceWriteLock,
 } from './lib/governance-write.mjs';
-
 
 function die(message, exitCode = 1) {
   console.error(message);
@@ -50,24 +49,24 @@ Usage:
 
 Commands:
   lint
-    --repo-root <path>        Repo root (default: auto-detect; fallback: cwd)
+    --repo-root <path>        Repo root (default: auto-detect from cwd)
     --strict                  Treat warnings as errors
     Exit non-zero on errors; warnings fail only in strict mode.
     Validate repository state against the project governance rules.
 
   sync
-    --repo-root <path>        Repo root (default: auto-detect; fallback: cwd)
+    --repo-root <path>        Repo root (default: auto-detect from cwd)
     --dry-run                 Print planned changes without writing
     --apply                   Apply changes (writes files)
     --prune                   Also remove registry task entries whose bundle no longer exists
                               in any linked worktree or at any local branch tip (verified by
                               stable task ID; unverifiable evidence refuses the prune)
     Generate missing task meta IDs, upsert registry tasks, and regenerate derived views.
-    Sync projects only this worktree's bundles. Provably linear cross-worktree divergence does
-    not block it; concurrent or unprovable divergence does.
+    The sync command projects only this worktree's bundles into its registry. Provably linear
+    cross-worktree divergence does not block it; concurrent or unprovable divergence does.
 
   query
-    --repo-root <path>        Repo root (default: auto-detect; fallback: cwd)
+    --repo-root <path>        Repo root (default: auto-detect from cwd)
     --id <T-###>              Filter by a specific task id
     --status <status>         Filter by status (planned|in-progress|blocked|done|archived)
     --text <substring>        Substring match against common task fields
@@ -75,7 +74,7 @@ Commands:
     Locate tasks across every linked worktree for dedupe/triage (LLM-friendly output).
 
   resume
-    --repo-root <path>        Repo root (default: auto-detect; fallback: cwd)
+    --repo-root <path>        Repo root (default: auto-detect from cwd)
     --task <T-###>            Task ID (default: branch task, then the active task)
     --limit <n>               Recent linked commits (default: ${RESUME_DEFAULT_COMMIT_LIMIT}; max: ${RESUME_MAX_COMMIT_LIMIT})
     --scan <n>                History scan limit (default: ${RESUME_DEFAULT_SCAN_LIMIT}; max: ${RESUME_MAX_SCAN_LIMIT})
@@ -85,7 +84,7 @@ Commands:
                 3 no such task, 4 newest state is in another linked worktree.
 
   map
-    --repo-root <path>        Repo root (default: auto-detect; fallback: cwd)
+    --repo-root <path>        Repo root (default: auto-detect from cwd)
     --task <T-###>            Task ID to map (required)
     --feature <F-###>         Existing Feature ID to map the task to (required)
     --dry-run                 Show what would change without writing
@@ -93,7 +92,7 @@ Commands:
     Map a task to a Feature. Its Milestone is derived from that Feature.
 
   milestone
-    --repo-root <path>        Repo root (default: auto-detect; fallback: cwd)
+    --repo-root <path>        Repo root (default: auto-detect from cwd)
     --title <text>            Exact Milestone title to find or create (required)
     --description <text>      Outcome used only when creating a Milestone
     --dry-run                 Show what would change without writing
@@ -102,13 +101,13 @@ Commands:
     Resolve an existing Milestone by title or allocate one across linked worktrees.
 
   feature
-    --repo-root <path>        Repo root (default: auto-detect; fallback: cwd)
-    --title <text>            Exact feature title to find or create (required)
-    --description <text>      Description used only when creating a feature
+    --repo-root <path>        Repo root (default: auto-detect from cwd)
+    --title <text>            Exact Feature title to find or create (required)
+    --description <text>      Description used only when creating a Feature
     --dry-run                 Show what would change without writing
-    --apply                   Ensure the feature exists in the current registry
-    --json                    Output the resolved feature as JSON
-    Resolve an existing feature by title or allocate one across linked worktrees.
+    --apply                   Ensure the Feature exists in the current registry
+    --json                    Output the resolved Feature as JSON
+    Resolve an existing Feature by title or allocate one across linked worktrees.
 
 Examples:
   node .ai/scripts/ctl-project-governance.mjs lint
@@ -214,17 +213,11 @@ function parseBoundedPositiveInt(value, fallback, maximum, optionName) {
 
 function main() {
   const { command, opts } = parseArgs(process.argv);
-  const repoRoot =
-    opts['repo-root'] ? path.resolve(opts['repo-root']) : findRepoRoot(process.cwd()) || path.resolve(process.cwd());
-
-  if (command !== 'lint') {
-    const unsupported = getUnsupportedGovernanceFiles(repoRoot);
-    if (unsupported.length > 0) {
-      die(
-        '[error] Unsupported task-governance files conflict with the current single-path layout:\n' +
-          unsupported.map((item) => `  - ${item.file} @ ${item.worktree_path}`).join('\n')
-      );
-    }
+  const repoRoot = opts['repo-root']
+    ? canonicalPath(path.resolve(opts['repo-root']))
+    : findRepoRoot(process.cwd());
+  if (!repoRoot) {
+    die('[error] Cannot find installed task governance from cwd; pass --repo-root explicitly.');
   }
 
   switch (command) {

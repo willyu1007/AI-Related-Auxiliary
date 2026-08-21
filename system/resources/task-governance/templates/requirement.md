@@ -1,11 +1,10 @@
 # <Task Title> — Requirements
 
-Use this optional file to align requirement detail before planning. After the task starts, `01-status.md` owns the current goal and completion head, while `00-roadmap.md` owns top-level decision alignment and the implementation route.
+<!-- Optional alignment input. Keep source intent and unresolved ownership here; after opening, current task truth lives in status and roadmap. Remove authoring comments. -->
 
-## Baseline
+## Sources and ownership
 
 - Owner / confirmer: <!-- person or authority -->
-- Confirmed on: <!-- YYYY-MM-DD or pending -->
 - Source documents: <!-- paths, links, or none -->
 - Host plan input: <!-- path or none; input only, not the repository authority -->
 
@@ -38,9 +37,9 @@ Use this optional file to align requirement detail before planning. After the ta
 |---|---|---|---|
 | <!-- item --> | <!-- owner --> | <!-- impact --> | <!-- evidence or checkpoint --> |
 
-Copy unresolved items into `00-roadmap.md` when the bundle is created. Do not maintain two changing copies after alignment.
+<!-- Carry unresolved items that still affect the route into `00-roadmap.md`; do not maintain two changing copies. -->
 
 ## Confirmation
 
 - [ ] Outcome, scenarios, boundaries, and constraints are confirmed or their unresolved owners are explicit.
-- [ ] The high-level current goal and completion conditions have been transferred to `01-status.md`.
+- [ ] The current goal and relevant acceptance references have been transferred to `01-status.md`.

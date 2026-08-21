@@ -25,6 +25,10 @@ below or other supporting documents and directories when the actual work benefit
 each addition a distinct, durable purpose and do not use one to duplicate the goal, status, plan,
 decisions, architecture, or verification authorities.
 
+Templates are starting shapes, not a request for filler. Preserve headings and fields consumed by
+governance tooling, adapt the depth to the task, remove authoring prompts, and record uncertainty
+instead of inventing facts. Omit irrelevant optional detail where the contract allows it.
+
 Each immediate child of `dev-docs/archive/` is one archived task and contains exactly:
 
 ```text
@@ -43,12 +47,12 @@ and evidence; the active working files do not survive the archive transition.
 - **`00-roadmap.md`** — Decision alignment and rationale, working assumptions, relationships
   touching this task, the implementation kickoff gate, phased route, phase closeout, and recovery
   strategy.
-- **`01-status.md`** — Current goal, progress state, phase, next step, blocker, and high-level
-  completion conditions.
+- **`01-status.md`** — Current goal, progress state, phase, next step, blocker, and the current
+  `Done when` acceptance references.
 - **`02-architecture.md`** — Current settled technical design and contracts, without alternatives
   or decision history.
-- **`verification.md`** — Current completion-condition matrix, latest decisive evidence,
-  outstanding checks, and material limitations.
+- **`verification.md`** — Planned checks and the latest decisive evidence for relevant claims,
+  acceptance references, phase outcomes, and material limitations.
 - **`implementation.md`** *(optional)* — Current realization map when architecture alone is not
   enough to resume safely.
 - **`pitfalls.md`** *(optional)* — Current anti-error register for recurring, evidenced hazards.
@@ -60,6 +64,12 @@ and evidence; the active working files do not survive the archive transition.
 Update these as current snapshots. Git history retains superseded states; avoid chronological
 journals and repeated raw logs in the main documents.
 
+`Done when` holds the task's current acceptance references. They help planning, review, and
+verification, but do not independently prove completion or override confirmed requirements,
+repository reality, verification evidence, or required user acceptance. Revise them when the
+understood outcome changes. Roadmap phase outcomes and exit criteria guide execution only; they do
+not define task acceptance.
+
 ## Lifecycle model
 
 Progress lives in `01-status.md` under `## Progress` as exactly one `State:` value:
@@ -68,8 +78,26 @@ Progress lives in `01-status.md` under `## Progress` as exactly one `State:` val
   checkpoint has landed.
 - **`in-progress`** — Work is actively advancing.
 - **`blocked`** — External input or a dependency prevents meaningful progress.
-- **`done`** — Every current completion condition is satisfied with decisive verification
-  evidence.
+- **`done`** — The task-level completion contract below holds.
+
+### Completion contract
+
+Mark a task `done` only when all three claims hold at the task boundary:
+
+- **Outcome closure** — Repository reality supports the goal as an end-to-end outcome, and no
+  known in-scope roadmap work remains unresolved.
+- **Implementation or artifact quality** — Relevant review and checks are complete, and no known
+  material defect, unresolved review finding, temporary instrumentation, or residue contradicts
+  the accepted outcome or repository conventions.
+- **Semantic convergence** — Code, interfaces, configuration, documentation, the task bundle, and
+  the project hub agree on the accepted result; no unintended parallel old/new paths, duplicated
+  behavior, or competing authority remains.
+
+Ground each claim in decisive evidence and obtain any required user acceptance. For non-code
+tasks, apply the quality claim to the delivered artifacts. An explicit transitional dual track may
+remain while work is in progress only when its purpose, recovery boundary, and exit are recorded.
+Before completion, remove the superseded path unless permanent compatibility is part of the
+confirmed outcome.
 
 Implementation readiness lives separately in the roadmap kickoff gate:
 
@@ -81,6 +109,9 @@ Implementation readiness lives separately in the roadmap kickoff gate:
 - Kickoff is `pending` whenever evidence invalidates a gating premise or route; route-dependent
   implementation remains paused until alignment is restored.
 - A `done` task must have kickoff `ready`.
+
+Checking every `Done when` item does not make a task `done`, and an outdated item must be revised
+rather than used to block or justify completion mechanically.
 
 A completed task remains active with `State: done` until its separately approved archive
 transition.

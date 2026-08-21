@@ -1,22 +1,15 @@
 #!/usr/bin/env node
-/**
- * Install or refresh the repository task-governance system.
- *
- * This runs from the skill source, independent of any target-repository runtime copy. Fixed assets
- * are refreshed; project-owned hub data is created only when missing.
- */
+/** Install or explicitly refresh the shared repository task-governance resource. */
 
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import {
-  getUnsupportedGovernanceFiles,
-  normalizeEol,
-} from '../assets/project/.ai/scripts/lib/governance-read.mjs';
+import { canonicalPath, normalizeEol } from './project/.ai/scripts/lib/governance-read.mjs';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const SHIPPED_ROOT = path.resolve(__dirname, '..', 'assets', 'project');
+const RESOURCE_ROOT = canonicalPath(path.dirname(fileURLToPath(import.meta.url)));
+const SHIPPED_ROOT = path.join(RESOURCE_ROOT, 'project');
+
 function fail(message) {
   console.error(message);
   process.exit(1);
@@ -25,21 +18,22 @@ function fail(message) {
 function usage(exitCode = 0) {
   console.log(`
 Usage:
-  node install-project-governance.mjs [options]
+  node install.mjs [options]
 
 Options:
-  --repo-root <path>  Repo root (default: auto-detect; fallback: cwd)
-  --dry-run           Show planned refresh and initialization without writing
+  --repo-root <path>  Repo root (default: auto-detect from cwd)
+  --dry-run           Show the initialization or refresh plan without writing
+  --refresh           Explicitly replace installed fixed assets with the shared resource
   -h, --help          Show this help
 
-Refresh fixed task-governance assets and create missing project-owned hub files without
-overwriting existing project data.
+Without --refresh, install missing fixed assets and stop when an existing one differs. Project-owned
+hub data is created only when missing and is never refreshed.
 `.trim());
   process.exit(exitCode);
 }
 
 function parseArgs(argv) {
-  const opts = { repoRoot: null, dryRun: false };
+  const opts = { repoRoot: null, dryRun: false, refresh: false };
   const seen = new Set();
   for (let index = 2; index < argv.length; index++) {
     const token = argv[index];
@@ -47,12 +41,15 @@ function parseArgs(argv) {
     if (!token.startsWith('--')) fail(`[error] Unexpected positional argument: "${token}".`);
 
     const key = token.slice(2);
-    if (!['repo-root', 'dry-run'].includes(key)) fail(`[error] Unknown option: --${key}.`);
+    if (!['repo-root', 'dry-run', 'refresh'].includes(key)) {
+      fail(`[error] Unknown option: --${key}.`);
+    }
     if (seen.has(key)) fail(`[error] Option --${key} was provided more than once.`);
     seen.add(key);
 
-    if (key === 'dry-run') {
-      opts.dryRun = true;
+    if (key === 'dry-run' || key === 'refresh') {
+      if (key === 'dry-run') opts.dryRun = true;
+      else opts.refresh = true;
       continue;
     }
 
@@ -121,63 +118,57 @@ function isPathInside(parent, candidate) {
   );
 }
 
-function assertGovernanceLayout(repoRoot) {
-  const unsupported = getUnsupportedGovernanceFiles(repoRoot);
-  if (unsupported.length === 0) return;
-
-  const paths = unsupported
-    .map((item) => `  - ${item.file} @ ${item.worktree_path}`)
-    .join('\n');
-  fail(
-    '[error] Unsupported task-governance files conflict with the current single-path layout. ' +
-      'Remove them before continuing:\n' +
-      paths
-    );
-}
-
-function refreshAssets({ repoRoot, dryRun, actions }) {
-  if (!exists(SHIPPED_ROOT)) {
-    fail(`[error] Shipped project assets are missing at ${toPosix(SHIPPED_ROOT)}.`);
-  }
-
-  for (const relative of collectFiles(SHIPPED_ROOT)) {
+function planFixedAssets({ repoRoot, refresh, shippedFiles, actions }) {
+  const drift = [];
+  for (const relative of shippedFiles) {
     const source = path.join(SHIPPED_ROOT, relative);
     const target = path.join(repoRoot, relative);
     const content = readText(source);
-    if (content === null) fail(`[error] Cannot read shipped asset: ${toPosix(source)}.`);
+    if (content === null) throw new Error(`Cannot read shipped asset: ${toPosix(source)}.`);
     const previous = readText(target);
-    // Compare with normalized line endings so checkout EOL settings do not force rewrites.
     if (previous !== null && normalizeEol(previous) === normalizeEol(content)) continue;
-    actions.push({ op: previous === null ? 'write' : 'update', path: target });
-    if (!dryRun) writeText(target, content);
+    if (previous !== null && !refresh) {
+      drift.push(toPosix(relative));
+      continue;
+    }
+    actions.push({ op: previous === null ? 'write' : 'update', path: target, content });
+  }
+
+  if (drift.length > 0) {
+    fail(
+      '[error] Installed fixed task-governance assets differ from the shared resource. ' +
+        'Review an explicit --dry-run --refresh before replacing them:\n' +
+        drift.map((relative) => `  - ${relative}`).join('\n')
+    );
   }
 }
 
-function initializeHub({ repoRoot, dryRun, actions }) {
-  const targetTemplates = path.join(repoRoot, '.ai', 'project', 'templates');
-  const sourceTemplates = path.join(SHIPPED_ROOT, '.ai', 'project', 'templates');
-  const templatesDir = exists(targetTemplates) ? targetTemplates : sourceTemplates;
+function planHubInitialization({ repoRoot, actions }) {
+  const templatesDir = path.join(SHIPPED_ROOT, '.ai', 'project', 'templates');
   if (!exists(templatesDir)) {
-    fail(`[error] Missing project templates directory: ${toPosix(templatesDir)}.`);
+    throw new Error(`Missing project templates directory: ${toPosix(templatesDir)}.`);
   }
 
   for (const file of ['registry.json', 'dashboard.md', 'feature-map.md']) {
     const target = path.join(repoRoot, '.ai', 'project', file);
     if (exists(target)) continue;
     const source = path.join(templatesDir, file);
-    const raw = readText(source);
-    if (raw === null) fail(`[error] Missing project template: ${toPosix(source)}.`);
-    actions.push({ op: 'write', path: target, note: 'initialize project data' });
-    if (!dryRun) writeText(target, raw);
+    const content = readText(source);
+    if (content === null) throw new Error(`Missing project template: ${toPosix(source)}.`);
+    actions.push({ op: 'write', path: target, content, note: 'initialize project data' });
   }
+}
+
+function applyActions(actions) {
+  for (const action of actions) writeText(action.path, action.content);
 }
 
 function printActions(repoRoot, actions, dryRun) {
   if (actions.length === 0) {
-    console.log(`[ok] Project governance is current.${dryRun ? ' (dry-run)' : ''}`);
+    console.log(`[ok] Task governance is current.${dryRun ? ' (dry-run)' : ''}`);
     return;
   }
-  console.log(`[ok] Project governance ${dryRun ? 'plan complete' : 'installed'}.`);
+  console.log(`[ok] Task governance ${dryRun ? 'plan complete' : 'installed'}.`);
   for (const action of actions) {
     const note = action.note ? ` (${action.note})` : '';
     const mode = dryRun ? ' (dry-run)' : '';
@@ -187,15 +178,23 @@ function printActions(repoRoot, actions, dryRun) {
 
 function main() {
   const opts = parseArgs(process.argv);
-  const repoRoot = opts.repoRoot || findRepoRoot(process.cwd()) || path.resolve(process.cwd());
-  if (isPathInside(SHIPPED_ROOT, repoRoot)) {
-    fail('[error] The installation target must not be the skill asset source or one of its descendants.');
+  const discoveredRoot = opts.repoRoot || findRepoRoot(process.cwd());
+  const repoRoot = discoveredRoot ? canonicalPath(discoveredRoot) : null;
+  if (!repoRoot || !exists(path.join(repoRoot, '.git'))) {
+    fail('[error] Task governance must be installed at a Git repository root.');
   }
-  assertGovernanceLayout(repoRoot);
+  if (isPathInside(RESOURCE_ROOT, repoRoot) || isPathInside(repoRoot, RESOURCE_ROOT)) {
+    fail('[error] The task-governance resource library cannot install into itself or its containing repository.');
+  }
+  if (!exists(SHIPPED_ROOT)) {
+    fail(`[error] Shipped project assets are missing at ${toPosix(SHIPPED_ROOT)}.`);
+  }
 
+  const shippedFiles = collectFiles(SHIPPED_ROOT);
   const actions = [];
-  refreshAssets({ repoRoot, dryRun: opts.dryRun, actions });
-  initializeHub({ repoRoot, dryRun: opts.dryRun, actions });
+  planFixedAssets({ repoRoot, refresh: opts.refresh, shippedFiles, actions });
+  planHubInitialization({ repoRoot, actions });
+  if (!opts.dryRun) applyActions(actions);
   printActions(repoRoot, actions, opts.dryRun);
 }
 

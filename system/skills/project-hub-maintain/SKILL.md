@@ -28,7 +28,7 @@ Archiving is an approved destructive transition from a working record to a compa
 
 1. **Clean, aligned checkpoint.** The closeout checkpoint is committed, the active bundle matches repository reality, and unrelated worktree changes are identified. If not, run the task checkpoint synchronization workflow first.
 
-2. **Completion audit.** Treat `State: done` as a claim. Require roadmap kickoff `ready`, read the goal and every `Done when` item from `01-status.md`, inspect the task's exact trailer-linked commit timeline and delivered code, and rerun the cheapest decisive verification from `verification.md` when it is still runnable. Environmental inability to run a check must be explicit; it is not a pass.
+2. **Completion audit.** Treat `State: done` as a claim and audit the completion contract in `dev-docs/AGENTS.md`. Require roadmap kickoff `ready`, read the goal and use `Done when` only as an audit reference, inspect unresolved in-scope roadmap work, the task's exact trailer-linked commit timeline, delivered code, and required acceptance, then rerun the cheapest decisive verification from `verification.md` when it is still runnable. Roadmap phase criteria and checked acceptance references do not prove task completion. Environmental inability to run a check must be explicit; it is not a pass.
 
    Stop when either side disagrees: reality incomplete means finish the work; reality complete but the record stale means synchronize the task. Archiving itself never repairs the claim.
 

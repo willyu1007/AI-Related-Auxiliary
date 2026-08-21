@@ -47,9 +47,7 @@ task-start / task-resume
    boundary. Honor any identity or recovery stop condition instead of choosing
    or duplicating a task.
 2. **Prepare the route.** Use `task-plan` until kickoff is `ready` and the current
-   phase is executable. Let planning express wide migrations as `expand`,
-   bounded `migrate`, and `contract` checkpoints when needed; execute each as a
-   normal roadmap phase.
+   phase is executable.
 3. **Execute the phase.** Complete its defined outcome through the relevant
    domain workflow. Keep long-running operations and external waits inside the
    current phase until they produce a decisive result or a recorded blocker.
@@ -77,5 +75,5 @@ task-start / task-resume
    execution transfers to a fresh session, follow it with `task-handoff` and
    later recover through `task-resume`.
 6. **Finish.** Use `task-sync` to mark the goal done only after the final phase
-   closes and the bundle's completion conditions have decisive evidence.
-   Archiving is a separate operation.
+   closes and the completion contract in `dev-docs/AGENTS.md` holds. Archiving
+   is a separate operation.

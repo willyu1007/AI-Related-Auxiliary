@@ -44,7 +44,7 @@ A non-zero exit carries `error.reason`; report that reason and do not guess or c
 The packet is the bounded first read. Verify or reconstruct it manually in this order when the command is unavailable or a field conflicts with repository reality:
 
 1. Resolve the task from an explicit `T-###`, a unique request-text match, the branch ID, the sole `in-progress` bundle, then the sole `blocked` bundle.
-2. Read `01-status.md` for the goal, `State:`, current phase, next step, blocker, and `Done when`.
+2. Read `01-status.md` for the goal, `State:`, current phase, next step, blocker, and current acceptance references.
 3. Read the roadmap kickoff gate. If it is `pending`, do not resume decision-dependent implementation; recover the open decisions and current alignment or discovery action instead.
 4. If `pitfalls.md` exists, read its current hazards.
 5. Rebuild the committed timeline from exact `Task: T-###` trailers. An empty timeline means unknown progress, not zero progress.
@@ -66,7 +66,7 @@ Report disagreements instead of silently selecting one source. If the user asked
 
 - Task ID, slug, docs path, and how it was resolved
 - Current goal, `State:`, and next step
-- Current phase, blocker, and completion conditions
+- Current phase, blocker, and current acceptance references
 - Kickoff status and any gate that prevents implementation
 - What the linked commits prove landed
 - Relevant uncommitted changes and any disagreement with the record

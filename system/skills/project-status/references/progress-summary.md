@@ -13,13 +13,13 @@ node .ai/scripts/ctl-project-governance.mjs query --json
 ```markdown
 ## Progress Overview
 
-| Status | Count | Ratio |
-|--------|-------|-------|
-| done | N | X% |
-| in-progress | N | X% |
-| blocked | N | X% |
-| planned | N | X% |
-| archived | N | X% |
+| Status | Count |
+|--------|-------|
+| done | N |
+| in-progress | N |
+| blocked | N |
+| planned | N |
+| archived | N |
 
 **In Progress**:
 - <T-###> <slug> - <kickoff status> - <brief description or current phase>
@@ -31,8 +31,9 @@ node .ai/scripts/ctl-project-governance.mjs query --json
 ```
 
 ## Rules
-- Calculate percentages from every valid, non-conflicting logical row returned by query, including archived tasks
-- Exclude conflicted or invalid logical rows from status percentages and report them separately as unresolved evidence
+- Count every valid, non-conflicting logical row returned by query, including archived tasks
+- Exclude conflicted or invalid logical rows from counts and report them separately as unresolved evidence
+- Counts describe task inventory, not effort, quality, scope coverage, or overall completion percentage
 - Only show "Blocked" section if blockers exist
 - Next step follows documented selection evidence and action rules (see next-action.md)
 - Separate kickoff-pending alignment/replanning from kickoff-ready implementation

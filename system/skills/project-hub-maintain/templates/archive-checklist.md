@@ -6,7 +6,7 @@ Task: `T-###` · slug: `<slug>`
 
 - [ ] Full sync pass completed; bundle matches `git status` / task commit timeline
 - [ ] Roadmap kickoff is `ready`; no invalidated route remains pending
-- [ ] Completion audit passed: goal and every `Done when` item from `01-status.md` hold against the commit timeline and delivered code — not just against `State: done`
+- [ ] Completion contract in `dev-docs/AGENTS.md` is supported by decisive evidence; `Done when` was reviewed only as an acceptance reference
 - [ ] Cheapest decisive verification command from `verification.md` re-run, when runnable
 - [ ] Uncommitted or unfinished work is not described as landed
 - [ ] Every material deferred outcome has an explicit task, proposed Idea, canceled, or descoped disposition
@@ -29,6 +29,6 @@ Task: `T-###` · slug: `<slug>`
 - [ ] Registry shows `archived`
 - [ ] Archive, metadata, Feature record, registry, and derived views committed together with `Task: T-###`
 
-## Done when
+## Final check
 
 - [ ] All boxes above are checked or explicitly N/A with reason

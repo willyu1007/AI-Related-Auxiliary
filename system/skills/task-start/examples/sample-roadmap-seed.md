@@ -1,68 +1,91 @@
 # Roadmap
 
-`01-status.md` owns the current goal and state for this example task.
+> One possible pending roadmap seed. Adapt the judgment, not the wording or domain.
 
 ## Scope and constraints
 
 ### In scope
-- Add a feature flag that gates the new checkout at the frontend and backend entry points.
-- Preserve the existing checkout as the default and rollback path.
+- Gate the new checkout at its frontend and backend entry points.
+- Preserve the existing checkout as the rollback path.
 
 ### Out of scope
 - Rewriting checkout architecture or changing payment providers.
 
 ### Constraints and dependencies
-- Confirm that the existing flag provider supports both entry points before implementation.
-- A global flag disable must restore the old checkout without a deploy.
+- The existing flag provider must support both entry points before implementation begins.
 
 ## Decision alignment
 
 | Decision question | Options / tradeoffs | Current direction | Status | Owner / required confirmation | Closure evidence | Consequences |
 |---|---|---|---|---|---|---|
-| How should frontend and backend evaluate the checkout flag? | Duplicate evaluation is locally simple but risks cohort drift; a shared boundary adds one dependency but keeps behavior coherent | Prefer the existing shared flag client because one evaluation boundary prevents cohort drift, provided Phase 1 confirms support at both entry points | proposed | Technical owner | Repository evidence from Phase 1 | Determines the later integration boundary |
-| What gates rollout increases? | Faster rollout shortens delivery; conservative thresholds reduce exposure | Propose a 1% start with conversion, error-rate, and latency gates because limited exposure makes rollback safer | proposed | Product owner confirmation | Confirmed thresholds and rollback owner | Defines later rollout exit criteria and safety |
+| Where should checkout flag evaluation live? | Separate evaluation is simple but can split cohorts; one shared boundary keeps behavior coherent but adds a dependency | Prefer the existing shared client if repository evidence confirms both entry points can use it | proposed | Technical owner | Phase 1 repository evidence | Determines the integration boundary |
 
 ### Assumptions
 
 | Assumption | Risk if wrong | Validation |
 |---|---|---|
-| The repository already has a flag provider supported by both entry points | A new integration boundary or separate task may be required | Inspect current clients and run a focused evaluation check in Phase 1 |
+| A suitable shared flag client already exists | The integration boundary must be revised | Inspect the current clients in Phase 1 |
 
 ## Task relationships
 
 | Task | Relationship from this task | Owned boundary / exchanged contract | Coordination condition |
 |---|---|---|---|
-| T-021 | depends-on | Owns the shared flag client contract consumed here | Confirm the stable evaluation API before implementation kickoff |
+| None | — | — | — |
 
 ## Implementation plan
 
-### Phase 1 — Discover the flag boundary
-- Outcome: the supported provider and evaluation owner are confirmed.
-- Approach: inspect existing frontend and backend flag clients, then prove one evaluation contract with the smallest runnable check.
+### Phase 1 — Confirm the flag boundary
+- Outcome: the supported evaluation boundary is known.
+- Approach: inspect the current clients and prove the smallest shared contract without changing checkout behavior.
 - Planned changes:
-  1. Locate the current checkout entry points and supported flag clients.
-  2. Validate whether both entry points can consume one evaluation contract.
-  3. Close or revise the shared-boundary decision from the resulting evidence.
-- Affected boundaries / entry points: checkout frontend entry, checkout backend entry, shared flag client.
-- Dependencies: repository inspection and the T-021 client contract.
-- Exit criteria: both entry points can evaluate the same flag safely, or the roadmap records the evidenced boundary change.
-- Verification: focused provider smoke check.
-- Recovery: keep checkout behavior unchanged and return the unresolved boundary to decision alignment.
+  1. Locate the frontend and backend checkout entry points and their flag clients.
+  2. Verify whether both can consume one evaluation contract.
+- Affected boundaries / entry points: checkout frontend, checkout backend, shared flag client.
+- Dependencies: repository evidence.
+- Exit criteria: the shared boundary is confirmed or the decision records why it must change.
+- Verification: focused inspection and the smallest runnable provider check.
+- Recovery: leave checkout behavior unchanged and keep kickoff pending.
+
+### Phase 2 — Integrate behind the flag (provisional)
+- Outcome: both checkout entry points use the confirmed boundary while the existing checkout remains the default.
+- Approach: adapt the entry points through the settled contract and keep the old path available.
+- Planned changes:
+  1. Add the shared evaluation at each confirmed entry point.
+  2. Route enabled traffic to the new checkout without removing the old path.
+- Affected boundaries / entry points: the boundaries confirmed in Phase 1.
+- Dependencies: Phase 1 decision and settled interface.
+- Exit criteria: the flag controls both entry points without changing disabled behavior.
+- Verification: focused integration checks for enabled and disabled paths.
+- Recovery: disable the flag and revert the bounded integration if the contract fails.
+
+### Phase 3 — Verify rollout and recovery (provisional)
+- Outcome: the integrated path and rollback behavior have evidence suitable for an explicit rollout decision.
+- Approach: exercise the supported scenarios and record limitations before changing exposure.
+- Planned changes:
+  1. Verify the enabled, disabled, and rollback paths.
+  2. Present the evidence and unresolved rollout choices for confirmation.
+- Affected boundaries / entry points: checkout behavior and operational flag control.
+- Dependencies: Phase 2 integration and user-owned rollout decisions.
+- Exit criteria: verification evidence is current and rollout ownership is explicit.
+- Verification: scenario checks plus direct rollback observation.
+- Recovery: keep exposure disabled until the evidence and decision support rollout.
 
 ## Kickoff gate
 
 - Status: pending
 - [ ] Every user-owned choice that blocks implementation is decided.
 - [ ] Settled design and interfaces are reflected in `02-architecture.md`.
-- [ ] The first implementation phase is executable with exit, verification, and recovery criteria.
-- [ ] Every current completion condition has a decisive planned check in `verification.md`.
+- [ ] The major route connects the current Goal to the completion contract, and the first implementation phase is executable with exit, verification, and recovery criteria.
+- [ ] Verification needed for the proposed route is identified in `verification.md`.
 
 ## Risks and recovery
 
 | Risk | Detection | Mitigation | Recovery / rollback |
 |---|---|---|---|
-| The existing provider cannot keep frontend and backend cohorts aligned | Phase 1 cannot prove a shared evaluation contract | Keep discovery isolated from checkout behavior | Leave kickoff pending and revise the integration boundary before implementation |
+| The provider cannot keep cohorts aligned | Phase 1 cannot prove a shared evaluation contract | Keep discovery isolated from checkout behavior | Revise the boundary before implementation |
 
 ## Phase closeout
 
-End the discovery phase with reviewed evidence, synchronized decisions and task relationships, updated verification plans, and a commit carrying the task trailer.
+- Review: evidence from both checkout entry points.
+- Record update: the decision, route, architecture, status, and verification evidence affected by the result.
+- Checkpoint: a reviewed discovery checkpoint carrying the task trailer.

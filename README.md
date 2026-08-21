@@ -11,33 +11,39 @@ system/          # 库本身：跟着人走的全局层
   skills/        #   所有 Skill，一层平铺（发现只扫这一层）
     <skill>/
       SKILL.md
-      templates/ examples/ references/  # 随技能走的资产
-      assets/<bundle>/                  # 技能装进目标仓库的东西，按目标仓库的目录形状摆好
+      examples/ references/             # 只服务该技能的材料
+  resources/     #   多个 Skill 共用的系统设施
+    task-governance/
+      install.mjs
+      project/                         # 安装进目标仓库的固定设施
+      templates/                       # 与设施契约同步的任务模板
   docs/          #   全局 Agent 指令（CLAUDE.md / AGENTS.md）
 checks/          # 本仓库自己的校验，不是分发物
   run.mjs
-  skills/<skill>.sh   #   技能级冒烟测试
 ```
 
-**一个技能自带它需要的一切。** 要在目标仓库里放东西（控制脚本、契约、模板、空目录）时，那些东西放在该技能的 `assets/<bundle>/` 下，由技能自己的 install 命令幂等地写进去。没有需要先装的 pack，技能正文里也就没有"如果 X 存在"这类分支。
+普通 Skill 应保持自包含；但依赖同一套仓库协议、控制脚本或持久化格式的工作流，可以共享 `system/resources/` 中的系统设施。此时 `system/` 是完整发布单元，不能只复制其中一个依赖设施的 Skill。
 
-控制脚本必须落进目标仓库，这不是风格选择：Git 钩子按仓库路径调用它，够不到 `~/.claude/skills/`。
+`task-*`、`project-*` 与 `goal-mode` 工作流依赖 `task-governance`。它集中持有项目内 `.ai/` 运行时、`dev-docs` 契约和配套模板；`task-start` 在首次使用时将它初始化到目标仓库，其他相关 Skill 使用项目内已安装的设施。默认安装不会覆盖已有固定设施；内容不同时必须先预览并显式 refresh。每个 Agent 环境中的 `resources/` 必须与 `skills/` 同级，资源相对路径才能保持稳定。
+
+控制脚本仍要落进目标仓库：这样任务记录与仓库内的契约一起工作，其他机器、LLM 或 CI 不需要知道全局资源安装在哪里。
 
 技能发现只扫 `system/skills/` 的第一层，所以那一层保持平铺，不要建分组子目录。
 
 ## system/ —— 技能
 
-任务治理的七个技能，按实际操作划分 —— 每个对应工作流程里的一个时刻。主线是 `start → plan → implementation`；新证据推翻路线时回到 plan，实施检查点通过 `sync → resume` 走仓库跨越时间，`handoff → 新会话` 则通过对话完成零间隔交接。
+任务治理的八个技能按实际操作划分；其中 `goal-mode` 串联长任务主线，其余每个对应工作流程里的一个时刻。主线是 `start → plan → implementation`；新证据推翻路线时回到 plan，实施检查点通过 `sync → resume` 走仓库跨越时间，`handoff → 新会话` 则通过对话完成零间隔交接。
 
 | Skill | 时刻 | 通道 |
 |---|---|---|
-| [task-start](system/skills/task-start/SKILL.md) | 开任务：查重、建立带 pending roadmap seed 的 bundle、分配 ID 并注册进 hub；**持有 Task Contract 与项目资产** | 仓库 |
+| [task-start](system/skills/task-start/SKILL.md) | 开任务：查重、提炼目标、建立经用户确认的 pending roadmap seed、分配 ID 并注册进 hub | 仓库 |
 | [task-plan](system/skills/task-plan/SKILL.md) | 持续收敛顶层决策、完成实施 kickoff，并在新证据推翻路线时 replan | 仓库 + 对话 |
-| [task-sync](system/skills/task-sync/SKILL.md) | 把记录与仓库现实拉平，保持当前态证据而非追加流水账；**持有 Git 钩子** | 仓库 |
+| [task-sync](system/skills/task-sync/SKILL.md) | 把记录与仓库现实拉平，保持当前态证据而非追加流水账 | 仓库 |
 | [project-hub-maintain](system/skills/project-hub-maintain/SKILL.md) | 执行已选任务的归档转换，或修复 hub/registry 与派生视图漂移 | 仓库 |
 | [task-resume](system/skills/task-resume/SKILL.md) | 冷启动：只凭仓库重建已跟踪任务的上下文 | 仓库 |
 | [task-handoff](system/skills/task-handoff/SKILL.md) | 热交接：上下文降质时，把当前工作提炼成可粘贴的块 | **对话** |
 | [project-status](system/skills/project-status/SKILL.md) | 跨任务的只读进度、归档就绪度与 hub 漂移审计 | 仓库 |
+| [goal-mode](system/skills/goal-mode/SKILL.md) | 串联 start、planning、分阶段执行、checkpoint、handoff 与完成契约 | 仓库 + 对话 |
 
 另有与任务治理无关的技能：
 
@@ -64,11 +70,13 @@ checks/          # 本仓库自己的校验，不是分发物
 ```bash
 # 从本仓库同步到全局
 cp -R system/skills/. ~/.claude/skills/
+cp -R system/resources/. ~/.claude/resources/
 cp system/docs/CLAUDE.md ~/.claude/CLAUDE.md
 cp system/docs/AGENTS.md ~/.codex/AGENTS.md
 
 # 从全局回收改动到本仓库
 cp -R ~/.claude/skills/. system/skills/
+cp -R ~/.claude/resources/. system/resources/
 cp ~/.claude/CLAUDE.md system/docs/CLAUDE.md
 cp ~/.codex/AGENTS.md system/docs/AGENTS.md
 ```
@@ -81,16 +89,9 @@ cp ~/.codex/AGENTS.md system/docs/AGENTS.md
 node checks/run.mjs
 ```
 
-两部分。**静态检查**扫描 `system/`：引用的脚本是否真有人提供（悬空引用是仓库退役后最容易留下的坑）、钩子有没有可执行位（缺了 git 只 warn 然后静默跳过）、有无机器绝对路径、技能之间有没有互相提名、两份全局文档有没有漂移。**冒烟测试**从一个空的临时 git 仓库出发，由 `checks/skills/<skill>.sh` 调技能自己的 install 命令把仓库装起来 —— 被测的正是那条命令，而不是只有测试知道怎么写的 `cp -R`。
+这是轻量静态检查：扫描 `system/` 中的悬空脚本引用、机器绝对路径、技能间耦合、技能发现布局，以及两份全局文档的漂移。行为验证留给使用这些材料的目标仓库，不在这个纯储存仓库里维护复制出来的集成测试。
 
 `checks/` **不是分发物** —— 它校验这个库，`system/` 才是库本身。这也是本仓库唯一会执行的东西。
-
-其他用法：
-
-```bash
-node checks/run.mjs --static             # 只跑静态检查
-node checks/run.mjs --only task-start    # 只冒烟测一个技能
-```
 
 ## 贡献约定
 

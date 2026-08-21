@@ -16,7 +16,7 @@ export const RESUME_DEFAULT_SCAN_LIMIT = 500;
 export const RESUME_MAX_SCAN_LIMIT = 10000;
 
 const RESUME_MAX_CANDIDATES = 20;
-const RESUME_MAX_COMPLETION_CONDITIONS = 50;
+const RESUME_MAX_ACCEPTANCE_REFERENCES = 50;
 const RESUME_TEXT_LIMITS = Object.freeze({
   short: 256,
   text: 500,
@@ -33,46 +33,6 @@ export const TASK_STATUS = new Set(['planned', 'in-progress', 'blocked', 'done',
 const BUNDLE_STATUS = new Set(['planned', 'in-progress', 'blocked', 'done']);
 export const MILESTONE_STATUS = new Set(['planned', 'in-progress', 'blocked', 'done']);
 export const FEATURE_STATUS = new Set(['planned', 'in-progress', 'blocked', 'done', 'cut']);
-
-const UNSUPPORTED_GOVERNANCE_FILES = [
-  'dev-docs/README.md',
-  '.ai/project/registry.yaml',
-  '.ai/project/CONTRACT.md',
-  '.ai/project/task-index.md',
-  '.ai/project/changelog.md',
-  '.ai/project/templates/task-index.md',
-  '.ai/project/templates/changelog.md',
-  '.ai/project/templates/registry.yaml',
-  // Keep this rejection target from looking like an active shipped-script reference to static audits.
-  ['.ai', 'scripts', 'install-project-governance.mjs'].join('/'),
-  '.ai/scripts/lib/colors.mjs',
-  '.ai/scripts/lib/yaml-lite.mjs',
-];
-
-const UNSUPPORTED_GOVERNANCE_HOOKS = [
-  {
-    file: '.githooks/prepare-commit-msg',
-    signatures: ['ctl-project-governance.mjs task-exists --task', 'SKIP_TASK_TRAILER'],
-  },
-  {
-    file: '.githooks/commit-msg',
-    signatures: ['ctl-project-governance.mjs task-exists --task', 'SKIP_TASK_TRAILER'],
-  },
-  {
-    file: '.githooks/pre-commit',
-    signatures: [
-      'Detected dev-docs changes, running ctl-project-governance sync',
-      "git add ':(glob)**/.ai-task.json'",
-    ],
-  },
-  {
-    file: '.githooks/install.mjs',
-    signatures: [
-      'node .githooks/install.mjs [--uninstall] [--check]',
-      "Uses Git's core.hooksPath to point to .githooks/",
-    ],
-  },
-];
 
 export function toPosix(value) {
   return String(value).replace(/\\/g, '/');
@@ -197,10 +157,19 @@ export function exists(filePath) {
   }
 }
 
+export function canonicalPath(filePath) {
+  const resolved = path.resolve(filePath);
+  try {
+    return fs.realpathSync.native(resolved);
+  } catch {
+    return resolved;
+  }
+}
+
 export function findRepoRoot(startDir) {
   let dir = path.resolve(startDir);
   while (true) {
-    if (exists(path.join(dir, '.ai', 'project', 'AGENTS.md'))) return dir;
+    if (exists(path.join(dir, '.ai', 'project', 'AGENTS.md'))) return canonicalPath(dir);
     const parent = path.dirname(dir);
     if (parent === dir) return null;
     dir = parent;
@@ -367,7 +336,7 @@ export function getMarkdownChecklistItems(markdownRaw, heading) {
     if (!match) continue;
     const text = cleanMarkdownValue(match[2]);
     if (!text) continue;
-    items.push({ checked: String(match[1]).toLowerCase() === 'x', condition: text });
+    items.push({ checked: String(match[1]).toLowerCase() === 'x', text });
   }
   return items;
 }
@@ -379,10 +348,6 @@ export function getRoadmapKickoff(roadmapRaw) {
     rawStatus: status,
     ...getMarkdownChecklistStats(roadmapRaw, 'Kickoff gate'),
   };
-}
-
-export function getCompletionCriteriaStats(statusRaw) {
-  return getMarkdownChecklistStats(statusRaw, 'Done when');
 }
 
 export function formatTaskRef(task) {
@@ -511,35 +476,6 @@ export function parseTaskMeta(metaRaw) {
     parse_error: null,
     schema_errors: schemaErrors,
   };
-}
-
-function getUnsupportedGovernanceFilesInWorktree(repoRoot) {
-  const unsupported = UNSUPPORTED_GOVERNANCE_FILES.filter((relative) =>
-    exists(path.join(repoRoot, relative))
-  );
-  for (const hook of UNSUPPORTED_GOVERNANCE_HOOKS) {
-    const raw = readText(path.join(repoRoot, hook.file));
-    if (raw !== null && hook.signatures.every((signature) => raw.includes(signature))) {
-      unsupported.push(hook.file);
-    }
-  }
-  for (const task of scanTasks(repoRoot)) {
-    const relative = path.join(task.relPath, '.ai-task.yaml');
-    if (exists(path.join(repoRoot, relative))) unsupported.push(toPosix(relative));
-  }
-  return [...new Set(unsupported.map(toPosix))].sort((a, b) => a.localeCompare(b));
-}
-
-export function getUnsupportedGovernanceFiles(repoRoot) {
-  const occurrences = [];
-  for (const worktree of listGitWorktrees(repoRoot)) {
-    for (const file of getUnsupportedGovernanceFilesInWorktree(worktree.path)) {
-      occurrences.push({ file, worktree_path: toPosix(path.resolve(worktree.path)) });
-    }
-  }
-  return occurrences.sort(
-    (a, b) => a.worktree_path.localeCompare(b.worktree_path) || a.file.localeCompare(b.file)
-  );
 }
 
 function formatJsonLines(rows) {
@@ -888,9 +824,9 @@ function resolveStaleTaskOccurrences(repoRoot, taskId, ordered, conflicts) {
     return failWith('concurrent-divergence');
   }
 
-  const currentRoot = path.resolve(repoRoot);
+  const currentRoot = canonicalPath(repoRoot);
   const leader =
-    leaders.find((state) => path.resolve(state.occurrence.worktree_path) === currentRoot) ||
+    leaders.find((state) => canonicalPath(state.occurrence.worktree_path) === currentRoot) ||
     leaders[0];
   return {
     leader: leader.occurrence,
@@ -919,12 +855,12 @@ function mergeTaskOccurrences(repoRoot, rows) {
     groups.set(key, group);
   }
 
-  const currentRoot = path.resolve(repoRoot);
+  const currentRoot = canonicalPath(repoRoot);
   const merged = [];
   for (const group of groups.values()) {
     const ordered = group.slice().sort((left, right) => {
-      const leftCurrent = path.resolve(left.worktree_path) === currentRoot ? 0 : 1;
-      const rightCurrent = path.resolve(right.worktree_path) === currentRoot ? 0 : 1;
+      const leftCurrent = canonicalPath(left.worktree_path) === currentRoot ? 0 : 1;
+      const rightCurrent = canonicalPath(right.worktree_path) === currentRoot ? 0 : 1;
       return leftCurrent - rightCurrent
         || String(left.worktree_path).localeCompare(String(right.worktree_path))
         || String(left.dev_docs_path).localeCompare(String(right.dev_docs_path));
@@ -1098,7 +1034,7 @@ function resolveResumeTaskContext({ repoRoot, taskId, branch }) {
     if (global.invalid) {
       return { ok: false, reason: 'invalid-metadata', source, branch, candidates: [global] };
     }
-    if (path.resolve(global.worktree_path) !== path.resolve(repoRoot)) {
+    if (canonicalPath(global.worktree_path) !== canonicalPath(repoRoot)) {
       return { ok: false, reason: 'other-worktree', source, branch, candidates: [global] };
     }
     if (!localResult.ok) {
@@ -1183,7 +1119,10 @@ export function listGitWorktrees(repoRoot) {
   for (const line of normalizeEol(raw).split('\n')) {
     if (line.startsWith('worktree ')) {
       if (current) worktrees.push(current);
-      current = { path: path.resolve(repoRoot, line.slice('worktree '.length)), branch: '(detached)' };
+      current = {
+        path: canonicalPath(path.resolve(repoRoot, line.slice('worktree '.length))),
+        branch: '(detached)',
+      };
       continue;
     }
     if (current && line.startsWith('branch refs/heads/')) {
@@ -1445,7 +1384,7 @@ function readResumeStatus(repoRoot, task) {
     current_phase: getMarkdownListField(statusRaw, 'Progress', 'Current phase') || null,
     next_step: getMarkdownListField(statusRaw, 'Progress', 'Next step') || null,
     blocker: getMarkdownListField(statusRaw, 'Progress', 'Blocker') || null,
-    completion_conditions: getMarkdownChecklistItems(statusRaw, 'Done when'),
+    acceptance_references: getMarkdownChecklistItems(statusRaw, 'Done when'),
     status_error: status.error || null,
   };
 }
@@ -1517,8 +1456,8 @@ export function cmdResume({ repoRoot, taskId, limit, scan, limitClamped, scanCla
   if (!statusDoc.current_phase) warnings.push(`Current phase is missing from ${statusDoc.path}.`);
   if (!statusDoc.next_step) warnings.push(`Next step is missing from ${statusDoc.path}.`);
   if (!statusDoc.blocker) warnings.push(`Blocker is missing from ${statusDoc.path}.`);
-  if (statusDoc.completion_conditions.length === 0) {
-    warnings.push(`Done when has no completion conditions in ${statusDoc.path}.`);
+  if (statusDoc.acceptance_references.length === 0) {
+    warnings.push(`Done when has no acceptance references in ${statusDoc.path}.`);
   }
   if (roadmap.kickoff_status === 'unknown') warnings.push(`Kickoff status is missing or invalid in ${roadmap.path}.`);
   if (linked.length === 0) warnings.push(`No commit carries "Task: ${task.id}"; linked progress is unknown, not zero.`);
@@ -1543,8 +1482,8 @@ export function cmdResume({ repoRoot, taskId, limit, scan, limitClamped, scanCla
       limiter.text(entry, RESUME_TEXT_LIMITS.path, `worktree.entries[${index}]`)
     ),
   };
-  if (statusDoc.completion_conditions.length > RESUME_MAX_COMPLETION_CONDITIONS) {
-    limiter.mark('status.completion_conditions');
+  if (statusDoc.acceptance_references.length > RESUME_MAX_ACCEPTANCE_REFERENCES) {
+    limiter.mark('status.acceptance_references');
   }
   const packet = {
     version: 4,
@@ -1565,14 +1504,14 @@ export function cmdResume({ repoRoot, taskId, limit, scan, limitClamped, scanCla
       ),
       next_step: limiter.text(statusDoc.next_step, RESUME_TEXT_LIMITS.text, 'status.next_step'),
       blocker: limiter.text(statusDoc.blocker, RESUME_TEXT_LIMITS.text, 'status.blocker'),
-      completion_conditions: statusDoc.completion_conditions
-        .slice(0, RESUME_MAX_COMPLETION_CONDITIONS)
+      acceptance_references: statusDoc.acceptance_references
+        .slice(0, RESUME_MAX_ACCEPTANCE_REFERENCES)
         .map((item, index) => ({
           checked: item.checked,
-          condition: limiter.text(
-            item.condition,
+          reference: limiter.text(
+            item.text,
             RESUME_TEXT_LIMITS.text,
-            `status.completion_conditions[${index}].condition`
+            `status.acceptance_references[${index}].reference`
           ),
         })),
     },

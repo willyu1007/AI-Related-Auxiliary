@@ -5,9 +5,9 @@
 
 ## Progress
 - State: planned
-- Current phase: discovery
+- Current phase: <!-- first alignment or discovery phase -->
 - Next step: <!-- one concrete action -->
 - Blocker: none
 
 ## Done when
-- [ ] <!-- high-level observable outcome -->
+- [ ] <!-- current acceptance reference; add only distinct references grounded in the conversation or requirements -->

@@ -10,103 +10,88 @@ description: >-
   session.
 ---
 
-Open and register a durable task bundle before implementation begins.
+Open one user-approved, non-duplicate tracked task with a clear outcome, project placement, and preliminary roadmap. Leave implementation readiness to later planning.
 
 ## Workflow
 
-1. **Apply the creation gate.** Open a tracked task when the user explicitly asks to track work or persist a repository roadmap, when the work introduces a product or system capability that belongs in the project hub, when the record must survive a pause or handoff, or when high-risk or cross-cutting work needs durable decisions, verification, or recovery context. Otherwise keep planning in the conversation and create no bundle. File count, step count, and estimated duration alone do not justify a tracked task.
+1. **Confirm durable tracking.** Open a task when any of these is true:
 
-2. **Provision and read the task system.** When the gate passes, run the idempotent installer before using task docs:
+   - The user explicitly requests a tracked task or durable roadmap.
+   - The work introduces a new product or system capability that belongs in the project hub.
+   - The record must survive a session boundary or handoff.
+   - Risk or cross-cutting impact requires durable decisions, verification, or recovery context.
+
+   Otherwise keep bounded, low-risk work in conversation. File count, step count, and estimated duration alone do not justify a task.
+
+2. **Protect the worktree and ensure governance.** Resolve the Git top-level and run the rest of this workflow from there. Record `git status --short`. Resolve the shared task-governance resource at `<this-skill>/../../resources/task-governance`; stop and report an incomplete system installation when it is missing. Preview its installer, then apply only the shown initialization or repair of missing files:
 
    ```bash
-   node <this-skill>/scripts/install-project-governance.mjs --repo-root .
+   node <task-governance-resource>/install.mjs --dry-run
+   node <task-governance-resource>/install.mjs
    ```
 
-   `<this-skill>` is the directory containing this `SKILL.md`. The installer creates or refreshes `dev-docs/CLAUDE.md`, `dev-docs/AGENTS.md`, `dev-docs/active/`, `dev-docs/archive/`, and the project-governance assets. It preserves project-owned hub data. Read `dev-docs/AGENTS.md` completely, then validate the existing layout before searching or creating anything:
+   The default installer never replaces an existing fixed asset. If it reports a difference, stop and show the affected paths; governance refresh is a separate, explicitly approved operation using `--dry-run --refresh` and then `--refresh`. Do not perform it as part of opening a task.
+
+   After governance is available, read `dev-docs/AGENTS.md` and `.ai/project/AGENTS.md` completely, then validate before interpreting or creating task data:
 
    ```bash
    node .ai/scripts/ctl-project-governance.mjs lint
    ```
 
-   Stop without creating a bundle when validation fails.
+   Stop on validation failure. Preserve all pre-existing changes throughout the workflow.
 
-3. **Search before creating.** Inspect active work in every linked worktree, including uncommitted bundles:
+3. **Search before creating.** Query several short domain and outcome terms; search covers linked worktrees and uncommitted bundles:
 
    ```bash
-   node .ai/scripts/ctl-project-governance.mjs query --text "<goal keywords>"
-   node .ai/scripts/ctl-project-governance.mjs query --status in-progress
-   node .ai/scripts/ctl-project-governance.mjs query --status blocked
+   node .ai/scripts/ctl-project-governance.mjs query --text "<domain term>" --json
+   node .ai/scripts/ctl-project-governance.mjs query --text "<outcome term>" --json
    ```
 
-   Read the goal of plausible matches. If one already covers the requested outcome, continue it instead of creating a duplicate. Multiple checkouts of the same task ID appear as one logical result with their occurrences in `worktrees`; when a row lists `stale_worktrees`, its facts come from the newest occurrence and the listed copies are merely behind. If `conflict` is true, inspect `conflicts` and stop rather than choosing a worktree or fact source. If `invalid` is true, repair the reported task metadata before deduplication or allocation.
+   Read plausible goals. Stop on `conflict` or `invalid`. Use the newest occurrence when only `stale_worktrees` is reported. Continue an existing active task instead of duplicating it; verify a `done` outcome before opening follow-up work, and use archived tasks only as prior evidence.
 
-4. **Define the task head.** Infer a one-sentence goal, high-level completion conditions, and a kebab-case slug. Ask only when an unresolved choice would materially change the goal, boundaries, or success conditions. Otherwise state the inferred values and proceed. Keep sequential work as phases when it serves the same goal and completion conditions. Split work only when it needs its own observable outcome, state, owner, handoff, verification, archive, separate worktree, or independently managed interface.
+4. **Synthesize and seed one outcome.** Distill the relevant user conversation and repository evidence into one coherent task. Later user corrections supersede earlier wording; preserve unresolved material conflicts instead of turning the discussion transcript into scope. Shape a clear goal, boundaries, current `Done when` acceptance references, and a kebab-case slug. Ask only when a user-owned choice would materially change the outcome. Split work only when part of it needs an independent outcome or lifecycle.
 
-5. **Align requirements when needed.** If the user requests requirements alignment or provides a requirements document, create `requirement.md` from `./templates/requirement.md` before the roadmap. Merge sources using this precedence:
+   Create `requirement.md` only when requirements alignment is requested or a requirements source is supplied. Resolve sources in this order: latest confirmed user instruction, confirmed `requirement.md`, host plan artifact, then model inference. Keep unresolved conflicts open.
 
-   1. Latest user-confirmed instruction
-   2. `requirement.md`
-   3. A host plan artifact, when available
-   4. Model inference
+   Create `dev-docs/active/<slug>/` from the required [status](../../resources/task-governance/templates/01-status.md), [roadmap](../../resources/task-governance/templates/00-roadmap.md), [architecture](../../resources/task-governance/templates/02-architecture.md), and [verification](../../resources/task-governance/templates/verification.md) templates according to `dev-docs/AGENTS.md`. When selected above, instantiate the [requirements template](../../resources/task-governance/templates/requirement.md) in the same directory. Preserve contract-required structure, adapt the detail, and remove authoring comments. Leave `.ai-task.json` absent; the next sync owns its ID and initial metadata.
 
-   Record unresolved conflicts in `00-roadmap.md`; never drop one silently.
+   Create the smallest truthful bundle that lets a fresh agent understand why the task exists, what is decided or still unknown, and the route currently proposed. A new task starts at `State: planned` with kickoff `pending`. Draft the major phases far enough for the user to judge the whole direction: make the first phase concrete and mark later phases provisional when evidence does not yet support their detail. Do not add effort estimates, quality scores, or speculative file-level steps. Read the [roadmap seed example](examples/sample-roadmap-seed.md) only when that initial shape is unclear.
 
-6. **Seed the bundle from its defined semantics.** Create `dev-docs/active/<slug>/` from `./templates/` according to `dev-docs/AGENTS.md`. Populate the current goal and `State: planned`. Write a roadmap seed containing confirmed scope, known constraints and relationships, material open decisions, risks, and one concrete alignment or discovery phase. Set the kickoff gate to `pending`; do not invent downstream implementation phases or close decisions merely to make the task look ready. Do not leave required sections as unfilled template placeholders; express missing evidence as a discovery action. Apart from a `requirement.md` justified in Step 5, do not create optional entries speculatively; actual work may add them later when each has a distinct durable purpose. Never use an optional entry as a second goal, status, plan, decision, architecture, or verification authority.
-
-7. **Allocate and register.** Let the control script validate the full sync change set, then create `.ai-task.json`, update the registry, and regenerate derived views under the shared governance lock:
+5. **Allocate identity and propose project placement.** Sync to allocate the task ID and its initial registry projection, then add 3–8 useful search keywords to `.ai-task.json`:
 
    ```bash
    node .ai/scripts/ctl-project-governance.mjs sync --apply
    ```
 
-   Read the allocated ID from `.ai-task.json`; never choose one manually. Then write 3–8 durable search keywords into its `keywords` array — domain terms a later session would search for — so cross-worktree query can find the task; sync preserves them. For a new project capability, inspect registry Feature titles and descriptions for the same intent. Reuse the existing Feature when appropriate; otherwise allocate one under the shared cross-worktree lock:
+   Inspect registry Features and identify the one that owns the capability. Propose a new Feature only for a distinct, confirmed project capability; otherwise propose the existing owner or leave genuinely unresolved ownership on `F-000`. Keep the initial projection on `F-000` until the user reviews this placement. Never choose an ID manually or hand-edit task projections and generated views.
+
+6. **Verify the opening.** Re-query the ID and slug, then lint:
 
    ```bash
-   node .ai/scripts/ctl-project-governance.mjs feature --title "<feature title>" --description "<intent>" --apply --json
+   node .ai/scripts/ctl-project-governance.mjs query --id T-### --json
+   node .ai/scripts/ctl-project-governance.mjs query --text "<slug>" --json
+   node .ai/scripts/ctl-project-governance.mjs lint
    ```
 
-   Map the task to the existing Feature and regenerate derived views:
+   Require one valid task ID, no duplicate outcome, an explicit project-placement proposal, valid keywords, and clean lint. Confirm that a fresh agent can recover the goal, state, acceptance references, open choices, preliminary route, next action, and kickoff reason from `01-status.md` and `00-roadmap.md`.
+
+7. **Review the opening with the user.** Keep the generated bundle uncommitted. Present a compact brief with the goal, scope and boundaries, current acceptance references, items needing confirmation, preliminary roadmap, known risks or unknowns, and project placement. Summarize each phase by purpose, expected outcome, and evidence or feedback point; do not ask the user to review the full generated documents.
+
+   Incorporate the user's feedback into the bundle. After the user confirms project placement, apply exactly that existing Feature mapping or create the confirmed Feature and map the task, then rerun sync and lint:
 
    ```bash
+   node .ai/scripts/ctl-project-governance.mjs feature --title "<confirmed feature title>" --description "<confirmed intent>" --apply --json
    node .ai/scripts/ctl-project-governance.mjs map --task T-### --feature F-### --apply
    node .ai/scripts/ctl-project-governance.mjs sync --apply
-   ```
-
-   Use `F-000` only when no Feature mapping is confirmed yet, and report that unresolved triage explicitly. Never hand-edit an AUTO block.
-
-8. **Verify uniqueness and validity.** Re-query the exact slug across worktrees, then lint:
-
-   ```bash
-   node .ai/scripts/ctl-project-governance.mjs query --text "<slug>"
    node .ai/scripts/ctl-project-governance.mjs lint
    ```
 
-   Stop if distinct task IDs represent the same goal, the same ID reports `conflict: true` — concurrent or unprovable divergence — or lint reports an error. A row that merely lists `stale_worktrees` is provably linear evolution, not a stop condition. Confirm the new task's metadata carries its 3–8 keywords before the checkpoint.
+   Skip Feature creation when an existing Feature was confirmed, and skip mapping when placement remains `F-000`. Repeat the brief only for materially changed parts. Do not commit until the user explicitly approves the opening or says there are no further changes. Open implementation choices may remain when they are recorded honestly and do not change the task's goal or boundary.
 
-9. **Create the initial checkpoint.** Stage only the new task and hub files, then commit the verified record with its task trailer. Include installed governance assets when this is the repository's first task. If repository policy or the user forbids commits, leave the files uncommitted and report that explicitly.
+8. **Create the opening checkpoint.** After approval, compare the full diff with the initial worktree state. Stage only the new bundle, its governance projection, and any first-install governance paths created by this workflow; use explicit paths and preserve foreign work. Commit the opening with its task trailer. If repository policy or the user forbids commits, leave the coherent bundle uncommitted and report that explicitly:
 
    ```bash
    git commit -m "docs(task): open T-### <slug>" -m "Task: T-###"
    ```
 
-10. **Hand back or continue.** Report the task ID, goal, bundle path, Feature mapping, kickoff status, relevant task relationships, and next three actions. When the user also requested implementation, continue into decision alignment and kickoff; do not change application code until the roadmap gate becomes `ready`. Otherwise stop after the durable checkpoint.
-
-## Rules
-
-- Never create a duplicate task for an outcome already covered in any linked worktree.
-- Do not modify application code, configuration, or database state while scaffolding.
-- Do not invent project-specific facts; use a discovery phase for missing evidence.
-- Never put secrets, credentials, or tokens in task or hub artifacts.
-- A host plan artifact is input; the task roadmap is the repository planning record.
-- The mandatory bundle and initial checkpoint precede implementation.
-
-## Reader test
-
-Before proceeding, verify that a fresh agent can read `01-status.md` and answer what the task is, its current state, and the next action; then read `00-roadmap.md` and answer which top-level choices remain open, which other tasks constrain or receive work from it, why kickoff is pending, and what alignment or discovery action comes first.
-
-## Assets
-
-- `./templates/` — required initial bundle templates and the conditional requirements input
-- `./examples/sample-roadmap-seed.md` — a worked pending roadmap seed
-- `./scripts/install-project-governance.mjs` — project governance installer
-- `./assets/project/` — repository governance guidance, code, and hub assets installed into a project
+   Report the task ID, path, Feature placement, kickoff status, checkpoint state, preserved foreign changes, and next action. If planning or implementation was requested, continue into planning. Otherwise, ask whether the user wants to plan the task now. Do not change application code until kickoff is `ready`. Never put secrets, credentials, or tokens in task or hub artifacts.

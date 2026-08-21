@@ -19,13 +19,14 @@ The hub consumes these task facts:
 - `.ai-task.json` supplies stable `T-###` identity, directory slug, and optional search keywords;
   it does not duplicate status, dates, or other lifecycle facts.
 - An active bundle's `01-status.md` supplies `planned | in-progress | blocked | done`, goal,
-  current phase, next step, blocker, and completion conditions.
+  current phase, next step, blocker, and the current `Done when` acceptance references.
 - `00-roadmap.md` supplies independent `pending | ready` kickoff readiness for queries and
   recovery context.
 - Archive location supplies effective `archived` state; an archived bundle contains exactly
   `.ai-task.json` and `summary.md`.
-- `done` requires kickoff `ready`, a non-empty fully checked completion checklist, and one
-  matching `pass` row with decisive evidence for every completion condition.
+- `done` requires kickoff `ready` and remains a task-bundle claim grounded in repository reality,
+  decisive verification, and required acceptance under `dev-docs/AGENTS.md`. The hub never derives
+  completion from `Done when` or roadmap phase criteria.
 
 ## Project graph
 
@@ -114,4 +115,5 @@ The hub consumes these task facts:
 ## Change control
 
 These semantics change only when the governance system itself is explicitly being revised. Keep
-this file, the control script, templates, task workflows, and behavioral checks aligned.
+the installer, this file, the control script, templates, and task workflows aligned. Replacing an
+installed fixed asset requires an explicit resource refresh.

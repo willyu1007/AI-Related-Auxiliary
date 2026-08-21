@@ -26,7 +26,7 @@ node .ai/scripts/ctl-project-governance.mjs resume --task T-###
 
 Use this JSON packet as the bounded starting point, then inspect the relevant diff for any uncommitted detail the packet cannot explain.
 
-- `01-status.md`: goal, state, current phase, next step, blocker, and completion conditions
+- `01-status.md`: goal, state, current phase, next step, blocker, and current acceptance references
 - `00-roadmap.md` kickoff gate: whether implementation may continue
 - linked commits: what landed
 - `git status --short` and relevant diffs: what remains uncommitted
@@ -47,8 +47,8 @@ Kickoff: pending / ready
 ### Goal
 One sentence describing the intended outcome.
 
-### Done when
-- [ ] Current observable completion condition.
+### Acceptance reference
+- Current `Done when` item relevant to recovery.
 
 ### Landed
 - Committed result and short SHA.

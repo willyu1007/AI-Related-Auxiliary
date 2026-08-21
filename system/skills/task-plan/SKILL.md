@@ -1,92 +1,152 @@
 ---
 name: task-plan
 description: >-
-  Use when a tracked task exists or has just been opened and needs top-level
-  decisions discussed and resolved, its roadmap made ready for implementation
-  kickoff, or its current route revised because new evidence changes scope,
-  design, sequencing, task relationships, risk, or verification. Do not use to
-  open a new task or merely synchronize completed work with repository reality.
+  Use when the user wants to plan or replan a tracked task, including when they
+  choose to continue after task creation.
 ---
 
-Converge one living roadmap without creating a second planning authority.
+Converge one task bundle into a coherent current plan without creating a second planning authority.
 
 ## Workflow
 
-1. **Recover the task and evidence.** Read `dev-docs/AGENTS.md`, then resolve exactly one existing
-   task across linked worktrees with an exact ID query or request-text query. A result with
+1. **Locate the task and recover its context.** Resolve the Git top-level and run the rest of this
+   workflow there. Read `dev-docs/AGENTS.md`. Prefer the task ID already established by the
+   current request or preceding task creation; otherwise query by request terms:
+
+   ```bash
+   node .ai/scripts/ctl-project-governance.mjs query --id T-### --json
+   node .ai/scripts/ctl-project-governance.mjs query --text "<request terms>" --json
+   ```
+
+   Continue only after the query identifies exactly one valid matching task. A result with
    `conflict: true` is a stop condition: show its occurrences and differing facts instead of
    choosing a source. `invalid: true` also stops planning until the reported task metadata is
-   repaired. Continue in another worktree only when the environment can target it safely
-   and the request clearly identifies it. Inspect the resolved status, roadmap, settled
-   architecture, linked commits, relevant worktree changes, and repository evidence. If no
-   tracked task exists, stop; this workflow does not create one.
+   repaired. Show multiple plausible candidates and ask the user which one to plan; if none
+   matches, report that and stop. Continue in another worktree only when the environment can
+   target it safely and the request clearly identifies it; otherwise report its path and stop.
 
-2. **Classify the planning moment.** Use the same roadmap for all three cases:
+   After selecting the task, pass its exact ID to context recovery rather than relying on an
+   implicit fallback:
 
-   | Moment | Outcome |
-   |---|---|
-   | Alignment | Material top-level choices move from `open` through a supported recommendation to `decided`. |
-   | Kickoff | The gate becomes `ready` and the first implementation phase is executable. |
-   | Replan | Invalidated assumptions or decisions are replaced, affected phases are rewritten, and readiness is re-established. |
+   ```bash
+   node .ai/scripts/ctl-project-governance.mjs resume --task T-###
+   ```
 
-   When evidence invalidates a decision or route that implementation depends on, set the kickoff gate to `pending` immediately, uncheck the gate items the evidence invalidated (lint rejects a pending gate whose items are all checked), and stop dependent implementation while replanning. Independent evidence gathering may continue.
+   Use the packet as a starting index, then inspect `01-status.md`, `00-roadmap.md`,
+   `02-architecture.md`, `requirement.md` when present, `verification.md`, linked commits,
+   relevant worktree changes, and repository evidence. Read `pitfalls.md` or other supporting
+   material when its stated purpose can affect the route.
 
-3. **Drive decision convergence.** Work from the `Decision alignment` table rather than a temporary plan document.
+2. **Converge on the planning direction.** Work from the user's direction, the task bundle, and
+   repository evidence.
 
-   - For a user-owned choice about goal, scope, product behavior, or acceptance, present the viable options, material tradeoffs, recommendation, and consequence. Mark it `decided` only after user confirmation.
-   - For a technical choice inside the approved boundary, gather repository or experimental evidence and decide it when the recorded closure condition is satisfied.
-   - Ask only about choices that need user ownership or materially block the route. Do not outsource ordinary technical discovery.
-   - Update the roadmap after a semantic event: a material question appears, the recommended direction changes, a decision closes or is superseded, a task relationship changes, or evidence changes sequencing, risk, recovery, or verification. Do not rewrite it after every conversational turn.
+   - If the user has proposed a solution, use it as the current direction. Otherwise, form a proposal from the user's goal, constraints, preferences, and the available evidence.
+   - Identify only top-level decisions that can materially change the solution or its overall route. Where the direction is not already clear, lead with a recommendation for the user to confirm or revise; resolve ordinary implementation details directly.
+   - Incorporate confirmed decisions and user corrections back into the proposal until it forms one coherent direction. Do not reopen settled choices unless new evidence invalidates them.
+   - If evidence invalidates a settled decision, assumption, or dependent route, immediately set kickoff to `pending`, uncheck the affected gate items, stop dependent implementation, and revise the affected decisions and phases. Independent evidence gathering may continue.
 
-4. **Propagate each conclusion once.** Keep the decision question, status, closure evidence, concise rationale, consequences, and working assumptions in `00-roadmap.md`. Put only the resulting current technical design and contracts in `02-architecture.md`; do not copy alternatives, decision ownership, closure status, or rationale history there. If a premise is invalidated, remove or revise any architecture conclusion that no longer remains settled. If the goal, completion conditions, current phase, next action, or blocker changed, update `01-status.md`. The first alignment or discovery checkpoint after opening changes `State: planned` to `State: in-progress`; kickoff readiness remains a separate dimension. Keep relationship rows directional and never copy another task's mutable state.
+3. **Reconcile the task bundle into the current plan.** Use the current direction, top-level
+   decisions, user feedback, and repository evidence to decide what must be added, revised,
+   retained, or removed so the bundle expresses one coherent current plan. Apply each fact
+   according to the document responsibilities in `dev-docs/AGENTS.md`; preserve required
+   structure, not stale content.
 
-5. **Build or revise the executable route.** While kickoff is `pending`, the first phase may be alignment or discovery and later implementation phases may remain absent rather than invented. Keep work as phases only while it shares this task's outcome, state, completion conditions, and lifecycle. If new evidence reveals work needing an independent outcome, owner, pause, verification, archive, worktree, or managed interface, record the relationship and creation trigger instead of expanding this roadmap to own it.
+   - Keep the task outcome, boundaries, and acceptance references aligned with the current direction. Leave unresolved material changes as decisions rather than recording them as settled facts.
+   - Add, revise, or remove decisions, assumptions, relationships, risks, settled design, verification, and supporting context according to their current relevance. Retain superseded content only while it still constrains the active route, transition, or recovery.
+   - Build or revise phases at the level supported by current evidence. They should collectively reach the task outcome and completion contract, express coherent results rather than technical layers, make the first unfinished phase executable, and keep unsupported later detail provisional. Keep work in this task only while it serves the same outcome and lifecycle; represent independent outcomes as related tasks.
+   - Re-evaluate progress, the next action, and the recorded kickoff gate after each material reconciliation. If the route exposes a missing top-level decision or contradiction, return to Step 2. Keep kickoff `pending` until every recorded gate item holds and the first implementation action can begin without reopening the overall route; only then set it to `ready`.
 
-   Prefer the smallest coherent implementation phase that produces an independently
-   demonstrable or decisive vertical result and can pass its own verification. If the
-   entire change is already one such unit, keep it as one phase. Do not split work by
-   technical layer when no phase can prove a meaningful outcome.
+   Treat the conversation as working context and the bundle as the current planning snapshot. Do
+   not preserve the transcript, duplicate facts across authorities, or retain obsolete content for
+   history. The first alignment or discovery checkpoint after opening changes `State: planned` to
+   `State: in-progress`; kickoff readiness remains a separate dimension. Repeat Steps 2 and 3 as
+   feedback or evidence materially changes the direction.
 
-   For a wide migration that cannot stay usable as ordinary vertical phases, use explicit
-   `expand -> migrate -> contract` phases:
+4. **Confirm the planning checkpoint with the user.** Keep planning changes uncommitted and
+   present the current result in the user's preferred language and a compact, decision-oriented
+   structure. Always include the outcome, current solution, top-level decisions, readiness, and
+   confirmation; omit only empty optional sections rather than sending the user to the full bundle:
 
-   - `expand` introduces the new path while keeping the old path recoverable;
-   - each `migrate` phase moves one bounded caller, data, or traffic batch and defines its
-     own verification and recovery boundary;
-   - when batches cannot close independently, keep them inside one `migrate` phase instead
-     of presenting them as independent checkpoints;
-   - `contract` starts only after no supported caller, data, or traffic dependency remains
-     on the old path, then removes the superseded path and unsupported dual track.
+   ```markdown
+   ### Planning checkpoint review — T-###
 
-   Do not complete the task before the `contract` phase passes verification. Before
-   changing the gate to `ready`, verify all of the following in the roadmap:
+   **Outcome**
+   - Goal:
+   - In scope:
+   - Out of scope:
+   - Acceptance references:
 
-   - every user-owned choice that blocks implementation is `decided`;
-   - current settled design and interfaces are reflected in `02-architecture.md`;
-   - the first implementation phase has an outcome, approach, ordered changes, affected boundaries, dependencies, exit criteria, verification, and recovery;
-   - every current completion condition has a decisive planned check in `verification.md`.
+   **Current solution**
+   - ...
 
-   Check all kickoff items, set `Status: ready`, and make `01-status.md` point to the first unfinished implementation action. Never use `ready` to mean merely that a discussion occurred.
+   **Top-level decisions**
+   - Confirmed: ...
+   - Needs confirmation: ... / None
 
-6. **Checkpoint the semantic change.** Refresh and validate governance, inspect the entire
-   worktree, and separate this task's paths from foreign changes. Stage only the planning bundle
-   and governance paths caused by this task, using explicit paths; never absorb an unrelated
-   staged or dirty change. Commit the coherent planning checkpoint with the task trailer. Batch
-   tightly related decisions; do not create a commit for wording-only churn.
+   **Route**
+   1. **Phase** — expected outcome
+
+   **Readiness**
+   - Kickoff: `ready` / `pending`
+   - Reason:
+   - First action:
+
+   **Material risks or relationships**
+   - ...
+
+   **Confirmation**
+   - Approve this planning checkpoint or provide corrections.
+   ```
+
+   After feedback, return to Steps 2 and 3, then present only the changed direction and its effects
+   on decisions, phases, and readiness unless the plan changed enough to require a new full
+   checkpoint. End with one explicit request to approve the checkpoint or provide corrections.
+   Proceed only after the user confirms that no further planning changes are needed; confirmation
+   does not close choices still recorded as unresolved.
+
+5. **Create the planning checkpoint.** After user confirmation, synchronize and validate
+   governance, then inspect the resulting task bundle, final diff, and entire worktree. Confirm
+   that the checkpoint still matches the approved plan and separate this task's paths from foreign
+   changes.
 
    ```bash
    node .ai/scripts/ctl-project-governance.mjs sync --apply
    node .ai/scripts/ctl-project-governance.mjs lint
+   ```
+
+   If validation or the final diff reveals a material planning change, return to Steps 2–4 before
+   committing. If no semantic planning change exists, do not create a checkpoint commit.
+   Otherwise, stage only the task bundle and governance paths caused by this task, using explicit
+   paths; never absorb an unrelated staged or dirty change. Commit the coherent checkpoint with
+   the task trailer:
+
+   ```bash
    git commit -m "docs(task): plan T-### <slug>" -m "Task: T-###"
    ```
 
-7. **Hand back or implement.** Report kickoff status, resolved and unresolved decisions, the changed route, affected task relationships, and the first executable action. If the request also authorizes implementation, begin or resume it only when kickoff is `ready`; a planning-only request stops after the checkpoint and handback. When the user asks for an HTML explanation, create it after the checkpoint from the current bundle and keep it outside the repository as a non-authoritative communication artifact.
+   If the user or repository policy rules out a commit, leave the validated checkpoint coherent
+   and uncommitted.
 
-## Rules
+6. **Hand back or continue.** In the user's preferred language, report the actual result without
+   repeating the confirmed planning brief. Omit immaterial fields:
 
-- Never create a temporary alignment, kickoff, or replan document beside the roadmap.
-- Never leave kickoff `ready` after a gating premise or route is invalidated.
-- Never start or continue decision-dependent implementation while kickoff is `pending`.
-- Never mark a user-owned choice `decided` without confirmation or a technical choice `decided` without its recorded evidence.
-- Never turn implementation detail that does not change the route into roadmap churn.
-- Never let an HTML brief, host plan, or conversation become a second task authority.
+   ```markdown
+   ### Planning checkpoint result — T-###
+
+   - Kickoff:
+   - Checkpoint:
+   - Remaining decisions or blockers:
+   - Next action:
+   - Material task relationships or preserved foreign changes:
+   ```
+
+   If kickoff is `ready` and implementation scope is not already clear, recommend an execution
+   boundary and list the current phases as cumulative stopping points, using outcomes rather than
+   implementation detail. Mark provisional boundaries honestly and let the user choose how far to
+   proceed. Existing implementation authorization takes precedence; do not ask again when the user
+   has already selected a boundary or authorized the complete task.
+
+   Planning approval alone does not authorize implementation. Begin or resume implementation only
+   within the authorized boundary and while kickoff remains `ready`; any selected scope remains
+   subject to newly discovered top-level decisions and required external approvals. Otherwise stop
+   after the handback.
