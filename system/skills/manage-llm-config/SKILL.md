@@ -43,11 +43,9 @@ Use the project's shared LLM configuration loader. If none exists, add one minim
 
 1. Start from the agent or workflow code involved in the task. Identify its LLM calls by their roles in the feature, such as `planner`, `generate`, or `review`.
 2. Follow the code's existing feature configuration reference. For a new feature, derive a stable kebab-case feature ID from its name.
-3. Reuse the project's shared LLM configuration loader, or add a minimal one when absent.
-4. Create or update `.ai/llm/<feature-id>/config.json` and its prompt files. Move the corresponding provider, model, parameters, prompt, and tool configuration out of code so each value has one runtime source. Keep multiple calls as named entries under `calls`.
-5. Reuse or add the required provider in `.ai/llm/providers.json`.
-6. Wire the feature code to the configuration, keep later changes in the same feature directory, and ensure `.ai/llm` is included in the runtime or deployment artifact.
-7. Verify JSON parsing, prompt paths, provider resolution, environment-backed credentials, removal of duplicate hard-coded values, and relevant feature behavior.
+3. Move the provider, model, parameters, prompt, and tool configuration out of code into the feature directory so each value has one runtime source.
+4. Wire the feature code to the configuration, keep later changes in the same feature directory, and ensure `.ai/llm` is included in the runtime or deployment artifact.
+5. Verify JSON parsing, prompt paths, provider resolution, environment-backed credentials, removal of duplicate hard-coded values, and relevant feature behavior.
 
 ## Assets
 

@@ -9,10 +9,6 @@ TDD develops one observable behavior at a time through a red → green → refac
 
 Use the project's domain language, relevant design decisions, existing test organization, and test tooling.
 
-## What a good test is
-
-Tests verify behavior through public interfaces, not implementation details. Code can change entirely; tests shouldn't. A good test reads like a specification: "user can checkout with valid cart" tells you exactly what capability exists, and it survives refactors because it doesn't care about internal structure.
-
 Read [references/tests.md](references/tests.md) when test shape or quality is uncertain. Read [references/mocking.md](references/mocking.md) before introducing a mock or changing code for mockability.
 
 ## Seams: where tests go

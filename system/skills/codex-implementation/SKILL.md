@@ -18,10 +18,8 @@ Claude owns task scoping, diff review, verification, and final reporting. Codex 
 3. Keep related changes in one Codex run when they share context and acceptance criteria. Split only independent scopes or work that cannot be verified clearly as one unit.
 4. Create a temporary artifact directory for Codex's report.
 5. Run `codex exec` with repo write access.
-6. After Codex exits, inspect `git status` and `git diff`.
-7. Run proportionate verification yourself.
-8. If the diff or verification exposes a bounded Codex-created problem, correct it directly or give Codex an evidence-backed follow-up, then repeat inspection and verification. Do not repeat the same failed approach.
-9. Report what Codex changed, what Claude verified, and any remaining risks.
+6. After Codex exits, run the review loop below.
+7. Report what Codex changed, what Claude verified, and any remaining risks.
 
 Use this command shape:
 
@@ -93,7 +91,7 @@ Report:
 
 ## Review After Codex
 
-Always inspect Codex's diff before telling the user the work is done. When a bounded defect or failed check is attributable to Codex's changes, correct it directly or provide a follow-up containing the new evidence, then rerun the relevant verification. Continue while each iteration makes progress; stop when the same failure recurs, requirements are ambiguous, required access or dependencies are unavailable, or Codex changes cannot be separated safely from user work.
+Always inspect `git status` and Codex's diff before telling the user the work is done, and run proportionate verification yourself. When a bounded defect or failed check is attributable to Codex's changes, correct it directly or provide a follow-up containing the new evidence, then rerun the relevant verification. Continue while each iteration makes progress; stop when the same failure recurs, requirements are ambiguous, required access or dependencies are unavailable, or Codex changes cannot be separated safely from user work.
 
 Revert only Codex-created mistakes when you are sure they are not user changes. Remove unrelated Codex changes and continue when they can be separated safely; otherwise stop and report the diff summary.
 

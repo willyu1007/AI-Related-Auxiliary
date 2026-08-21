@@ -126,10 +126,7 @@ Treat edits to surviving files as itemized changes with proposed diffs. If an ed
 ## Guardrails
 
 - Act only on explicitly approved paths and diffs. A batch approval covers only the presented batch; each itemized or report-only finding requires its own named approval or instruction.
-- Require itemized approval for every untracked target, and stage it recoverably outside the repository before permanent deletion.
 - Do not touch gitignored files except approved `.ai/.tmp/` candidates. Never treat `.env`, credential, token, or secret files as cleanup candidates, and never quote their contents.
-- Do not change supported behavior or rewrite live logic; classify such findings as report-only.
 - Never delete, weaken, or bypass a check to make verification pass.
 - Preserve unrelated working-tree changes. Never stage or commit them, and never mix cleanup changes into a feature commit.
-- Never modify task records or their archives.
 - When the same class of leftover recurs, recommend an upstream lifecycle rule in the handback; do not change that lifecycle unless separately requested.

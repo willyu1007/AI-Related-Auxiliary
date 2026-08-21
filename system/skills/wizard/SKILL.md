@@ -11,7 +11,7 @@ A wizard is an interactive Bash script. Treat it as a temporary handoff artifact
 
 ## Isolate the human boundary
 
-Inspect the project and target workflow before asking for information. Complete available investigation, preparation, configuration, and validation first.
+Inspect the project and target workflow before asking for information.
 
 A step belongs in the wizard only when it requires something unavailable to the agent, such as:
 
@@ -36,13 +36,9 @@ Copy [template.sh](template.sh) to the target path. Keep the library above the `
 - Before a secret is written to a file, confirm the destination is ignored by version control; otherwise write it to the project's secret store or stop and tell the user.
 - Use `confirm` immediately before an irreversible user action.
 
-The wizard may automate only the immediate handoff around a user action, such as opening a destination, capturing input, persisting it, or recording completion. Keep the surrounding automatable workflow with the agent.
-
 ## Verify and hand off
 
 - Run `bash -n <script>` and `shellcheck` when available, then make the script executable.
 - Trace every captured value to its intended destination and verify external names against project configuration.
 - Do not run the wizard end to end; it depends on user access and input.
 - Tell the user how to run it and what the agent can continue once it finishes.
-
-Retain the wizard only when the user wants a repeatable project workflow. Otherwise treat it as a scratch artifact for the current transition.

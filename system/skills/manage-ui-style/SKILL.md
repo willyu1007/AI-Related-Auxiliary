@@ -33,17 +33,6 @@ the project.
 - **Create:** Introduce a new pattern only when its responsibility, behavior, or
   constraints materially differ from what the project already provides.
 
-## Choose the work
-
-- **Implement** when the direction and project pattern are clear.
-- **Explore** when the user requests alternatives or layout, information hierarchy,
-  or the primary action or affordance is materially unresolved.
-- **Crystallize** when an accepted pattern should guide later work.
-- **Audit** when the user requests a drift or design-system check, with correction
-  only when authorized.
-
-Combine these only as needed to complete the requested outcome.
-
 ## Mock, choose, and implement
 
 A change is non-trivial when confirming its direction before production could avoid

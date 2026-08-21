@@ -51,46 +51,11 @@ Tell Codex:
 - Known launch commands, test credentials, seed data, deep links, or fixtures.
 - Whether source edits are allowed. Default to no edits.
 - Where screenshots, logs, and the final report should be saved.
-- To return pass, fail, or blocked, plus steps performed, observed behavior, screenshot paths, and actionable feedback.
+- Never to assume a port: read the actual URL from the server's startup output, since the default may already be in use, and poll it until it responds before interacting.
+- To capture a screenshot on any failure or unexpected state before reporting.
+- To return pass, fail, or blocked, plus steps performed, observed behavior, screenshot paths, and actionable feedback. `blocked` means the environment never became usable — an unreachable server after a reasonable wait is blocked, not fail.
 
 Keep the prompt specific enough that Codex does not need the surrounding Claude conversation.
-
-## Example Prompt
-
-```text
-You are verifying implemented behavior for Claude using computer use.
-
-Repository: /absolute/path/to/repo
-Artifact directory: <repo>/.ai/.tmp/codex-computer-use.xxxxxx
-
-Behavior to verify:
-- The command palette opens with Cmd+K and closes with Escape.
-
-Platform / app type:
-- Web app, launched locally.
-
-Launch / setup:
-- Start the dev server using the project's dev command (e.g. `pnpm dev` or `bun dev`).
-- Do not assume a port. Read the actual URL and port from the server's startup output; the default may already be in use.
-- Poll the printed URL until it responds before interacting. If the server never becomes reachable within a reasonable wait, stop and report `blocked` with the captured output.
-
-Constraints:
-- Do not edit source files.
-- Do not act on real accounts or production data.
-
-Artifacts:
-- Save all screenshots and logs under the artifact directory, using absolute paths.
-- List every screenshot path explicitly in the final report.
-- Capture a screenshot on any failure or unexpected state before reporting.
-- Write the final report to the report path.
-
-Report:
-- Overall result: pass, fail, or blocked
-- Steps performed
-- Observed behavior
-- Screenshot paths
-- Actionable feedback
-```
 
 ## Reporting Back
 
