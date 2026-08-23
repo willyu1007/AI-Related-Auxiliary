@@ -30,7 +30,6 @@ const SKILL_CROSSLINK_ALLOWLIST = new Map([
     new Set([
       'cleanup-project-residue',
       'review-code',
-      'task-handoff',
       'task-plan',
       'task-resume',
       'task-start',

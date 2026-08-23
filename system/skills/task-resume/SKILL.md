@@ -1,86 +1,52 @@
 ---
 name: task-resume
 description: >-
-  Use when the user asks to continue, pick up, or recover context for a specific
-  existing tracked task, including when the current branch identifies that task.
-  Do not use for portfolio-wide status questions or task creation.
+  Use when continuing, picking up, or recovering an active tracked task
+  requires reconstructing its working context from repository state.
 ---
 
-## Fast path
+## Resolve and load the task
 
-Read `dev-docs/AGENTS.md` before interpreting a task bundle.
+Resolve the Git top-level and run the rest of this workflow there. Read `dev-docs/AGENTS.md`, then resolve one active task through the first applicable branch:
 
-Resolve a named task ID directly. The command stops if linked worktrees disagree or the task is
-only available in another worktree:
+- With a reliable task ID, run:
 
-```bash
-node .ai/scripts/ctl-project-governance.mjs resume --task T-###
-```
+  ```bash
+  node .ai/scripts/ctl-project-governance.mjs resume --task T-###
+  ```
 
-When the request names work but not an ID, search the goal, slug, keywords, and linked worktrees first:
+- When the request identifies work but not an ID, query with distinctive request terms. Continue only from one relevant, valid active candidate, then resume it by exact ID:
 
-```bash
-node .ai/scripts/ctl-project-governance.mjs query --text "<request terms>" --json
-```
+  ```bash
+  node .ai/scripts/ctl-project-governance.mjs query --text "<request terms>" --json
+  ```
 
-- A candidate with `conflict: true`: show its `worktrees` and differing facts from `conflicts`. A `documents` entry carries a `reason` — `concurrent-divergence` needs the content-equivalence groups in `values` reconciled; `unrelated-history`, `missing-lineage`, and `unreadable-evidence` need the Git evidence named in `evidence` repaired. Do not choose a worktree or resume the task until the disagreement is resolved.
-- A candidate with `invalid: true`: show `metadata_errors` and stop until the identity record is repaired.
-- A candidate listing `stale_worktrees`: its facts come from the newest occurrence. When that occurrence is another worktree, `resume` stops with `other-worktree`; recover there or bring this worktree up to date first.
-- One relevant candidate in the current worktree: pass its ID to `resume`.
-- One relevant candidate in another worktree: do not create a duplicate task. Read it there; continue there only when the execution environment can safely target that worktree and the request clearly refers to it. Otherwise report its path and ask before changing worktrees.
-- Multiple plausible candidates: show the compact candidates and ask which one.
-- No candidate: report that no tracked task matches. Use the task-opening workflow only if the user wants to open one.
+- Without reliable task identity, let the runner use the branch identity, then the sole `in-progress` task or, when none exists, the sole `blocked` task:
 
-When neither the request nor the branch identifies a task, this command may resolve the sole `in-progress` task, then the sole `blocked` task:
+  ```bash
+  node .ai/scripts/ctl-project-governance.mjs resume
+  ```
 
-```bash
-node .ai/scripts/ctl-project-governance.mjs resume
-```
+On ambiguity or no match, report the compact result and stop instead of guessing. Preserve runner evidence for invalid metadata, conflicting occurrences, stale worktrees, or a task owned by another worktree. Recover in the authoritative worktree only when the request and environment already permit it; otherwise report the path and ask before changing worktrees. Read `.ai/project/AGENTS.md` only when cross-worktree diagnosis is needed.
 
-A non-zero exit carries `error.reason`; report that reason and do not guess or continue recovery.
+An archived bundle is historical evidence, not an active resume target. A non-zero exit stops recovery. On success, use the returned packet as the bounded first read and carry its `warnings` and `truncated_fields` into context reconstruction.
 
-## Recovery order
+## Reconstruct the working context
 
-The packet is the bounded first read. Verify or reconstruct it manually in this order when the command is unavailable or a field conflicts with repository reality:
+Use the packet first. Treat its `warnings` and `truncated_fields` as signals for selective expansion, then follow the document responsibilities and bundle-reading order in `dev-docs/AGENTS.md`.
 
-1. Resolve the task from an explicit `T-###`, a unique request-text match, the branch ID, the sole `in-progress` bundle, then the sole `blocked` bundle.
-2. Read `01-status.md` for the goal, `State:`, current phase, next step, blocker, and current acceptance references.
-3. Read the roadmap kickoff gate. If it is `pending`, do not resume decision-dependent implementation; recover the open decisions and current alignment or discovery action instead.
-4. If `pitfalls.md` exists, read its current hazards.
-5. Rebuild the committed timeline from exact `Task: T-###` trailers. An empty timeline means unknown progress, not zero progress.
-6. Inspect `git status --short` and the relevant diff. Uncommitted changes may be newer than every record.
-7. Read further only to answer an unresolved question: `00-roadmap.md` for decision alignment, task relationships, and the remaining implementation route; optional `implementation.md` for the current realized implementation map; `verification.md` for current decisive evidence; and any other task-local supporting document only for its stated distinct purpose.
+Read `02-architecture.md` when settled design, boundaries, or contracts constrain the next action. Read optional `implementation.md` only when architecture is not enough to locate the realized behavior and operational entry points.
 
-## Reconciliation
+An empty linked commit timeline means progress is unknown, not zero.
 
-Use each source only for what it can prove:
+## Reconcile and continue
 
-- `01-status.md` owns the intended goal, current state, and next action.
-- Git history owns what was committed.
-- The worktree owns what is currently uncommitted.
-- `00-roadmap.md` owns top-level decision alignment, current-task relationships, and the phased implementation route. Another task's own status file, not a relationship row, owns that task's state.
+Reconcile the packet under the authority model in `dev-docs/AGENTS.md`. Surface disagreements instead of silently choosing one source.
 
-Report disagreements instead of silently selecting one source. If the user asked only for status, stop after the report. If the user asked to continue the work, resolve pending decision alignment or replanning before implementation; once work proceeds, synchronize a checkpoint whenever a phase lands or a check runs.
+Context reconstruction is read-only. When the enclosing request authorizes continuing or changing the task, return to the current execution workflow from the recovered next action.
 
-## Output
+## Communicate when needed
 
-- Task ID, slug, docs path, and how it was resolved
-- Current goal, `State:`, and next step
-- Current phase, blocker, and current acceptance references
-- Kickoff status and any gate that prevents implementation
-- What the linked commits prove landed
-- Relevant uncommitted changes and any disagreement with the record
-- Relevant do-not-repeat warnings, when any are recorded
-- The next concrete actions
+When the user explicitly asks to recover, review, or resume the task, summarize the recovered task, goal and state, landed and uncommitted evidence, relevant blocker or uncertainty, and next action in the user's preferred language. If recovery happens internally during continuous work, continue without a standalone status report.
 
-## Rules
-
-- Never let a branch ID trigger recovery for an unrelated request.
-- Never guess between plausible tasks or duplicate a task already open in another worktree.
-- Context recovery is read-only. Modify code or records only when the user's request also asks to continue or change the task.
-- Never resume decision-dependent implementation while kickoff is `pending`.
-- Do not read the whole bundle by default; expand from status only when the next decision needs it.
-
-## Contract
-
-For an active task, progress is `01-status.md` `## Progress` → `State:`. A bundle under `dev-docs/archive/` is `archived` by location.
+If recovery needs the user to choose a task or worktree, or to resolve conflicting evidence, report only the evidence and decision needed to proceed.

@@ -73,10 +73,10 @@
 ## Kickoff gate
 
 - Status: pending
-- [ ] Every user-owned choice that blocks implementation is decided.
-- [ ] Settled design and interfaces are reflected in `02-architecture.md`.
-- [ ] The major route connects the current Goal to the completion contract, and the first implementation phase is executable with exit, verification, and recovery criteria.
-- [ ] Verification needed for the proposed route is identified in `verification.md`.
+- [ ] Decisions: the flag-evaluation boundary choice is decided with its named confirmation.
+- [ ] Design: the settled evaluation contract is reflected in `02-architecture.md`.
+- [ ] Route: the major route connects the current Goal to the completion contract, and Phase 1 is executable with exit, verification, and recovery criteria.
+- [ ] Verification: checks for the enabled, disabled, and rollback paths are identified in `verification.md`.
 
 ## Risks and recovery
 

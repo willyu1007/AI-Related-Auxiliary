@@ -55,12 +55,12 @@
 ## Kickoff gate
 
 - Status: pending
-- [ ] Every user-owned choice that blocks implementation is decided.
-- [ ] Settled design and interfaces are reflected in `02-architecture.md`.
-- [ ] The major route connects the current Goal to the completion contract, and the first implementation phase is executable with exit, verification, and recovery criteria.
-- [ ] Verification needed for the proposed route is identified in `verification.md`.
+- [ ] Decisions: every user-owned choice that blocks implementation is decided.
+- [ ] Design: settled design and interfaces are reflected in `02-architecture.md`.
+- [ ] Route: the major route connects the current Goal to the completion contract, and the first implementation phase is executable with exit, verification, and recovery criteria.
+- [ ] Verification: verification needed for the proposed route is identified in `verification.md`.
 
-<!-- `ready` means every item is checked and the first implementation action can start without reopening the route. -->
+<!-- Keep the four category prefixes; adapt the wording after each colon to the task. `ready` means every item is checked and the first implementation action can start without reopening the route. -->
 
 ## Risks and recovery
 

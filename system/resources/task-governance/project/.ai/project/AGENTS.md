@@ -54,10 +54,14 @@ The hub consumes these task facts:
 
 - `registry.json` `ideas` is a low-frequency parking place for “worth remembering, not now” notes.
 - Each item contains only `idea`, with enough context to understand it later.
-- Ideas have no ID, registration, status, dashboard projection, or separate document. When one is
-  selected, implement it directly if the work is bounded and low risk; create a normal dev-docs
-  task bundle only when durable tracking is otherwise justified. Delete the Idea after direct
-  implementation succeeds or the task bundle takes over.
+- Ideas have no ID, registration, status, dashboard projection, or separate document. Selecting an
+  Idea grants no implementation authorization and adds no tracking requirement of its own: apply
+  the same task-creation gate as any other incoming work — an explicit tracking request, a record
+  that must survive sessions or handoff, risk or cross-cutting impact needing durable decisions,
+  or an outcome that belongs in the project hub. Work that triggers none of these may be
+  implemented directly; work that triggers any of them opens a normal dev-docs task bundle even
+  when it is not a new capability. Delete the Idea after direct implementation succeeds or the
+  task bundle takes over.
 
 ## Consistency and worktrees
 
@@ -93,6 +97,9 @@ The hub consumes these task facts:
 - Registry Milestone and Feature values are project-level semantic decisions, so they do not use
   the task rule: any same-ID divergence across linked worktree registries is a stop condition
   until the registries are reconciled.
+- `project-query --json` returns the Milestone and Feature union across linked worktrees. Each
+  logical row preserves its worktree occurrences and exact same-ID semantic conflicts; conflicted
+  values remain unset until reconciled.
 - Changing a task-to-Feature mapping stays fail-closed while the task has multiple checked-out
   copies; resolve to one writable occurrence or coordinate every occurrence as one edit.
 - `invalid: true` means at least one occurrence has invalid task metadata. `metadata_errors`

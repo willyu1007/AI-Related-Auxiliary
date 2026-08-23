@@ -15,7 +15,6 @@ import {
   getBundleStatusFromStatusDoc,
   getHubDir,
   getRegistryPath,
-  listGitWorktrees,
   loadRegistry,
   normalizeEol,
   parseTaskMeta,
@@ -30,6 +29,7 @@ import {
   toPosix,
 } from './governance-read.mjs';
 import { getRegistryDataErrors } from './governance-lint.mjs';
+import { readProjectGraph } from './governance-project-read.mjs';
 
 function getTaskRowErrorsFromRows(tasks) {
   const errors = [];
@@ -212,7 +212,7 @@ function findTaskBranchTips(repoRoot, taskId) {
   return tips;
 }
 
-export function cmdSync({ repoRoot, dryRun, apply, prune = false }) {
+export function cmdSync({ repoRoot, dryRun, apply, prune = false, taskId = null }) {
   const actions = [];
   const errors = [];
   const warnings = [];
@@ -254,10 +254,34 @@ export function cmdSync({ repoRoot, dryRun, apply, prune = false }) {
     return { ok: succeeded, errors, warnings, actions };
   };
 
-  const taskConflicts = getTaskRowErrorsFromRows(queryTasks({ repoRoot }));
+  if (taskId && !TASK_ID_RE.test(taskId)) {
+    errors.push(`Invalid --task (expected T-###, got "${taskId}").`);
+    return finish();
+  }
+  if (taskId && prune) {
+    errors.push('Scoped sync cannot prune registry tasks.');
+    return finish();
+  }
+
+  const queriedTasks = queryTasks(taskId ? { repoRoot, id: taskId } : { repoRoot });
+  const taskConflicts = getTaskRowErrorsFromRows(queriedTasks);
   if (taskConflicts.length > 0) {
     errors.push(...taskConflicts);
     return finish();
+  }
+  if (taskId) {
+    const selected = queriedTasks.find((task) => task.id === taskId);
+    const currentWorktree = canonicalPath(repoRoot);
+    const staleHere = selected?.stale_worktrees?.some(
+      (occurrence) => canonicalPath(occurrence.worktree_path) === currentWorktree
+    );
+    if (staleHere) {
+      errors.push(
+        `Task "${taskId}" has a newer occurrence in another linked worktree. ` +
+          'Recover there or update this worktree before scoped sync.'
+      );
+      return finish();
+    }
   }
 
   const registryPath = getRegistryPath(repoRoot);
@@ -274,50 +298,65 @@ export function cmdSync({ repoRoot, dryRun, apply, prune = false }) {
     return finish();
   }
   const reg = loaded.registry;
-  const projectGraph = collectProjectGraphFromAllWorktrees(repoRoot, { repairingRepoRoot: repoRoot });
+  const projectGraph = readProjectGraph({ repoRoot, repairingRepoRoot: repoRoot });
   errors.push(...projectGraph.errors);
   if (errors.length > 0) return finish();
 
   const tasks = scanTasks(repoRoot);
-
-  // Allocate IDs for missing meta
-  const existingIds = new Set();
-  for (const task of tasks) {
-    const raw = readText(task.metaPath);
-    if (raw === null) continue;
-    existingIds.add(parseTaskMeta(raw).task_id);
+  let tasksToSync = tasks;
+  if (taskId) {
+    tasksToSync = tasks.filter((task) => {
+      const raw = readText(task.metaPath);
+      if (raw === null) return false;
+      const meta = parseTaskMeta(raw);
+      return meta.parse_error === null && meta.schema_errors.length === 0 && meta.task_id === taskId;
+    });
+    if (tasksToSync.length === 0) {
+      errors.push(
+        `Task "${taskId}" has no valid bundle in this worktree. Repair its identity before scoped sync.`
+      );
+      return finish();
+    }
+    if (tasksToSync.length > 1) {
+      errors.push(`Task "${taskId}" appears in multiple bundles in this worktree.`);
+      return finish();
+    }
   }
 
-  // Also include any IDs already present in the registry to avoid reusing historical IDs.
-  for (const task of reg.tasks) existingIds.add(task.id);
-
-  // And IDs linked from any branch's history. The working tree is blind to other branches, so a
-  // linked worktree would otherwise reallocate an ID a sibling worktree already committed.
-  for (const id of taskIdsFromAllBranches(repoRoot)) existingIds.add(id);
-
-  // Linked worktrees may contain valid task metadata that has not been committed yet. Include it
-  // while holding the shared Git-common-dir lock so concurrent syncs cannot choose the same ID.
-  const worktreeBundleIds = new Set(taskIdsFromAllWorktrees(repoRoot));
-  for (const id of worktreeBundleIds) existingIds.add(id);
-
-  function nextId() {
-    // Allocate monotonically increasing IDs (best-effort) to avoid reusing historical task IDs.
-    let max = 0;
-    for (const id of existingIds) {
-      const n = Number(String(id).slice(2));
-      if (Number.isFinite(n) && n > max) max = n;
+  let allocateTaskId = null;
+  let worktreeBundleIds = new Set();
+  if (!taskId) {
+    const existingIds = new Set();
+    for (const task of tasks) {
+      const raw = readText(task.metaPath);
+      if (raw === null) continue;
+      existingIds.add(parseTaskMeta(raw).task_id);
     }
+    for (const task of reg.tasks) existingIds.add(task.id);
+    for (const id of taskIdsFromAllBranches(repoRoot)) existingIds.add(id);
 
-    let candidate = max + 1;
-    while (candidate <= 999) {
-      const id = `T-${String(candidate).padStart(3, '0')}`;
-      if (!existingIds.has(id)) {
-        existingIds.add(id);
-        return id;
+    // Include valid, uncommitted metadata from linked worktrees while holding the shared lock.
+    worktreeBundleIds = new Set(taskIdsFromAllWorktrees(repoRoot));
+    for (const id of worktreeBundleIds) existingIds.add(id);
+
+    allocateTaskId = () => {
+      let max = 0;
+      for (const id of existingIds) {
+        const n = Number(String(id).slice(2));
+        if (Number.isFinite(n) && n > max) max = n;
       }
-      candidate++;
-    }
-    throw new Error('Exhausted task IDs (T-001..T-999).');
+
+      let candidate = max + 1;
+      while (candidate <= 999) {
+        const id = `T-${String(candidate).padStart(3, '0')}`;
+        if (!existingIds.has(id)) {
+          existingIds.add(id);
+          return id;
+        }
+        candidate++;
+      }
+      throw new Error('Exhausted task IDs (T-001..T-999).');
+    };
   }
 
   const todayStr = today();
@@ -329,7 +368,7 @@ export function cmdSync({ repoRoot, dryRun, apply, prune = false }) {
     tasksById.set(t.id, t);
   }
 
-  for (const task of tasks) {
+  for (const task of tasksToSync) {
     const statusRaw = readText(task.statusPath);
     const metaRaw = readText(task.metaPath);
 
@@ -348,7 +387,11 @@ export function cmdSync({ repoRoot, dryRun, apply, prune = false }) {
     }
 
     if (metaRaw === null) {
-      const id = nextId();
+      if (!allocateTaskId) {
+        errors.push(`${toPosix(task.relPath)}: Scoped sync cannot allocate a missing task ID.`);
+        continue;
+      }
+      const id = allocateTaskId();
       const meta = {
         task_id: id,
         slug: task.slug,
@@ -548,7 +591,7 @@ export function cmdMap({ repoRoot, taskId, featureId, dryRun, apply }) {
 
   const reg = loaded.registry;
   errors.push(...getRegistryWriteErrors(reg));
-  const projectGraph = collectProjectGraphFromAllWorktrees(repoRoot);
+  const projectGraph = readProjectGraph({ repoRoot });
   errors.push(...projectGraph.errors);
   if (errors.length > 0) return { ok: false, errors, actions };
   const registryPath = loaded.path;
@@ -624,75 +667,6 @@ function normalizeFeatureTitle(value) {
   return String(value || '').trim().replace(/\s+/g, ' ').toLowerCase();
 }
 
-function collectProjectGraphFromAllWorktrees(repoRoot, { repairingRepoRoot = null } = {}) {
-  const milestones = [];
-  const features = [];
-  const errors = [];
-  for (const worktree of listGitWorktrees(repoRoot)) {
-    const loaded = loadRegistry(worktree.path);
-    if (!loaded.registry) {
-      if (!loaded.error) continue;
-      errors.push(
-        `Cannot read project registry in linked worktree ${toPosix(worktree.path)}: ` +
-          `${loaded.error}.`
-      );
-      continue;
-    }
-    const canRepairTaskProjections =
-      repairingRepoRoot && canonicalPath(worktree.path) === canonicalPath(repairingRepoRoot);
-    const registryErrors = getRegistryDataErrors(loaded.registry, {
-      validateTasks: !canRepairTaskProjections,
-    });
-    if (registryErrors.length > 0) {
-      errors.push(
-        ...registryErrors.map(
-          (error) => `Linked worktree ${toPosix(worktree.path)} has invalid registry data: ${error}`
-        )
-      );
-      continue;
-    }
-    const registry = loaded.registry;
-    for (const milestone of registry.milestones) {
-      milestones.push({
-        ...milestone,
-        worktree_path: worktree.path,
-        worktree_branch: worktree.branch,
-      });
-    }
-    for (const feature of registry.features) {
-      features.push({
-        ...feature,
-        worktree_path: worktree.path,
-        worktree_branch: worktree.branch,
-      });
-    }
-  }
-  // Milestone and Feature values are project-level semantic decisions; Git recency proves file
-  // evolution, not that the meaning was confirmed. Same-ID divergence across linked worktrees is
-  // therefore always a stop condition, unlike the task-bundle linear-evolution rule.
-  for (const [label, rows, fields] of [
-    ['Milestone', milestones, ['title', 'status', 'description']],
-    ['Feature', features, ['title', 'milestone_id', 'status', 'description']],
-  ]) {
-    const rowsById = new Map();
-    for (const row of rows) {
-      const grouped = rowsById.get(row.id) || [];
-      grouped.push(row);
-      rowsById.set(row.id, grouped);
-    }
-    for (const [id, grouped] of rowsById) {
-      const differing = fields.filter(
-        (field) => new Set(grouped.map((row) => row[field])).size > 1
-      );
-      if (differing.length === 0) continue;
-      errors.push(
-        `${label} ID ${id} has different ${differing.join(', ')} values across linked worktrees.`
-      );
-    }
-  }
-  return { milestones, features, errors };
-}
-
 export function cmdMilestone({ repoRoot, title, description, dryRun, apply, json }) {
   const errors = [];
   const actions = [];
@@ -710,7 +684,7 @@ export function cmdMilestone({ repoRoot, title, description, dryRun, apply, json
     };
   }
   errors.push(...getRegistryWriteErrors(loaded.registry));
-  const projectGraph = collectProjectGraphFromAllWorktrees(repoRoot);
+  const projectGraph = readProjectGraph({ repoRoot });
   errors.push(...projectGraph.errors);
   if (errors.length > 0) return { ok: false, errors, actions };
 
@@ -813,7 +787,7 @@ export function cmdFeature({ repoRoot, title, description, dryRun, apply, json }
   errors.push(...getRegistryWriteErrors(loaded.registry));
   if (errors.length > 0) return { ok: false, errors, actions };
 
-  const projectGraph = collectProjectGraphFromAllWorktrees(repoRoot);
+  const projectGraph = readProjectGraph({ repoRoot });
   errors.push(...projectGraph.errors);
   if (errors.length > 0) return { ok: false, errors, actions };
 

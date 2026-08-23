@@ -2,13 +2,13 @@
 name: goal-mode
 description: >-
   Use when a task or goal is expected to span hours, days, long-running
-  operations, external waits, or multiple sessions, or when the user explicitly
-  asks to use goal mode.
+  operations, external waits, automatic continuations, or context compaction,
+  or when the user explicitly asks to use goal mode.
 ---
 
 # Goal Mode
 
-Coordinate one durable repository goal through one task bundle.
+Coordinate one durable repository goal through one task bundle in the same active goal run.
 
 **Do not defer phase quality work until the goal is otherwise complete: late
 review, repair, and simplification can cost more than the implementation itself,
@@ -17,9 +17,9 @@ implementation before work advances.**
 
 ## Framework
 
-- The task bundle is the sole durable authority for the goal, route, status,
-  settled design, and verification evidence. Do not create a parallel roadmap,
-  phase list, status record, or evidence log.
+- The host Goal owns the continuing objective and stopping condition. The task bundle owns the
+  repository-recoverable goal, route, status, settled design, and verification evidence. Do not
+  create a parallel roadmap, phase list, status record, or evidence log.
 - Each roadmap phase is one execution checkpoint. `task-plan` owns the route and
   phase shape; this skill drives the current phase through its closeout gate.
 - Roadmap kickoff must be `ready` before implementation begins. New evidence
@@ -39,13 +39,13 @@ task-start / task-resume
 -> clean up
 -> verify the final result
 -> task-sync
--> next phase / task-handoff / done
+-> next phase / done
 ```
 
 1. **Bind the goal.** Use `task-start` when no active bundle represents it and
-   `task-resume` when the bundle already exists or work crosses a session
-   boundary. Honor any identity or recovery stop condition instead of choosing
-   or duplicating a task.
+   `task-resume` when an existing bundle's context must be rebuilt from
+   repository state. Honor any identity or recovery stop condition instead of
+   choosing or duplicating a task.
 2. **Prepare the route.** Use `task-plan` until kickoff is `ready` and the current
    phase is executable.
 3. **Execute the phase.** Complete its defined outcome through the relevant
@@ -70,10 +70,12 @@ task-start / task-resume
       check, finding, residue, or blocker without advancing the phase.
    5. Use `task-sync` to checkpoint repository reality and move to the next
       phase only after the closeout is verified.
-5. **Route the transition.** Repeat from the next phase. If evidence changes the
-   route, return to `task-plan`. Before stopping or waiting, use `task-sync`; if
-   execution transfers to a fresh session, follow it with `task-handoff` and
-   later recover through `task-resume`.
+5. **Route and recover.** Repeat from the next phase; if evidence changes the route, return to
+   `task-plan`. Use `task-sync` after decisive mid-phase evidence and before a stop, external wait,
+   or long operation when repository state would otherwise be hard to recover. After automatic
+   continuation or compaction, recover the exact bundle with `task-resume` when context is
+   incomplete, then continue the same active Goal. Do not move Goal-mode execution to a fresh
+   session or chat; the host Goal does not transfer with repository context.
 6. **Finish.** Use `task-sync` to mark the goal done only after the final phase
    closes and the completion contract in `dev-docs/AGENTS.md` holds. Archiving
    is a separate operation.

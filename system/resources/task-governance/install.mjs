@@ -9,6 +9,16 @@ import { canonicalPath, normalizeEol } from './project/.ai/scripts/lib/governanc
 
 const RESOURCE_ROOT = canonicalPath(path.dirname(fileURLToPath(import.meta.url)));
 const SHIPPED_ROOT = path.join(RESOURCE_ROOT, 'project');
+const HUB_TEMPLATE_PREFIX = '.ai/project/templates/';
+const OWNED_EXACT_FILES = new Set([
+  '.ai/project/AGENTS.md',
+  '.ai/project/CLAUDE.md',
+  '.ai/scripts/ctl-project-governance.mjs',
+  'dev-docs/AGENTS.md',
+  'dev-docs/CLAUDE.md',
+  'dev-docs/active/.gitkeep',
+  'dev-docs/archive/.gitkeep',
+]);
 
 function fail(message) {
   console.error(message);
@@ -23,7 +33,7 @@ Usage:
 Options:
   --repo-root <path>  Repo root (default: auto-detect from cwd)
   --dry-run           Show the initialization or refresh plan without writing
-  --refresh           Explicitly replace installed fixed assets with the shared resource
+  --refresh           Replace fixed assets and remove obsolete task-governance files
   -h, --help          Show this help
 
 Without --refresh, install missing fixed assets and stop when an existing one differs. Project-owned
@@ -109,6 +119,34 @@ function collectFiles(dir, base = dir) {
   return files;
 }
 
+function isSourceOnly(relative) {
+  return toPosix(relative).startsWith(HUB_TEMPLATE_PREFIX);
+}
+
+function isOwnedFixedAsset(relative) {
+  const normalized = toPosix(relative);
+  return (
+    OWNED_EXACT_FILES.has(normalized) ||
+    /^\.ai\/scripts\/lib\/governance-[a-z0-9-]+\.mjs$/.test(normalized)
+  );
+}
+
+function collectInstalledOwnedAssets(repoRoot) {
+  const files = [...OWNED_EXACT_FILES]
+    .filter((relative) => exists(path.join(repoRoot, relative)));
+  for (const relativeRoot of ['.ai/scripts/lib', '.ai/project/templates']) {
+    const absoluteRoot = path.join(repoRoot, relativeRoot);
+    if (!exists(absoluteRoot)) continue;
+    for (const relative of collectFiles(absoluteRoot, repoRoot)) {
+      const normalized = toPosix(relative);
+      if (isOwnedFixedAsset(normalized) || normalized.startsWith(HUB_TEMPLATE_PREFIX)) {
+        files.push(relative);
+      }
+    }
+  }
+  return files;
+}
+
 function isPathInside(parent, candidate) {
   const relative = path.relative(parent, candidate);
   return relative === '' || (
@@ -143,6 +181,27 @@ function planFixedAssets({ repoRoot, refresh, shippedFiles, actions }) {
   }
 }
 
+function planObsoleteFixedAssets({ repoRoot, refresh, shippedFiles, actions }) {
+  const shipped = new Set(shippedFiles.map(toPosix));
+  const obsolete = collectInstalledOwnedAssets(repoRoot)
+    .filter((relative) => !shipped.has(toPosix(relative)));
+  if (obsolete.length === 0) return;
+  if (!refresh) {
+    fail(
+      '[error] Installed task-governance assets include obsolete files. ' +
+        'Review an explicit --dry-run --refresh before removing them:\n' +
+        obsolete.map((relative) => `  - ${toPosix(relative)}`).join('\n')
+    );
+  }
+  for (const relative of obsolete) {
+    actions.push({
+      op: 'delete',
+      path: path.join(repoRoot, relative),
+      note: 'remove obsolete fixed asset',
+    });
+  }
+}
+
 function planHubInitialization({ repoRoot, actions }) {
   const templatesDir = path.join(SHIPPED_ROOT, '.ai', 'project', 'templates');
   if (!exists(templatesDir)) {
@@ -159,8 +218,27 @@ function planHubInitialization({ repoRoot, actions }) {
   }
 }
 
-function applyActions(actions) {
-  for (const action of actions) writeText(action.path, action.content);
+function removeEmptyParents(filePath, repoRoot) {
+  let current = path.dirname(filePath);
+  while (current !== repoRoot && isPathInside(repoRoot, current)) {
+    try {
+      fs.rmdirSync(current);
+    } catch {
+      break;
+    }
+    current = path.dirname(current);
+  }
+}
+
+function applyActions(repoRoot, actions) {
+  for (const action of actions) {
+    if (action.op === 'delete') {
+      if (exists(action.path)) fs.unlinkSync(action.path);
+      removeEmptyParents(action.path, repoRoot);
+      continue;
+    }
+    writeText(action.path, action.content);
+  }
 }
 
 function printActions(repoRoot, actions, dryRun) {
@@ -190,11 +268,12 @@ function main() {
     fail(`[error] Shipped project assets are missing at ${toPosix(SHIPPED_ROOT)}.`);
   }
 
-  const shippedFiles = collectFiles(SHIPPED_ROOT);
+  const shippedFiles = collectFiles(SHIPPED_ROOT).filter((relative) => !isSourceOnly(relative));
   const actions = [];
   planFixedAssets({ repoRoot, refresh: opts.refresh, shippedFiles, actions });
+  planObsoleteFixedAssets({ repoRoot, refresh: opts.refresh, shippedFiles, actions });
   planHubInitialization({ repoRoot, actions });
-  if (!opts.dryRun) applyActions(actions);
+  if (!opts.dryRun) applyActions(repoRoot, actions);
   printActions(repoRoot, actions, opts.dryRun);
 }
 

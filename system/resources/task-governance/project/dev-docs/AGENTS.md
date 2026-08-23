@@ -40,6 +40,11 @@ dev-docs/archive/<slug>/
 Archive location makes the effective state `archived`. `summary.md` preserves the durable outcome
 and evidence; the active working files do not survive the archive transition.
 
+When behavior, interfaces, or implementation paths described in task records are removed or
+replaced, identify the affected active bundles and archived summaries and reconcile them in the
+same checkpoint. Preserve historical outcomes, but mark superseded content so it cannot be
+mistaken for the live system.
+
 ## Document responsibilities
 
 - **`.ai-task.json`** — Stable task identity and lookup metadata. It contains exactly schema
@@ -113,8 +118,8 @@ Implementation readiness lives separately in the roadmap kickoff gate:
 Checking every `Done when` item does not make a task `done`, and an outdated item must be revised
 rather than used to block or justify completion mechanically.
 
-A completed task remains active with `State: done` until its separately approved archive
-transition.
+A completed task remains active with `State: done` until an authorized archive transition is
+performed.
 
 ## Authorities and repository reality
 

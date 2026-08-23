@@ -1,60 +1,59 @@
 ---
 name: project-status
 description: >-
-  Use for read-only questions spanning tracked tasks: what exists, what is in
-  flight or blocked, how far task or Milestone work has progressed, what should
-  happen next, which tasks appear archive-ready, or whether the project hub has
-  drifted.
+  Use when a user or workflow needs a read-only view of tracked tasks,
+  Features, Milestones, or the project hub for status, progress, blockers,
+  evidence-backed next actions, archive readiness, or consistency.
 ---
 
-Answer the question from what is written down, and make the answer actionable.
+## Working model
 
-Read-only is the point of this skill, not a limitation. Scope is the portfolio: several tasks at once, the shape of the whole. A question about one specific task the user intends to continue is a different job — that one rebuilds the task's context rather than summarizing it.
+- **Task** — one durable work outcome recorded in a task bundle.
+- **Feature** — a project capability that tasks map to.
+- **Milestone** — a project-stage outcome that groups Features.
+- **Project hub** — connects these records; this skill reads them with repository evidence without changing them.
 
-## Response templates
+## Status views
 
-Pick by what was asked, then follow that reference's **Data Source** commands:
+Load only the views relevant to the request; combine them when the request spans more than one:
 
-| Question | Reference |
-|----------|-----------|
-| What tasks exist? | [references/task-list.md](references/task-list.md) |
-| How far along are we? | [references/progress-summary.md](references/progress-summary.md) |
-| What should I do next? | [references/next-action.md](references/next-action.md) |
-| What is blocked? | [references/blocked-items.md](references/blocked-items.md) |
-| How is a stage goal or Milestone progressing? | [references/milestone-progress.md](references/milestone-progress.md) |
-| What is the current focus? | [references/semantic-focus.md](references/semantic-focus.md) |
-| Which tasks appear ready to archive? | [references/archive-readiness.md](references/archive-readiness.md) |
-| Is the project hub consistent? | [references/hub-drift.md](references/hub-drift.md) |
+- **Task inventory, overall progress, or blocked work** — [task-overview.md](references/task-overview.md)
+- **Next actions** — [next-action.md](references/next-action.md)
+- **Milestone progress** — [milestone-progress.md](references/milestone-progress.md)
+- **Semantic or project focus** — [semantic-focus.md](references/semantic-focus.md)
+- **Archive readiness** — [archive-readiness.md](references/archive-readiness.md)
+- **Hub consistency** — [hub-drift.md](references/hub-drift.md)
 
 ## Workflow
 
-1. **Classify the question.** Read `dev-docs/AGENTS.md` for task semantics, then open the matching reference.
+1. **Resolve the scope and views.**
+   - Resolve the Git top-level and run the workflow there.
+   - Determine whether the request concerns one task, selected work, or the project as a whole.
+   - Read `dev-docs/AGENTS.md` and only the relevant status views. Read `.ai/project/AGENTS.md`
+     when project-hub semantics or consistency are in scope.
 
-2. **Gather from task bundles across linked worktrees.** Run the reference's data-source commands — usually
-   `ctl-project-governance.mjs query` with a `--status` or `--text` filter. Query already includes every linked worktree and returns one logical row per valid task ID. Never guess task details; open the returned `status_doc_path` when the query output is not enough. A row with `conflict: true` has no selected fact source: list its occurrences and differences separately, and do not use its unset top-level facts or run a worktree-specific follow-up until the disagreement is resolved. A row with `invalid: true` is diagnostic evidence only; report its `metadata_errors`, exclude it from status facts and counts, and do not resume it.
+2. **Gather the baseline evidence.**
+   - Run the selected views' data-source commands.
+   - Treat query results as cross-worktree logical task rows; expand returned task documents only
+     when the requested view needs more detail.
+   - Preserve conflicts, invalid or missing identity, and missing required active records as
+     diagnostics rather than task facts.
 
-3. **Check consistency, do not fix it.** `lint` reveals drift between the registry and the task bundles. Report the drift and the appropriate maintenance action; do not run write-mode repair.
+3. **Deepen the evidence where the answer depends on it.**
+   - Use `resume` for relevant active tasks when making claims about actual progress, landed work,
+     worktree state, or the next executable action.
+   - Use `lint` or dry-run evidence when consistency could change the answer.
+   - Use the project graph query for Feature or Milestone meaning.
 
-4. **Ground claims about active work.** For any `in-progress` or `blocked` task, run:
+4. **Reconcile and present the view.**
+   - Apply the authority model in `dev-docs/AGENTS.md`; surface disagreements and leave unsupported
+     facts unknown.
+   - Combine related views without repeating evidence.
+   - Match the output to the caller: use the user's preferred language for a user-facing answer,
+     or return only the needed facts to an enclosing workflow.
 
-   ```bash
-   node .ai/scripts/ctl-project-governance.mjs resume --repo-root <worktree_path> --task <T-###>
-   ```
+## Boundaries
 
-   Report the commit timeline, worktree warnings, and any disagreement between the packet and the documented status. An empty timeline means progress is unknown, not zero; `git log --grep="^Task: T-###"` is the same evidence without the packet around it.
-
-5. **For semantic questions**, use the selected Feature's registry `title` and `description`. `feature-map.md` and `dashboard.md` are derived indexes, never the semantic authority.
-
-6. **Answer from the template.** When the reference is archive readiness, treat `State: done` as a claim and report the first missing gate rather than changing anything. End with at least one command the user can run.
-
-## Rules
-
-- Never modify files. No `sync --apply`, no edits under `dev-docs/**` or `.ai/project/**`.
-- Never invent a task detail, a blocker reason, or a semantic intent. Undocumented means `unknown`.
-- Never present a claim about landed work the `resume` packet does not support; state the gap.
-- Account for every valid, non-conflicting query row in status counts. List conflicting or invalid
-  rows separately instead of assigning them a status or counting their occurrences as tasks.
-
-## Authority
-
-Hub semantics follow `.ai/project/AGENTS.md`. Active task progress is `01-status.md` `## Progress` → `State:`; archive location owns archived state. Registry task status is a derived projection.
+- Remain read-only: do not edit governance records or run commands that write.
+- Preserve source disagreements and evidence gaps; do not turn unsupported or conflicted values
+  into task facts.

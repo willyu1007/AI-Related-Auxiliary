@@ -17,6 +17,7 @@
 import path from 'node:path';
 
 import { cmdLint } from './lib/governance-lint.mjs';
+import { cmdProjectQuery } from './lib/governance-project-read.mjs';
 import {
   RESUME_DEFAULT_COMMIT_LIMIT,
   RESUME_DEFAULT_SCAN_LIMIT,
@@ -50,20 +51,25 @@ Usage:
 Commands:
   lint
     --repo-root <path>        Repo root (default: auto-detect from cwd)
+    --task <T-###>            Validate one task bundle and its registry projection
     --strict                  Treat warnings as errors
     Exit non-zero on errors; warnings fail only in strict mode.
-    Validate repository state against the project governance rules.
+    Validate repository state against the project governance rules. With --task, task-bundle
+    checks are scoped to that ID while the project graph and generated views remain global.
 
   sync
     --repo-root <path>        Repo root (default: auto-detect from cwd)
+    --task <T-###>            Project only this existing task bundle
     --dry-run                 Print planned changes without writing
     --apply                   Apply changes (writes files)
     --prune                   Also remove registry task entries whose bundle no longer exists
                               in any linked worktree or at any local branch tip (verified by
                               stable task ID; unverifiable evidence refuses the prune)
-    Generate missing task meta IDs, upsert registry tasks, and regenerate derived views.
-    The sync command projects only this worktree's bundles into its registry. Provably linear
-    cross-worktree divergence does not block it; concurrent or unprovable divergence does.
+    Without --task, generate missing task IDs and project this worktree's bundles into its registry.
+    With --task, update only that existing task projection; scoped sync does not allocate IDs or
+    prune. Both modes regenerate derived views. Provably linear cross-worktree divergence does not
+    block global sync; scoped sync refuses to checkpoint a stale occurrence. Concurrent or
+    unprovable divergence blocks both modes.
 
   query
     --repo-root <path>        Repo root (default: auto-detect from cwd)
@@ -72,6 +78,12 @@ Commands:
     --text <substring>        Substring match against common task fields
     --json                    Output a single JSON array instead of JSON lines
     Locate tasks across every linked worktree for dedupe/triage (LLM-friendly output).
+
+  project-query
+    --repo-root <path>        Repo root (default: auto-detect from cwd)
+    --json                    Output one object containing Milestones, Features, and diagnostics
+    Locate the project graph across every linked worktree. Same-ID semantic conflicts preserve
+    their exact values and worktree occurrences and exit non-zero.
 
   resume
     --repo-root <path>        Repo root (default: auto-detect from cwd)
@@ -111,10 +123,13 @@ Commands:
 
 Examples:
   node .ai/scripts/ctl-project-governance.mjs lint
+  node .ai/scripts/ctl-project-governance.mjs lint --task T-001
   node .ai/scripts/ctl-project-governance.mjs sync --dry-run
+  node .ai/scripts/ctl-project-governance.mjs sync --task T-001 --dry-run
   node .ai/scripts/ctl-project-governance.mjs sync --apply
   node .ai/scripts/ctl-project-governance.mjs milestone --title "Public beta" --apply --json
   node .ai/scripts/ctl-project-governance.mjs feature --title "OAuth providers" --apply --json
+  node .ai/scripts/ctl-project-governance.mjs project-query --json
   node .ai/scripts/ctl-project-governance.mjs map --task T-001 --feature F-002 --apply
   node .ai/scripts/ctl-project-governance.mjs resume
 `.trim();
@@ -124,13 +139,14 @@ Examples:
 }
 
 const COMMAND_OPTIONS = Object.freeze({
-  lint: { values: ['repo-root'], flags: ['strict'] },
+  lint: { values: ['repo-root', 'task'], flags: ['strict'] },
   sync: {
-    values: ['repo-root'],
+    values: ['repo-root', 'task'],
     flags: ['dry-run', 'apply', 'prune'],
     conflicts: [['dry-run', 'apply']],
   },
   query: { values: ['repo-root', 'id', 'status', 'text'], flags: ['json'] },
+  'project-query': { values: ['repo-root'], flags: ['json'] },
   resume: { values: ['repo-root', 'task', 'limit', 'scan'], flags: [] },
   map: {
     values: ['repo-root', 'task', 'feature'],
@@ -223,13 +239,24 @@ function main() {
   switch (command) {
     case 'lint': {
       const strict = !!opts.strict;
-      const { ok: okLint } = cmdLint({ repoRoot, strict });
+      const taskId = opts.task ? String(opts.task) : null;
+      if (taskId && !TASK_ID_RE.test(taskId)) {
+        die(`[error] Option --task requires a task ID in T-### format (got "${taskId}").`);
+      }
+      const { ok: okLint } = cmdLint({ repoRoot, strict, taskId });
       process.exit(okLint ? 0 : 1);
       break;
     }
     case 'sync': {
       const dryRun = !!opts['dry-run'];
       const apply = !!opts.apply;
+      const taskId = opts.task ? String(opts.task) : null;
+      if (taskId && !TASK_ID_RE.test(taskId)) {
+        die(`[error] Option --task requires a task ID in T-### format (got "${taskId}").`);
+      }
+      if (taskId && opts.prune) {
+        die('[error] Options --task and --prune cannot be used together.');
+      }
       if (!dryRun && !apply) {
         console.log('No mode specified; defaulting to --dry-run.');
       }
@@ -241,6 +268,7 @@ function main() {
             dryRun: dryRun || !apply,
             apply: apply && !dryRun,
             prune: !!opts.prune,
+            taskId,
           });
         res = apply && !dryRun ? withGovernanceWriteLock(repoRoot, runSync) : runSync();
       } catch (error) {
@@ -268,6 +296,11 @@ function main() {
         text: text || null,
         json,
       });
+      process.exit(res.ok ? 0 : 1);
+      break;
+    }
+    case 'project-query': {
+      const res = cmdProjectQuery({ repoRoot, json: !!opts.json });
       process.exit(res.ok ? 0 : 1);
       break;
     }

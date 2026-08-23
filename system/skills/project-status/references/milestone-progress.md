@@ -1,45 +1,25 @@
-# Milestone Progress Report
+# Milestone progress
 
-Use when the user asks about a stage goal, Milestone progress, or which Features remain in the
-current stage.
+Use this view for a stage outcome, Milestone progress, or the Features contributing to a stage.
 
-## Data Source
+## Data sources
 
 ```bash
 node .ai/scripts/ctl-project-governance.mjs query --json
-node .ai/scripts/ctl-project-governance.mjs lint
-cat .ai/project/registry.json
+node .ai/scripts/ctl-project-governance.mjs project-query --json
 ```
 
-Use `registry.json` for the declared Milestone and Feature meaning and status. Use query results
-for task evidence across linked worktrees.
+Use the project graph query for declared Milestone and Feature meaning and status, and the task
+query for mapped task evidence. A conflicted project row preserves its worktree-specific values but
+has no selected semantic source.
 
-## Output Template
+## Interpretation
 
-```markdown
-## Stage Progress
-
-**Milestone**: <M-###> <title>
-**Declared status**: <status>
-**Stage outcome**: <description or unknown>
-
-| Feature | Declared status | Planned | In progress | Blocked | Done/archived | Signal |
-|---------|-----------------|---------|-------------|---------|---------------|--------|
-| <F-###> <title> | <status> | N | N | N | N | <evidence or inconsistency> |
-
-**Stage signal**: <active, blocked, possibly ready for acceptance, inconsistent, or unknown>
-**Recommended next step**: <one concrete action>
-```
-
-## Rules
-
-- Report the requested Milestone. If none is named, prefer real Milestones with `in-progress` or
-  `blocked` status; treat `M-000` as an untriaged queue, not a stage goal.
+- Report the requested Milestone. If none is named, use explicit project focus or show all relevant
+  current Milestones rather than choosing arbitrarily. Treat `M-000` as an untriaged queue, not a
+  stage goal.
 - Group each task under its derived Milestone and Feature. Keep declared Feature/Milestone status
   separate from observed task state.
-- Do not use a conflicted logical task row as stage-progress evidence until its differing facts are
-  reconciled; list the conflict separately.
-- Do not use an invalid task row as stage-progress evidence; list its metadata diagnostics separately.
 - Counts are evidence, not weighted completion percentages. Do not infer effort or scope coverage
   from the number of tasks.
 - A Milestone marked `done` while any Feature is not `done` or `cut` is inconsistent.
@@ -49,3 +29,11 @@ for task evidence across linked worktrees.
   it as possibly ready for acceptance. Do not mark it `done`; the stage outcome still needs human
   confirmation.
 - Surface blockers and cross-worktree disagreement before recommending new work.
+
+## Include
+
+- Each relevant Milestone's title, declared status, and stage outcome.
+- Its Features, their declared statuses, and the mapped task-state signals that matter to the view.
+- Blockers, inconsistencies, or possible acceptance readiness without converting task counts into
+  project-level status.
+- A next step only when requested or supported by documented selection evidence.

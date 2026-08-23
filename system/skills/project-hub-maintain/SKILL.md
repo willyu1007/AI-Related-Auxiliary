@@ -1,170 +1,33 @@
 ---
 name: project-hub-maintain
 description: >-
-  Use when the user asks to archive or close a verified task, apply selected
-  archive transitions, apply a confirmed Milestone mapping or Feature lifecycle
-  change, or repair project-hub registry, mapping, or derived-view drift. Not
-  for choosing project scope or for read-only status, audit, or archive-readiness
-  questions.
+  Use when a tracked task is being archived, confirmed changes to Milestones,
+  Features, Ideas, or task-to-Feature mappings need to be applied, or
+  project-hub drift needs repair. Not for read-only status or deciding project
+  scope.
 ---
 
 ## Route
 
-| Intent | Workflow |
-|---|---|
-| Close or archive a selected verified task | Archive task |
-| Record a confirmed Milestone, change which Features it owns, or apply a confirmed Feature status | Maintain project graph |
-| Repair registry, mapping, or generated-view drift | Repair hub drift |
+- **Archive one tracked task** — read [archive-task.md](references/archive-task.md).
+- **Apply confirmed Milestone, Feature, Idea, or task-to-Feature changes** — read
+  [Project records and relationships](references/hub-maintenance.md#project-records-and-relationships).
+- **Repair registry, mapping, or generated-view drift** — read
+  [Repair drift](references/hub-maintenance.md#repair-drift).
 
-The task bundle owns execution truth. The hub is a semantic map and derived projection; it does not replace checkpoint synchronization.
+Resolve the Git top-level before following the selected route. Read `.ai/project/AGENTS.md` for
+hub semantics; also read `dev-docs/AGENTS.md` when a task bundle is being inspected or changed.
 
-Read `dev-docs/AGENTS.md` before auditing or changing a task bundle.
+## Working boundaries
 
-## Archive task
-
-Archiving is an approved destructive transition from a working record to a compact historical record. Use `./templates/archive-checklist.md`.
-
-### Gates
-
-1. **Clean, aligned checkpoint.** The closeout checkpoint is committed, the active bundle matches repository reality, and unrelated worktree changes are identified. If not, run the task checkpoint synchronization workflow first.
-
-2. **Completion audit.** Treat `State: done` as a claim and audit the completion contract in `dev-docs/AGENTS.md`. Require roadmap kickoff `ready`, read the goal and use `Done when` only as an audit reference, inspect unresolved in-scope roadmap work, the task's exact trailer-linked commit timeline, delivered code, and required acceptance, then rerun the cheapest decisive verification from `verification.md` when it is still runnable. Roadmap phase criteria and checked acceptance references do not prove task completion. Environmental inability to run a check must be explicit; it is not a pass.
-
-   Stop when either side disagrees: reality incomplete means finish the work; reality complete but the record stale means synchronize the task. Archiving itself never repairs the claim.
-
-3. **Resolve deferred outcomes.** Open a normal task for confirmed work that needs durable tracking, propose moving a low-priority possibility to the registry Idea list, or record that it was canceled or descoped. Opening another task is a separate checkpoint; archive approval does not authorize it. Do not write an Idea yet. Include each proposed Idea addition in the archive transition below. If the disposition requires user judgment, stop and ask before drafting the archive transition.
-
-4. **Distillation proposal.** Inspect every additional task-local supporting entry before deleting it; preserve its durable meaning in the authorities above or the archive summary, and omit only material that is intentionally ephemeral or superseded. Draft `summary.md` containing only:
-
-   - task ID, slug, goal, and actual outcome, including descoped parts;
-   - durable decisions and migration consequences;
-   - verification evidence and any environmental limitation;
-   - pitfalls worth carrying forward;
-   - related tasks and the disposition of material deferred outcomes;
-   - `git log --grep="^Task: T-###"` as the full-history pointer.
-
-   Show the exact move, the proposed summary, and the deletion list. The deletion list is every bundle entry except `.ai-task.json` and the new `summary.md`, including roadmap, status, architecture, verification, optional inputs, and artifacts.
-
-   Roadmap deletion must not erase future work.
-
-5. **Explicit approval.** One approval covers the shown summary, deletions, move from `dev-docs/active/<slug>/` to `dev-docs/archive/<slug>/`, and any exact Idea or Feature record edits included in the proposal. Without approval, change nothing.
-
-### Execute as one recoverable change
-
-6. Write `summary.md`, apply approved Idea additions, remove the approved source files, and move the bundle. The archived bundle must contain exactly `.ai-task.json` and `summary.md`; its location makes its effective state `archived`.
-
-7. If the task changed Feature meaning, include the exact registry Feature `title` or `description` edit in the approved proposal and apply it now. Never hand-edit `feature-map.md`.
-
-8. Refresh and validate the hub before committing:
-
-   ```bash
-   node .ai/scripts/ctl-project-governance.mjs sync --apply
-   node .ai/scripts/ctl-project-governance.mjs lint
-   ```
-
-   A failure stops the commit. Restore the clean active layout from the pre-archive checkpoint or correct the approved transition; never leave a half-archived bundle.
-
-9. Stage the archive move, affected Feature record, registry, and derived views. Commit one task per archive so its transition remains on its own timeline:
-
-   ```bash
-   git commit -m "chore(archive): archive T-### <slug>" -m "Task: T-###"
-   ```
-
-10. Report the archive path, retained summary, deleted material, verification run, hub/feature changes, commit, and deferred follow-ups.
-
-### Stop conditions
-
-- Completion audit fails: report the unmet condition; do not archive.
-- Bundle is stale or dirty: return it to checkpoint synchronization.
-- Approval is absent or differs from the proposed scope: leave the active bundle intact.
-- Hub refresh or lint fails: do not commit a partial transition.
-
-## Maintain project graph
-
-Use this only after the project outcome, ownership, or lifecycle claim is confirmed. The hub
-records the decision; it does not decide product scope or infer a rollup from task counts.
-
-1. Inspect `git status --short`, query the affected tasks across linked worktrees, and inspect
-   `.ai/project/registry.json` in every linked worktree. Stop on foreign work, a conflicted or
-   invalid task row, an uncommitted semantic edit, or conflicting meaning for the same project ID.
-2. For a new stage, allocate its monotonic ID under the shared Git-common-dir lock; `M-000` is
-   reserved:
-
-   ```bash
-   node .ai/scripts/ctl-project-governance.mjs milestone --title "<stage outcome>" --description "<accepted outcome>" --apply --json
-   ```
-
-   The command creates only `id`, `title`, `status: planned`, and `description`; never choose an
-   `M-###` manually.
-3. Show the exact Milestone record and any Feature `milestone_id`, title, description, or status
-   changes before editing. Apply only the confirmed scope. Do not add Milestone fields to task
-   entries or create a separate Milestone document.
-4. Treat project-item statuses as explicit claims:
-
-   - `planned` means accepted for the graph but not actively advancing;
-   - `in-progress` means its confirmed outcome is actively advancing;
-   - `blocked` requires a named external dependency or input;
-   - `done` requires the Feature or Milestone outcome to be accepted;
-   - `cut` requires an explicit descoping decision and applies only to Features.
-
-   Task states and verification are evidence, never an automatic status rollup. Before setting a
-   Feature to `done` or `cut`, resolve its non-terminal mapped tasks and make the acceptance
-   or descoping decision explicit. A `done` Milestone also requires every in-scope Feature to be
-   `done` or `cut`. These are lint errors, not advisory warnings.
-5. Regenerate derived views, validate, and inspect the diff:
-
-   ```bash
-   node .ai/scripts/ctl-project-governance.mjs sync --apply
-   node .ai/scripts/ctl-project-governance.mjs lint
-   ```
-
-6. Stage only the confirmed registry and generated-view paths, preserve foreign changes, and
-   commit the coherent graph update. Include a `Task: T-###` trailer only when exactly one tracked
-   task owns the change. Report the outcome, affected project items, progress contradictions,
-   commit, and remaining worktree changes.
-
-## Repair hub drift
-
-Inspect first, apply second:
-
-```bash
-node .ai/scripts/ctl-project-governance.mjs lint
-node .ai/scripts/ctl-project-governance.mjs sync --dry-run
-node .ai/scripts/ctl-project-governance.mjs query --json
-node .ai/scripts/ctl-project-governance.mjs sync --apply
-node .ai/scripts/ctl-project-governance.mjs lint
-```
-
-- Active `in-progress` or `blocked` work on `F-000` is unresolved Feature triage; report it instead of inventing ownership.
-- A registry task entry whose bundle no longer exists in any linked worktree or at any local branch tip is an orphan. Preview, confirm the reported evidence, and then remove it with the supported prune mode instead of hand-editing the registry; prune refuses entries whose bundle survives on a branch or whose evidence cannot be verified:
-
-  ```bash
-  node .ai/scripts/ctl-project-governance.mjs sync --prune --dry-run
-  node .ai/scripts/ctl-project-governance.mjs sync --prune --apply
-  ```
-- For a confirmed task-to-Feature correction, preview and then apply the supported mapping instead of expecting sync to choose semantic ownership:
-
-  ```bash
-  node .ai/scripts/ctl-project-governance.mjs map --task T-### --feature F-### --dry-run
-  node .ai/scripts/ctl-project-governance.mjs map --task T-### --feature F-### --apply
-  ```
-
-  When a repair must remove or reparent an existing relationship, show the exact targeted registry edit and obtain confirmation before applying it; sync preserves existing semantic mappings.
-- To change a task's Milestone, change its Feature mapping or the owning Feature's confirmed `milestone_id`; never add `milestone_id` to a task entry.
-- Regenerate AUTO sections; never hand-edit them.
-- Do not alter an active task's goal or `State:` as part of hub repair.
-- If drift originates from another worktree's uncommitted bundle, report its worktree and coordinate there instead of overwriting it here.
-- After a successful repair, inspect the diff, stage only the repaired hub paths, and commit the
-  coherent repair when repository policy permits. Preserve and report every foreign path.
-
-## Boundaries
-
-- Never archive without completion evidence and explicit approval of the exact destructive scope.
-- Never delete source content before its durable meaning appears in the proposed `summary.md`.
-- Never distill an active bundle that will remain active.
-- Never combine multiple task archives in one commit.
-- Never put secrets in hub files, task bundles, or summaries.
-
-## Authority
-
-For active tasks, `01-status.md` owns progress. For archived tasks, path owns effective state and the bundle contains exactly `.ai-task.json` plus `summary.md`. Hub semantics follow `.ai/project/AGENTS.md`.
+- The task bundle owns task intent, progress, design, verification, and lifecycle. The hub owns
+  Milestones, Features, their relationships, and task mappings; generated views are projections.
+- If a confirmed hub change requires active task intent or progress to change, return control to
+  the task workflow instead of rewriting it here.
+- Apply exact changes already confirmed by the user or enclosing workflow; loading this skill adds
+  no authorization. Unresolved scope, meaning, or destructive targets remain open.
+- Task states and counts are evidence, not project decisions. Preserve task and project-graph
+  conflicts until their sources are reconciled.
+- Governance commands own generated hub views and task projections. Direct registry edits are
+  limited to confirmed semantic records without a supported operation. Preserve unrelated work;
+  stop when it overlaps the change or makes the evidence unreliable.

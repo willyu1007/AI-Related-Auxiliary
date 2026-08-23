@@ -1,27 +1,29 @@
 # Hub drift audit
 
-Use this response when the user asks whether task bundles, registry mappings, or generated hub views disagree. This workflow diagnoses drift without repairing it.
+Use this view to diagnose disagreement among task bundles, registry mappings, and generated hub
+views without repairing it.
 
-## Data source
+## Data sources
 
 ```bash
 node .ai/scripts/ctl-project-governance.mjs lint
 node .ai/scripts/ctl-project-governance.mjs sync --dry-run
 node .ai/scripts/ctl-project-governance.mjs query --json
+node .ai/scripts/ctl-project-governance.mjs project-query --json
 ```
 
-## Output
+## Interpretation
 
-Summarize each distinct issue once:
+- Summarize each distinct issue once across the command results.
+- When linked worktrees give the same Feature or Milestone ID different meaning, show the versions
+  as an unresolved semantic conflict; neither current copy becomes authoritative automatically.
+- Separate current-worktree generated drift from another worktree's uncommitted task record. Do not
+  recommend overwriting the latter from the current worktree.
+- If no issue appears, state which evidence was checked rather than inferring broader consistency.
 
-| Issue | Authoritative source | Affected worktree / path | Impact | Suggested repair |
+## Include
+
+Use a comparison table when several issues are present:
+
+| Issue | Evidence / authority boundary | Affected worktree / path | Impact | Suggested repair |
 |---|---|---|---|---|
-| <!-- lint or dry-run finding --> | <!-- task bundle / registry Feature or mapping --> | <!-- exact location --> | <!-- stale status, mapping, derived view, or conflict --> | <!-- specific maintenance action --> |
-
-Separate current-worktree generated drift from another worktree's uncommitted task record. Do not recommend overwriting the latter from the current worktree. If no issue appears, report that the checked state is consistent and name the commands used.
-
-## Rules
-
-- `lint`, `sync --dry-run`, and queries are read-only here.
-- Never run `sync --apply`, edit an AUTO block, change task state, or repair a mapping.
-- A task bundle owns progress and identity; registry task entries and generated views are projections.

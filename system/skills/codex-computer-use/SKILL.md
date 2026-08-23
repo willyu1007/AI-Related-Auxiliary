@@ -51,9 +51,9 @@ Tell Codex:
 - Known launch commands, test credentials, seed data, deep links, or fixtures.
 - Whether source edits are allowed. Default to no edits.
 - Where screenshots, logs, and the final report should be saved.
-- Never to assume a port: read the actual URL from the server's startup output, since the default may already be in use, and poll it until it responds before interacting.
+- When verification launches a local server, to read the actual URL from startup output rather than assume its port, and to poll it until it responds before interacting.
 - To capture a screenshot on any failure or unexpected state before reporting.
-- To return pass, fail, or blocked, plus steps performed, observed behavior, screenshot paths, and actionable feedback. `blocked` means the environment never became usable — an unreachable server after a reasonable wait is blocked, not fail.
+- To return pass, fail, or blocked, plus steps performed, observed behavior, screenshot paths, and actionable feedback. Use `fail` only after reaching and exercising the target behavior; use `blocked` when setup, access, dependencies, or the environment prevent reaching it.
 
 Keep the prompt specific enough that Codex does not need the surrounding Claude conversation.
 
@@ -61,6 +61,6 @@ Keep the prompt specific enough that Codex does not need the surrounding Claude 
 
 Before relaying a Codex result, open the referenced screenshots or logs and inspect them enough to decide whether the finding is real. In the user-facing response, separate confirmed behavior from Codex claims you did not verify.
 
-State the overall result clearly — pass, fail, or blocked — and name the behavior and platform Codex inspected. Distinguish a genuine behavior failure (`fail`) from an environment or setup problem such as a port conflict or a server that never came up (`blocked`), since the two call for different follow-ups. Surface screenshot paths so the user can look themselves.
+State the overall result clearly — pass, fail, or blocked — and name the behavior and platform Codex inspected. Distinguish a genuine behavior failure (`fail`) from a setup, access, dependency, or environment problem that prevented reaching it (`blocked`), since the two call for different follow-ups. Surface screenshot paths so the user can look themselves.
 
 If `codex` is not installed or the command fails, use available direct verification tooling when practical. Report a blocker only when no viable verification route remains.

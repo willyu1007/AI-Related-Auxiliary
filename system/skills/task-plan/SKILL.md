@@ -58,7 +58,7 @@ Converge one task bundle into a coherent current plan without creating a second 
 
    Treat the conversation as working context and the bundle as the current planning snapshot. Do
    not preserve the transcript, duplicate facts across authorities, or retain obsolete content for
-   history. The first alignment or discovery checkpoint after opening changes `State: planned` to
+   history. The first post-opening planning checkpoint changes `State: planned` to
    `State: in-progress`; kickoff readiness remains a separate dimension. Repeat Steps 2 and 3 as
    feedback or evidence materially changes the direction.
 
@@ -107,11 +107,13 @@ Converge one task bundle into a coherent current plan without creating a second 
 5. **Create the planning checkpoint.** After user confirmation, synchronize and validate
    governance, then inspect the resulting task bundle, final diff, and entire worktree. Confirm
    that the checkpoint still matches the approved plan and separate this task's paths from foreign
-   changes.
+   changes. Scoped sync keeps other bundles' drift out of this checkpoint; inspect its preview and
+   continue only when every planned change belongs to this planning checkpoint.
 
    ```bash
-   node .ai/scripts/ctl-project-governance.mjs sync --apply
-   node .ai/scripts/ctl-project-governance.mjs lint
+   node .ai/scripts/ctl-project-governance.mjs sync --task T-### --dry-run
+   node .ai/scripts/ctl-project-governance.mjs sync --task T-### --apply
+   node .ai/scripts/ctl-project-governance.mjs lint --task T-###
    ```
 
    If validation or the final diff reveals a material planning change, return to Steps 2–4 before

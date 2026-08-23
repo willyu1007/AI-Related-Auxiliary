@@ -5,88 +5,84 @@ description: >-
   or when degraded context makes continuing the task unreliable.
 ---
 
-## Stabilize the checkpoint
+**Do not use this skill while a host Goal is active.**
 
-Read `dev-docs/AGENTS.md`. Do not begin new work once handoff is chosen. Finish the current atomic action if that is safe, then run the checkpoint-sync workflow:
+## Stabilize the task
 
-- update the task bundle to match the repository;
-- verify and commit every coherent part that is safe to land with its `Task: T-###` trailer;
-- leave broken, incomplete, or unverified changes uncommitted and describe them precisely;
-- preserve changes belonging to other tasks and name them separately.
-
-A handoff does not require finishing the whole task. It requires a truthful, recoverable boundary. If context degradation prompted the handoff, stabilizing the current action outranks attempting the rest of the request with unreliable context.
+Run a full recovery pass across the task bundle, linked commits, and worktree so a fresh session can
+continue from repository state alone. Reconcile changed facts in their owning task documents and
+create a checkpoint when safely authorized. Finish the current atomic action only when it remains
+safe to complete and verify. Preserve incomplete, unverified, or foreign work instead of forcing a
+clean checkpoint. If stabilization stops, carry its exact failure as the first recovery action.
 
 ## Build the handoff
 
-Read the final values from the repository after synchronization:
+Build from the synchronized task bundle, linked commits, and relevant worktree state. If a compact
+final index is still needed, read one with the exact task ID:
 
 ```bash
 node .ai/scripts/ctl-project-governance.mjs resume --task T-###
 ```
 
-Use this JSON packet as the bounded starting point, then inspect the relevant diff for any uncommitted detail the packet cannot explain.
+Use the packet as a bounded read, then inspect the relevant diff for details it cannot explain. The
+repository remains authoritative; if the handoff conflicts with it or is explicitly incomplete,
+the destination recovers from the repository.
 
-- `01-status.md`: goal, state, current phase, next step, blocker, and current acceptance references
-- `00-roadmap.md` kickoff gate: whether implementation may continue
-- linked commits: what landed
-- `git status --short` and relevant diffs: what remains uncommitted
-- `pitfalls.md`, when present: paths the next session must not repeat
-- the rest of `00-roadmap.md`: unresolved top-level choices, relevant task relationships, and the near-term implementation route, only as needed
-- other task-local supporting entries, only when their stated purpose materially affects the next session
-
-Render one pasteable block:
+Render one pasteable block in the user's preferred language. Keep the current task action and any
+incomplete stabilization explicit; omit empty optional sections. Populate `Landed` only from linked
+commits, and keep task work separate from foreign changes. Include only work this session planned
+but did not implement, not the task's full remaining roadmap. Put unresolved proposals in `Open`;
+carry forward only established context needed for that session plan:
 
 ````markdown
-## T-012 · oauth-provider-integration
-State: in-progress · HEAD: a3f9c21
-Phase: provider adapter verification · Blocker: none
-Kickoff: pending / ready
-> Stale check: if `git rev-parse --short HEAD` is not `a3f9c21`, discard this
-> block and recover from the repository.
+## Handoff · T-### · <slug>
+Worktree: <current worktree root>
+Branch / HEAD: <branch> · <short SHA>
+Checkpoint: <what synchronized, or the exact incomplete step and failure>
+State / phase / kickoff / blocker: <current values>
+Goal: <current task outcome>
 
-### Goal
-One sentence describing the intended outcome.
-
-### Acceptance reference
-- Current `Done when` item relevant to recovery.
+### Continue
+1. Open the worktree above.
+2. Inspect the listed task paths and current diff.
+3. Continue with: <first task action>.
 
 ### Landed
-- Committed result and short SHA.
+- <committed result and short SHA>
 
-### Uncommitted
-- Path, current state, and why it was not landed. Use "Clean" when none.
+### Uncommitted task work
+- <path, current state, and why it was not landed>
 
-### Next
-1. First concrete action, including the command or path.
-2. Second action.
-3. Verification or decision point.
+### Planned but not implemented in this session
+- <planned action, intended outcome, and relevant paths>
+
+### Carry forward
+- <established finding, constraint, or non-obvious fact needed for that plan>
+
+### Preserved foreign work
+- <path and ownership>
 
 ### Do not repeat
-- Failed path and the evidence that ruled it out.
+- <failed path and the evidence that ruled it out>
 
 ### Open
-- Unresolved decision, blocker, or required human input; say who can resolve it.
+- <unresolved decision, blocker, or required human input, and who can resolve it>
 ````
 
-The stale check validates the block against repository movement. The receiving session should use repository recovery when the check fails.
+If kickoff is `pending`, the first task action is alignment or replanning, never decision-dependent
+implementation. Durable route changes and settled task cognition belong in the task bundle; do not
+write the handoff block into the repository.
 
 ## Delivery
 
-Default to returning the block in the conversation. If the environment can create a destination
-session and set its first message, ask whether the user wants that delivery after the checkpoint is
-stable. Create and send only after an explicit yes; otherwise return the pasteable block here.
-Produce one block for one destination, never both.
+Tell the user why handoff is preferable; keep this feedback outside the handoff prompt. Then choose
+one:
 
-## Rules
+- If task/thread creation is available but not authorized, show the complete prompt and ask whether
+  to trigger it.
+- If unavailable, provide the prompt in one fenced `markdown` block.
+- If authorized, create or message the task, preserve its source link when supported, and report
+  completion without repeating the prompt.
 
-- Never claim uncommitted work landed.
-- Never commit broken or unverified work merely to make the handoff look clean.
-- Never omit foreign worktree changes, unresolved blockers, or a known failed path.
-- Never hand off decision-dependent implementation as runnable when kickoff is `pending`; make alignment or replanning the first action.
-- Never write the handoff block into the repository; durable task facts belong in the bundle, and the transfer block belongs in the session channel.
-- Never create or message a destination session without the user's explicit confirmation.
-- If bundle synchronization or verification cannot complete, say exactly what failed and make that the first recovery action.
-
-## Contract
-
-For an active task, progress is `01-status.md` `## Progress` → `State:`. `00-roadmap.md` owns decision alignment, task relationships, and the implementation plan; it does not override the current status head.
+When uncommitted task work exists, continue in the same worktree. Host lifecycle signals such as
+`SessionStart(compact)` may inform the handoff decision.

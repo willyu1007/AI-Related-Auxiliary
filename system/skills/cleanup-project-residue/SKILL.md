@@ -16,6 +16,7 @@ description: Use when the user explicitly asks to clean up repository leftovers 
 - **Semantic depth:** By default, run shallow checks repository-wide and deep checks only within candidate scope. A full sweep runs deep checks repository-wide.
 - **Always-global checks:** Always check unused dependencies and exact duplicates. Outside candidate scope, only report version-residue signals and skipped or TODO-marked tests.
 - **Ignored files:** Exclude gitignored files except `.ai/.tmp/`. Itemize entries there that are not from the current session or whose ownership is unclear.
+- **Task records:** Exclude task records and their archives from cleanup candidates.
 - **Handback:** Name all unswept directories.
 
 ## Candidate Checks
@@ -41,7 +42,7 @@ description: Use when the user explicitly asks to clean up repository leftovers 
 
 - Check `TODO`/`FIXME`, commented-out code, suppressed type errors, `.only`/`.skip` in tests, and feature flags whose value is constant at every read site.
 - Delete markers that no longer apply, propose itemized edits for valid but outdated markers, and report genuine debt for the user to schedule.
-- Report scattered root-level session notes and plans as doc sprawl; never modify task records.
+- Report scattered root-level session notes and plans as doc sprawl.
 
 ## Semantic and Dual-Track Checks
 
@@ -121,11 +122,11 @@ Treat edits to surviving files as itemized changes with proposed diffs. If an ed
 
 7. **Finalize.** Permanently delete staged untracked backups only after verification succeeds. Commit verified changes only when requested or required by the repository workflow; keep deletions, surviving-file edits, and dependency changes separate.
 
-8. **Hand back.** Report deleted items, retained candidates with their anchors, report-only findings, unswept directories, baseline results, and final verification results. List every remaining live legacy path, wrapper, compatibility shim, semantic conflict, and dual track with its retention anchor or migration blocker. Do not describe the candidate scope as clean while unresolved semantic drift, dual-track risk, or unanchored technical debt remains; distinguish completed approved actions from remaining risk. Never modify task records.
+8. **Hand back.** Report deleted items, retained candidates with their anchors, report-only findings, unswept directories, baseline results, and final verification results. List every remaining live legacy path, wrapper, compatibility shim, semantic conflict, and dual track with its retention anchor or migration blocker. Do not describe the candidate scope as clean while unresolved semantic drift, dual-track risk, or unanchored technical debt remains; distinguish completed approved actions from remaining risk.
 
 ## Guardrails
 
-- Act only on explicitly approved paths and diffs. A batch approval covers only the presented batch; each itemized or report-only finding requires its own named approval or instruction.
+- A batch approval covers only the presented batch.
 - Do not touch gitignored files except approved `.ai/.tmp/` candidates. Never treat `.env`, credential, token, or secret files as cleanup candidates, and never quote their contents.
 - Never delete, weaken, or bypass a check to make verification pass.
 - Preserve unrelated working-tree changes. Never stage or commit them, and never mix cleanup changes into a feature commit.

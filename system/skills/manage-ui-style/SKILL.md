@@ -1,9 +1,29 @@
 ---
 name: manage-ui-style
-description: Use when designing or changing UI, aligning it with a project's visual system, capturing reusable style decisions, or auditing visual drift.
+description: Use when designing or changing UI, grounding it in actual user tasks, aligning it with a project's visual system, capturing reusable style decisions, or auditing visual drift.
 ---
 
 # Manage UI Style
+
+## Ground the UI in the use case
+
+Treat the developer and the actual user as separate perspectives, even when they
+are the same person. The developer's request defines the required outcome and
+boundaries; the use case determines how the UI organizes information, interaction,
+feedback, and copy. Do not turn implementation context, requirement rationale, or
+the system's internal model into visible explanation.
+
+Recover the smallest credible use case from the request and existing product
+evidence: the user's context and goal, what they already know, and the decisions,
+actions, feedback, and recovery needed to complete the task. Treat this as design
+reasoning, not an additional deliverable. If materially different use cases remain
+plausible, surface the conflict instead of inventing requirements or expanding scope.
+
+Visible copy must help the user orient, decide, act, anticipate a material state or
+consequence, or recover. Remove copy that only narrates the interface, repeats
+visible information, or explains implementation. If removing it changes no user
+behavior or understanding, remove it; if it compensates for weak structure, labels,
+affordances, or feedback, fix the interface first. Use the user's vocabulary.
 
 ## Establish style authority
 
@@ -32,6 +52,14 @@ the project.
   extend the existing owner's supported variants instead of creating a sibling.
 - **Create:** Introduce a new pattern only when its responsibility, behavior, or
   constraints materially differ from what the project already provides.
+- **Use canonical icons:** Treat icons as shared design assets. Reuse the project's
+  consumed icon component or asset first; otherwise use one established icon set
+  consistent with the platform and nearby UI. Preserve the source geometry and
+  `viewBox`, and apply size, stroke, color, and alignment through the project's
+  existing conventions. Do not hand-draw, reconstruct, mix families, or approximate
+  a recognizable product, platform, or brand icon. Create a custom icon only when
+  product-specific meaning or an explicit design request requires it, and verify it
+  at its actual rendered sizes beside neighboring icons.
 
 ## Mock, choose, and implement
 
@@ -46,7 +74,8 @@ leaves those decisions unchanged is trivial.
 
 - **Confirm a clear direction:** For a non-trivial change whose direction is clear,
   create one static HTML mock before editing production components. Derive it from
-  the relevant exemplar and use representative content, states, and density.
+  the relevant exemplar and use content, states, and density grounded in the
+  representative use case.
 
 - **Explore an open question:** Create alternatives only when the user requests
   them or the question is materially unresolved.

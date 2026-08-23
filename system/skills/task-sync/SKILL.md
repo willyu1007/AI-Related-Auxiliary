@@ -1,98 +1,155 @@
 ---
 name: task-sync
 description: >-
-  Use when an active tracked task reaches a checkpoint: a phase lands, a
-  verification runs, work is about to stop, or task-linked commits and records
-  need to be brought level with repository reality, including repair of that
-  task's invalid identity metadata. Do not use to discuss
-  unresolved top-level choices, prepare implementation kickoff, or revise a
-  route before the underlying decision is settled.
+  Use when work associated with one or more active tracked tasks needs a
+  repository checkpoint after a coherent implementation unit or decisive
+  verification result, before stopping or handoff, at completion, or to
+  reconcile task records or identity metadata with repository reality.
 ---
 
-## Depth
+## Reconciliation depth
 
-| Moment | Required depth |
-|---|---|
-| Mid-task checkpoint | Update only the records affected by the checkpoint. |
-| Before handoff or stopping | Run a full pass so a fresh session can continue from the bundle. |
-| Task complete | Run a full pass, record decisive verification, and set `State: done`; archiving remains a separate workflow. |
+Use the deepest applicable level. Depth changes the breadth of reconciliation, not the truthfulness required of the checkpoint.
+
+- **Ordinary checkpoint:** Reconcile the coherent unit being checkpointed, its evidence, and only the task authorities whose facts changed.
+- **Before stopping or handoff:** Run a full recovery pass across the task bundle, linked commits, and worktree so a fresh session can continue from repository state alone.
+- **Task completion:** Run a full completion pass against the completion contract in `dev-docs/AGENTS.md`, record the decisive evidence and required acceptance, and set `State: done` only when that contract holds. Archiving remains a separate operation.
 
 ## Workflow
 
-1. **Resolve and inspect reality.** Read `dev-docs/AGENTS.md`, identify the task, then inspect linked commits, `git status --short`, and relevant diffs before editing its record. Git history proves committed work; the worktree proves uncommitted work.
+1. **Identify affected tasks and checkpoint boundaries.** Resolve the Git top-level and read
+   `dev-docs/AGENTS.md`. Form the affected task set from exact task IDs already carried by the
+   current workflow, changed task-bundle paths, task trailers in relevant commits, and current
+   worktree or session evidence. Validate and recover each identified task through the applicable
+   branch:
 
-   If query reports `invalid: true`, repair `.ai-task.json` before the checkpoint. It contains
-   exactly `version: 1`, `task_id`, directory `slug`, and `keywords`. Preserve a valid `task_id` only when
-   the bundle path, registry projection, and task trailers do not disagree; preserve only valid,
-   unique, non-empty keyword strings and remove every other field. For malformed metadata, recover
-   an existing ID automatically only when those durable sources identify exactly one ID. Otherwise
-   stop and request identity evidence. If those sources prove the bundle has never received an ID,
-   remove the invalid metadata file and let sync allocate it. Absence of one source alone is not
-   that proof. This is identity repair, never manual allocation.
+   - With a reliable task ID, run
+     `node .ai/scripts/ctl-project-governance.mjs query --id T-### --json`.
+   - Without a reliable task ID, run
+     `node .ai/scripts/ctl-project-governance.mjs query --text "<exact bundle slug>" --json`; when it
+     returns one valid task, use its returned ID.
+   - If either query reports `invalid: true`, do not resume; follow
+     [identity repair](references/identity-repair.md) before continuing.
+
+   Only after validation, recover the task by exact ID with
+   `node .ai/scripts/ctl-project-governance.mjs resume --task T-###`.
+
+   Do not use the user's goal as the primary attribution signal. Multiple valid tasks are not an
+   ambiguity: order them and process them one at a time. Give each checkpoint one owning task, one
+   coherent unit, and the deepest applicable reconciliation level. Ask the user only when a
+   task ownership depends on a user decision; stop when different tasks cannot be separated safely.
+
+   For a task using the stopping, handoff, or completion level, read the
+   [full-pass checklist](references/full-pass-checklist.md) now and satisfy it across Steps 2–5,
+   confirming it again after the checkpoint.
 
    If query shows the task's newest occurrence in another worktree — this copy appears in
-   `stale_worktrees` — a checkpoint here may only synchronize this worktree's local reality.
-   Never copy the newest occurrence's facts into this bundle; recover in the newest worktree or
-   bring this one level through Git instead. `conflict: true` — concurrent or unprovable
-   divergence — stops the checkpoint until the disagreement is resolved.
+   `stale_worktrees` — stop this checkpoint. Recover in the newest worktree, or bring this occurrence
+   level through Git and query again. Never copy the newest occurrence's facts into this bundle.
+   `conflict: true` — concurrent or unprovable divergence — also stops the checkpoint until the
+   disagreement is resolved.
 
-2. **Attribute every changed path.** Split changes into this task and foreign work. Use environment session-attribution when available, but still inspect the whole worktree. Never modify, stage, or commit the foreign set. Report it in the handback.
+2. **Inspect and attribute repository reality.** Inspect linked commits, `git status --short`, the
+   worktree diff, and the staged diff before editing task records. Partition changed paths and
+   evidence among the affected tasks and foreign work. Use environment session attribution when
+   available, but still inspect the whole worktree. Git history proves committed work; the worktree
+   and index prove current uncommitted work. Never modify, stage, or commit the foreign set. If a
+   change cannot be isolated without modifying or mixing another task's or foreign work, stop and
+   report the boundary instead of forcing a checkpoint.
 
-3. **Update only the authorities reality changed.**
+3. **Reconcile one task at a time.** Read the selected bundle and update only the authorities whose
+   facts changed, following the document responsibilities in `dev-docs/AGENTS.md`. Keep the bundle
+   as one current snapshot and do not create another goal, status, plan, decision, architecture, or
+   verification authority.
 
-   | File | Authority |
-   |---|---|
-   | `01-status.md` | Current goal, `State:`, current phase, next step, blocker, and current acceptance references |
-   | `00-roadmap.md` | Top-level decision alignment, current-task relationships, phased implementation plan, risks, and closeout |
-   | `02-architecture.md` | Settled interfaces, design, and migration implications |
-   | `verification.md` | Planned checks, latest decisive evidence for relevant claims and phase outcomes, outstanding checks, and material limitations |
-   | `implementation.md` (optional) | Current map of non-obvious implementation, integration, migration, or operational facts |
-   | `pitfalls.md` (optional) | Current evidence-backed recurring hazards and their prevention |
+   A relationship row records only an edge touching this task and never copies the other task's mutable state. When a dependency blocks this task, update the blocker in `01-status.md` too. If repository or verification evidence invalidates a decision or route that implementation depends on, set the kickoff gate to `pending`, uncheck the invalidated gate items (lint rejects a pending gate whose items are all checked), record the evidence, and stop dependent implementation; do not improvise a replacement route during factual synchronization. Return control to the enclosing workflow for replanning before dependent implementation resumes; if synchronization is user-facing, report replanning as the next action. Keep `01-status.md` pointed at the truthful current phase and next action.
 
-   A relationship row records only an edge touching this task and never copies the other task's mutable state. When a dependency blocks this task, update the blocker in `01-status.md` too. If repository or verification evidence invalidates a decision or route that implementation depends on, set the kickoff gate to `pending`, uncheck the invalidated gate items (lint rejects a pending gate whose items are all checked), record the evidence, and stop dependent implementation; do not improvise a replacement route during factual synchronization. Keep `01-status.md` pointed at the truthful current phase and next action. Do not create another plan, goal, status, or verification authority.
+   Remove superseded content unless it still constrains the active route, transition, or recovery;
+   Git history retains the former state.
 
-   Create `implementation.md` from `./templates/implementation.md` only when its durable map would help a fresh agent understand the realized design. Create `pitfalls.md` from `./templates/pitfalls.md` only after a recurring hazard has evidence. Update both as current snapshots: do not append routine history, ordinary TODOs, or repeated test logs. Remove obsolete pitfalls after prevention is encoded and the warning is no longer useful; Git history retains the old entry. Put bulky raw evidence in `artifacts/`.
+   Create `implementation.md` from the [shared template](../../resources/task-governance/templates/implementation.md) only when its durable map would help a fresh agent understand the realized design. Create `pitfalls.md` from the [shared template](../../resources/task-governance/templates/pitfalls.md) only after a recurring hazard has evidence. Update both as current snapshots: do not append routine history, ordinary TODOs, or repeated test logs. Remove obsolete pitfalls after prevention is encoded and the warning is no longer useful; Git history retains the old entry. Put bulky raw evidence in `artifacts/`.
 
    Create or update any other task-local supporting document only when the actual work needs its stated, distinct purpose. Such documents may preserve useful domain-specific context, but must not become a second goal, status, plan, decision, architecture, or verification authority.
 
-   The first alignment, discovery, or implementation checkpoint after opening changes `planned` to `in-progress`. Set `blocked` only when progress requires unresolved external input or a dependency; state the blocker and the first action after unblock. Set `done` only under the lifecycle contract in `dev-docs/AGENTS.md`; review `Done when` as an acceptance reference and never infer completion from its checkbox state.
+   The first post-opening checkpoint changes `planned` to
+   `in-progress`. Apply every other state change under the lifecycle contract in
+   `dev-docs/AGENTS.md`; `Done when` is an acceptance reference, not completion proof.
 
-4. **Refresh governance before staging.**
+4. **Preview and validate this task.** Use the selected ID so another bundle's drift is not folded
+   into this checkpoint:
 
    ```bash
-   node .ai/scripts/ctl-project-governance.mjs sync --apply
-   node .ai/scripts/ctl-project-governance.mjs lint
+   node .ai/scripts/ctl-project-governance.mjs sync --task T-### --dry-run
    ```
 
-   Sync calculates and validates its complete governance change set before writing, then allocates missing task IDs under a cross-worktree lock, validates task metadata, and refreshes registry projections and derived views. A validation error leaves that planned change set unapplied. Lint validates the resulting cross-document semantics. Inspect the generated diff. If it exposes unrelated pre-existing hub drift that cannot be separated safely from this checkpoint, do not attach that drift to the task commit; report it for the hub-maintenance workflow.
+   Inspect the preview before any write. Continue only when every planned change is attributable to
+   the selected task and the global views derived from the registry. Scoped sync requires an
+   existing valid ID; keep missing or invalid identity on the separate repair path from Step 1.
 
-5. **Commit the verified checkpoint.** Before staging implementation, verify that the roadmap kickoff gate is `ready`. When it is `pending`, commit only coherent planning, discovery evidence, or record synchronization and do not land decision-dependent implementation. Stage this task's allowed implementation and bundle paths plus the governance changes caused by this task. Stage by explicit path; never use a worktree-wide catch-all when foreign changes exist.
+   Only after the preview passes that boundary, apply and validate it:
+
+   ```bash
+   node .ai/scripts/ctl-project-governance.mjs sync --task T-### --apply
+   node .ai/scripts/ctl-project-governance.mjs lint --task T-###
+   ```
+
+   Scoped validation still checks the shared registry graph and generated views, but it does not
+   make unrelated task-bundle drift part of this checkpoint. Inspect the selected bundle and
+   generated diff before staging. A sync validation error leaves its planned change set unapplied;
+   if lint fails, keep the applied changes uncommitted and resolve or report the failure.
+
+5. **Commit one isolated checkpoint.** Before staging implementation, verify that the roadmap
+   kickoff gate is `ready`. When it is `pending`, commit only coherent planning, discovery
+   evidence, or record synchronization and do not land decision-dependent implementation.
+
+   Inspect the existing index before staging. If it contains another task's or foreign staged
+   work, do not commit or alter that staging without authorization. Otherwise stage only this
+   task's implementation, bundle, and derived governance changes by explicit path or separable
+   hunk, then inspect the complete staged diff and confirm that it has exactly one task owner.
 
    ```bash
    git add <this task's paths>
-   git commit -m "feat(scope): subject" -m "Task: T-012"
+   git diff --cached
    ```
 
-   The exact `Task:` trailer is the durable commit link. Leave incomplete or unverified code uncommitted and record its state; a truthful dirty checkpoint is safer than a false landed claim. Re-check `git status --short` after the commit and report remaining changes.
+   Inspect that staged diff before committing:
 
-## Full-pass test
+   ```bash
+   git commit -m "<type>(<scope>): <subject>" -m "Task: T-###"
+   ```
 
-A fresh session reading `01-status.md` must be able to state the task's goal, state, blocker, and first action. Reading `00-roadmap.md` next must reveal kickoff readiness, unresolved top-level choices, why the current direction was chosen, relevant cross-task boundaries, and the remaining route. Anything required to answer those questions that exists only in session memory must be recorded before stopping.
+   The exact, single `Task:` trailer is the durable commit link. Commit only when the current
+   authorization includes creating the checkpoint; otherwise leave the validated state
+   uncommitted and preserve that fact for the enclosing workflow. Leave incomplete or unverified
+   code uncommitted and record its state. Re-check `git status --short` whether committed or not,
+   then return to Steps 2–5 for the next affected task.
 
-Use `./templates/full-pass-checklist.md` for the compact checklist.
+   After every affected task has completed this loop, run a final global
+   `sync --dry-run` and `lint`. If the preview reveals another affected task, add it to the loop.
+   Preserve and report unrelated pre-existing drift or validation failures rather than absorbing
+   them into a completed task checkpoint.
 
-## Rules
+6. **Return control or hand back.** When task-sync runs as an internal checkpoint, return to the
+   enclosing workflow without a standalone user report. Surface only a condition that requires user
+   input, changes the authorized boundary, or prevents safe continuation.
 
-- Never describe uncommitted work as landed or mark `done` without recorded evidence.
-- Never land decision-dependent implementation while the kickoff gate is `pending`.
-- Never attach a task trailer to foreign work or hide foreign changes from the handback.
-- Keep a superseded decision and its evidence only while the change still constrains the active route, transition, or recovery; otherwise remove it and rely on Git history.
-- Curate pitfalls as a current warning set and remove an item when encoded prevention makes it obsolete.
-- Never move a bundle into `archive/` here.
-- Never hand-edit AUTO-generated hub blocks or treat registry/meta status as authoritative.
-- Never guess or manually allocate a new task ID; `sync --apply` owns allocation across linked worktrees. Repair may only preserve or recover an existing ID proved by durable repository evidence.
-- Do not put secrets, credentials, or tokens in task artifacts.
+   When synchronization itself is the user-facing request, report in the user's preferred language
+   after all affected tasks have been processed or a boundary stops the loop. Keep the result compact
+   and omit empty fields:
 
-## Authority
+   ```markdown
+   ### Task checkpoints
 
-For an active task, progress is `01-status.md` `## Progress` → `State:`. Registry task status is a derived projection; `.ai-task.json` contains identity and search metadata only. Hub semantics follow `.ai/project/AGENTS.md`.
+   #### T-### — <checkpoint summary>
+   - State / phase:
+   - Depth:
+   - Checkpoint:
+   - Decisive verification:
+   - Remaining task changes:
+   - Next action:
+
+   **Preserved or ambiguous changes**
+   - ...
+   ```
+
+Never hand-edit generated hub views or allocate task IDs manually; `sync --apply` owns both.

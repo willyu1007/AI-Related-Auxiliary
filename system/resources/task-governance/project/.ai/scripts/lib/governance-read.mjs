@@ -296,25 +296,40 @@ function getMarkdownListField(markdownRaw, heading, field) {
   return '';
 }
 
-function getPitfallTableItems(markdownRaw, limit) {
-  const items = [];
-  let headerSeen = false;
+function parseTableRowCells(line) {
+  const trimmed = String(line || '').trim();
+  if (!trimmed.startsWith('|') || !trimmed.endsWith('|')) return null;
+  return trimmed.slice(1, -1).split('|').map((cell) => cell.trim());
+}
 
-  for (const line of normalizeEol(markdownRaw).split('\n')) {
-    const trimmed = line.trim();
-    if (!trimmed.startsWith('|') || !trimmed.endsWith('|')) continue;
-    const cells = trimmed
-      .slice(1, -1)
-      .split('|')
-      .map((cell) => cleanMarkdownValue(cell));
-    if (cells[0]?.toLowerCase() === 'hazard') {
-      headerSeen = true;
+function isTableSeparatorRow(cells) {
+  return cells !== null && cells.length > 0 && cells.every((cell) => /^:?-{3,}:?$/.test(cell));
+}
+
+function getPitfallTableItems(markdownRaw, limit) {
+  // The header is structural — any table row directly followed by a separator row — so template
+  // display wording cannot break parsing. Data columns follow the current template order:
+  // hazard, evidence, prevention, removal condition.
+  const items = [];
+  const lines = normalizeEol(markdownRaw).split('\n');
+  let inTable = false;
+
+  for (let index = 0; index < lines.length; index++) {
+    const cells = parseTableRowCells(lines[index]);
+    if (cells === null) {
+      inTable = false;
       continue;
     }
-    if (!headerSeen || cells.every((cell) => /^:?-{3,}:?$/.test(cell))) continue;
-    const hazard = cells[0];
-    const prevention = cells[2];
-    if (!hazard || hazard.includes('<!--')) continue;
+    if (!inTable) {
+      if (isTableSeparatorRow(parseTableRowCells(lines[index + 1]))) {
+        inTable = true;
+        index++;
+      }
+      continue;
+    }
+    const hazard = cleanMarkdownValue(cells[0]);
+    if (!hazard) continue;
+    const prevention = cleanMarkdownValue(cells[2]);
     items.push(prevention ? `${hazard} — ${prevention}` : hazard);
     if (items.length >= limit) break;
   }
@@ -520,7 +535,7 @@ function collectBundleTaskRows({ repoRoot }) {
       meta_missing: metaRaw === null,
       meta_invalid: metaInvalid,
       meta_errors: metaErrors,
-      status_missing: !statusRaw,
+      status_doc_state: task.phase === 'archive' ? 'not-required' : statusRaw ? 'present' : 'missing',
       status_doc_path: toPosix(path.relative(repoRoot, task.statusPath)),
       roadmap_path: toPosix(path.relative(repoRoot, task.roadmapPath)),
       kickoff_status: getRoadmapKickoff(roadmapRaw).status || 'unknown',
@@ -568,7 +583,7 @@ const QUERY_FACT_FIELDS = [
   'goal',
   'keywords',
   'meta_missing',
-  'status_missing',
+  'status_doc_state',
   'status_doc_path',
   'roadmap_path',
   'kickoff_status',

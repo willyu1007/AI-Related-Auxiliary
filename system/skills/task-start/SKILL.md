@@ -57,9 +57,13 @@ Open one user-approved, non-duplicate tracked task with a clear outcome, project
 
    Create the smallest truthful bundle that lets a fresh agent understand why the task exists, what is decided or still unknown, and the route currently proposed. A new task starts at `State: planned` with kickoff `pending`. Draft the major phases far enough for the user to judge the whole direction: make the first phase concrete and mark later phases provisional when evidence does not yet support their detail. Do not add effort estimates, quality scores, or speculative file-level steps. Read the [roadmap seed example](examples/sample-roadmap-seed.md) only when that initial shape is unclear.
 
-5. **Allocate identity and propose project placement.** Sync to allocate the task ID and its initial registry projection, then add 3–8 useful search keywords to `.ai-task.json`:
+5. **Allocate identity and propose project placement.** Preview the worktree-wide projection and
+   continue only when every planned change belongs to this opening. Then sync to allocate the task
+   ID and its initial registry projection, and add a small set of distinctive search keywords to
+   `.ai-task.json`:
 
    ```bash
+   node .ai/scripts/ctl-project-governance.mjs sync --dry-run
    node .ai/scripts/ctl-project-governance.mjs sync --apply
    ```
 
@@ -77,13 +81,17 @@ Open one user-approved, non-duplicate tracked task with a clear outcome, project
 
 7. **Review the opening with the user.** Keep the generated bundle uncommitted. Present a compact brief with the goal, scope and boundaries, current acceptance references, items needing confirmation, preliminary roadmap, known risks or unknowns, and project placement. Summarize each phase by purpose, expected outcome, and evidence or feedback point; do not ask the user to review the full generated documents.
 
-   Incorporate the user's feedback into the bundle. After the user confirms project placement, apply exactly that existing Feature mapping or create the confirmed Feature and map the task, then rerun sync and lint:
+   Incorporate the user's feedback into the bundle. After the user confirms project placement,
+   apply exactly that existing Feature mapping or create the confirmed Feature and map the task.
+   The task now has its ID, so checkpoint it with scoped sync; inspect the preview before applying
+   it and stop if it includes a change outside this opening:
 
    ```bash
    node .ai/scripts/ctl-project-governance.mjs feature --title "<confirmed feature title>" --description "<confirmed intent>" --apply --json
    node .ai/scripts/ctl-project-governance.mjs map --task T-### --feature F-### --apply
-   node .ai/scripts/ctl-project-governance.mjs sync --apply
-   node .ai/scripts/ctl-project-governance.mjs lint
+   node .ai/scripts/ctl-project-governance.mjs sync --task T-### --dry-run
+   node .ai/scripts/ctl-project-governance.mjs sync --task T-### --apply
+   node .ai/scripts/ctl-project-governance.mjs lint --task T-###
    ```
 
    Skip Feature creation when an existing Feature was confirmed, and skip mapping when placement remains `F-000`. Repeat the brief only for materially changed parts. Do not commit until the user explicitly approves the opening or says there are no further changes. Open implementation choices may remain when they are recorded honestly and do not change the task's goal or boundary.

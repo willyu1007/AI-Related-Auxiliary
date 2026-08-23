@@ -32,18 +32,18 @@ checks/          # 本仓库自己的校验，不是分发物
 
 ## system/ —— 技能
 
-任务治理的八个技能按实际操作划分；其中 `goal-mode` 串联长任务主线，其余每个对应工作流程里的一个时刻。主线是 `start → plan → implementation`；新证据推翻路线时回到 plan，实施检查点通过 `sync → resume` 走仓库跨越时间，`handoff → 新会话` 则通过对话完成零间隔交接。
+任务治理的八个技能按实际操作划分；其中 `goal-mode` 串联同一 Goal 运行内的长任务主线，其余每个对应工作流程里的一个时刻。主线是 `start → plan → implementation`；新证据推翻路线时回到 plan，实施检查点通过 `sync → resume` 走仓库跨越时间，`handoff → 新会话` 则通过对话完成普通任务的零间隔交接。
 
 | Skill | 时刻 | 通道 |
 |---|---|---|
 | [task-start](system/skills/task-start/SKILL.md) | 开任务：查重、提炼目标、建立经用户确认的 pending roadmap seed、分配 ID 并注册进 hub | 仓库 |
 | [task-plan](system/skills/task-plan/SKILL.md) | 持续收敛顶层决策、完成实施 kickoff，并在新证据推翻路线时 replan | 仓库 + 对话 |
 | [task-sync](system/skills/task-sync/SKILL.md) | 把记录与仓库现实拉平，保持当前态证据而非追加流水账 | 仓库 |
-| [project-hub-maintain](system/skills/project-hub-maintain/SKILL.md) | 执行已选任务的归档转换，或修复 hub/registry 与派生视图漂移 | 仓库 |
+| [project-hub-maintain](system/skills/project-hub-maintain/SKILL.md) | 执行任务归档、已确认的 Milestone / Feature / Idea / task mapping 变更，或修复 hub 与派生视图漂移 | 仓库 |
 | [task-resume](system/skills/task-resume/SKILL.md) | 冷启动：只凭仓库重建已跟踪任务的上下文 | 仓库 |
 | [task-handoff](system/skills/task-handoff/SKILL.md) | 热交接：上下文降质时，把当前工作提炼成可粘贴的块 | **对话** |
-| [project-status](system/skills/project-status/SKILL.md) | 跨任务的只读进度、归档就绪度与 hub 漂移审计 | 仓库 |
-| [goal-mode](system/skills/goal-mode/SKILL.md) | 串联 start、planning、分阶段执行、checkpoint、handoff 与完成契约 | 仓库 + 对话 |
+| [project-status](system/skills/project-status/SKILL.md) | 一项或多项任务及项目 hub 的只读状态、归档就绪度与一致性审查 | 仓库 |
+| [goal-mode](system/skills/goal-mode/SKILL.md) | 在同一 Goal 运行内串联 start、planning、分阶段执行、checkpoint、恢复与完成契约 | 仓库 + 对话 |
 
 另有与任务治理无关的技能：
 
@@ -97,7 +97,7 @@ node checks/run.mjs
 
 - 内容必须可复用：不绑定某台机器、某个密钥、某条个人路径。
 - 一条规则只定义一次。每个技能只写自己那一刀，完整的规范交给脚本的 `lint` 去机器校验——复制粘贴出来的第二份一定会静默漂移。
-- 技能之间不互相提名。要跳到别的技能时，说该做的动作，让 router 去选人。
+- 普通技能之间不互相提名；负责串联长任务的 `goal-mode` 是显式校验的编排例外。
 - 一行文字要么对齐一个模型推不出的偏好，要么抵消一个明知故犯的默认，要么是硬边界或引导；删掉后行为不变的行不该存在。
 - 理由只在支撑边界判断时保留：一句话、挂在规则上。独立成段的论证是说教。
 - 每个 Skill 都要写清边界：**不做什么**和做什么同样重要。
