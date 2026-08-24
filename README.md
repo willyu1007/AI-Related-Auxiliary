@@ -1,8 +1,8 @@
 # AI-Related-Auxiliary
 
-可复用的 AI 辅助材料库：Agent Skill、规则片段、说明文档。
+可复用的 AI 辅助材料库：Agent Skill、共享仓库设施和全局 Agent 指令。
 
-**本仓库不执行任何东西。** 里面的内容——包括脚本——都是被复制出去使用的材料，不是运行时。
+**`system/` 是分发物，`checks/` 是本仓库唯一的执行入口。** `system/` 中的脚本随资源安装进目标仓库后运行，不以本仓库作为运行时。
 
 ## 结构
 
@@ -11,12 +11,15 @@ system/          # 库本身：跟着人走的全局层
   skills/        #   所有 Skill，一层平铺（发现只扫这一层）
     <skill>/
       SKILL.md
-      examples/ references/             # 只服务该技能的材料
+      assets/ examples/ references/ templates/  # 按需存在，只服务该技能
   resources/     #   多个 Skill 共用的系统设施
     task-governance/
       install.mjs
-      project/                         # 安装进目标仓库的固定设施
-      templates/                       # 与设施契约同步的任务模板
+      project/                           # 安装进目标仓库的固定设施
+        .ai/project/                     # hub 契约与初始视图模板
+        .ai/scripts/                     # 治理 CLI 与实现
+        dev-docs/                        # task bundle 契约和目录骨架
+      templates/                         # 创建任务文档时使用的源模板
   docs/          #   全局 Agent 指令（CLAUDE.md / AGENTS.md）
 checks/          # 本仓库自己的校验，不是分发物
   run.mjs
@@ -28,9 +31,11 @@ checks/          # 本仓库自己的校验，不是分发物
 
 控制脚本仍要落进目标仓库：这样任务记录与仓库内的契约一起工作，其他机器、LLM 或 CI 不需要知道全局资源安装在哪里。
 
+安装后的 task bundle 以 `.ai-task.json`、`00-roadmap.md`、`01-status.md`、`02-architecture.md` 和 `verification.md` 分别承载身份、计划、进展、设计与验证事实；`.ai/project/registry.json` 持有跨任务的 Milestone、Feature、Idea 和 task mapping。治理 CLI 提供安装、lint、全局或 scoped sync、跨 worktree query、resume packet 与项目视图重建。
+
 技能发现只扫 `system/skills/` 的第一层，所以那一层保持平铺，不要建分组子目录。
 
-## system/ —— 技能
+## system/ —— 24 个技能
 
 任务治理的八个技能按实际操作划分；其中 `goal-mode` 串联同一 Goal 运行内的长任务主线，其余每个对应工作流程里的一个时刻。主线是 `start → plan → implementation`；新证据推翻路线时回到 plan，实施检查点通过 `sync → resume` 走仓库跨越时间，`handoff → 新会话` 则通过对话完成普通任务的零间隔交接。
 
@@ -45,11 +50,14 @@ checks/          # 本仓库自己的校验，不是分发物
 | [project-status](system/skills/project-status/SKILL.md) | 一项或多项任务及项目 hub 的只读状态、归档就绪度与一致性审查 | 仓库 |
 | [goal-mode](system/skills/goal-mode/SKILL.md) | 在同一 Goal 运行内串联 start、planning、分阶段执行、checkpoint、恢复与完成契约 | 仓库 + 对话 |
 
-另有与任务治理无关的技能：
+另有 16 个与任务治理无关的技能：
 
 | Skill | 用途 |
 |---|---|
-| `codex-*`（三个） / `html-communication` | 见各自 `SKILL.md` |
+| [codex-computer-use](system/skills/codex-computer-use/SKILL.md) | 当代码和 shell 不足时，通过 GUI、截图、模拟器或实时应用状态完成或验证工作 |
+| [codex-implementation](system/skills/codex-implementation/SKILL.md) | 把已明确的行为或设计交给 Codex CLI 实施，并保留调用方的范围、审查和交付责任 |
+| [codex-review](system/skills/codex-review/SKILL.md) | 使用 Codex CLI 审查实施计划或代码改动，并按产出模型确定主审或补充审查角色 |
+| [html-communication](system/skills/html-communication/SKILL.md) | 把计划、报告、比较或 UI mock 交付为便携、无脚本的 HTML 工作文档 |
 | [research](system/skills/research/SKILL.md) | 对需要多来源、时效性或可追溯引用的外部问题做有界调查，并返回可由调用方消费的证据结论 |
 | [review-code](system/skills/review-code/SKILL.md) | 直接审查代码：圈定范围、对齐审查意图，在已授权时边审边修，并报告已修复与未解决问题 |
 | [sync-db-from-prisma](system/skills/sync-db-from-prisma/SKILL.md) | Prisma repo→DB migration 闸门：预览、单独的 apply 批准、按环境应用、验证 |
@@ -58,6 +66,10 @@ checks/          # 本仓库自己的校验，不是分发物
 | [get-sensitive-info](system/skills/get-sensitive-info/SKILL.md) | 获取并使用 `~/Documents/LLM/project-ops.md` 中的项目敏感信息；按项目标准机制落地配置，缺失内容用中文占位符反写并返回可点击文档链接 |
 | [manage-ui-style](system/skills/manage-ui-style/SKILL.md) | 继承、探索并沉淀项目 UI 风格，在需要时审计和修复视觉漂移 |
 | [cleanup-project-residue](system/skills/cleanup-project-residue/SKILL.md) | 清理当前 session、任务、近期工作或全项目中的过时测试、冗余内容、语义漂移、双轨/legacy 残留和技术债；证据+批准后删除，校验门收尾 |
+| [resolve-vcs-conflicts](system/skills/resolve-vcs-conflicts/SKILL.md) | 在已获授权且进行中的 merge、rebase、cherry-pick 或 revert 中恢复双方意图并解决 Git 冲突 |
+| [tdd](system/skills/tdd/SKILL.md) | 在行为与测试 seam 足够稳定时，以 red → green → refactor 推进测试优先实现 |
+| [wizard](system/skills/wizard/SKILL.md) | 为必须由用户持有私密访问、MFA 或实体设备才能完成的步骤生成临时交互式向导 |
+| [write-prompt](system/skills/write-prompt/SKILL.md) | 为另一个 LLM、subagent、CLI agent 或运行时模型编写独立执行边界的 Prompt |
 
 ## 触发方式
 
