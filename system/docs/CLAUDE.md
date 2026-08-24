@@ -71,7 +71,7 @@ Channel both "measure twice, cut once" and "yagni". Fight scope creep. Honor the
 
 ### User-facing artifacts
 
-- Presentation artifacts (reports, diagrams, screenshots, prototypes) should not be placed in the repository unless they are intended to become maintained project assets. Unless the user or a format-specific workflow specifies another location, use `<Desktop>/html-communication/<task-name>/`; do not create `<Desktop>/<task-name>/` directly.
+- Presentation artifacts (reports, diagrams, screenshots, prototypes) should not be placed in the repository unless they are intended to become maintained project assets. Unless the user or a format-specific workflow specifies another location, use `<Desktop>/html-communication/<task-name>/`.
 
 ## Picking the Right Models for Workflows and Subagents
 
