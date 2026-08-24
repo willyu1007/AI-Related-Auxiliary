@@ -67,7 +67,7 @@ Use the deepest applicable level. Depth changes the breadth of reconciliation, n
    Remove superseded content unless it still constrains the active route, transition, or recovery;
    Git history retains the former state.
 
-   Create `implementation.md` from the [shared template](../../resources/task-governance/templates/implementation.md) only when its durable map would help a fresh agent understand the realized design. Create `pitfalls.md` from the [shared template](../../resources/task-governance/templates/pitfalls.md) only after a recurring hazard has evidence. Update both as current snapshots: do not append routine history, ordinary TODOs, or repeated test logs. Remove obsolete pitfalls after prevention is encoded and the warning is no longer useful; Git history retains the old entry. Put bulky raw evidence in `artifacts/`.
+   Create `implementation.md` from `<repo-root>/dev-docs/templates/implementation.md` only when its durable map would help a fresh agent understand the realized design. Create `pitfalls.md` from `<repo-root>/dev-docs/templates/pitfalls.md` only after a recurring hazard has evidence. Update both as current snapshots: do not append routine history, ordinary TODOs, or repeated test logs. Remove obsolete pitfalls after prevention is encoded and the warning is no longer useful; Git history retains the old entry. Put bulky raw evidence in `artifacts/`.
 
    Create or update any other task-local supporting document only when the actual work needs its stated, distinct purpose. Such documents may preserve useful domain-specific context, but must not become a second goal, status, plan, decision, architecture, or verification authority.
 

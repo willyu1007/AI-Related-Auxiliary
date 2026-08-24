@@ -23,22 +23,14 @@ Open one user-approved, non-duplicate tracked task with a clear outcome, project
 
    Otherwise keep bounded, low-risk work in conversation. File count, step count, and estimated duration alone do not justify a task.
 
-2. **Protect the worktree and ensure governance.** Resolve the Git top-level and run the rest of this workflow from there. Record `git status --short`. Resolve the shared task-governance resource at `<this-skill>/../../resources/task-governance`; stop and report an incomplete system installation when it is missing. Preview its installer, then apply only the shown initialization or repair of missing files:
+2. **Protect the worktree and ensure governance.** Work from `<repo-root>`:
 
-   ```bash
-   node <task-governance-resource>/install.mjs --dry-run
-   node <task-governance-resource>/install.mjs
-   ```
-
-   The default installer never replaces an existing fixed asset. If it reports a difference, stop and show the affected paths; governance refresh is a separate, explicitly approved operation using `--dry-run --refresh` and then `--refresh`. Do not perform it as part of opening a task.
-
-   After governance is available, read `dev-docs/AGENTS.md` and `.ai/project/AGENTS.md` completely, then validate before interpreting or creating task data:
-
-   ```bash
-   node .ai/scripts/ctl-project-governance.mjs lint
-   ```
-
-   Stop on validation failure. Preserve all pre-existing changes throughout the workflow.
+   - Record `git status --short`
+   - Need `<repo-root>/.ai/`, `<repo-root>/dev-docs/`, `<repo-root>/dev-docs/templates/`
+   - If missing, get `system/resources/task-governance/project/` from https://github.com/willyu1007/AI-Related-Auxiliary and copy it into `<repo-root>`
+   - Fill gaps only; `--refresh` needs explicit approval, not during open
+   - Read `dev-docs/AGENTS.md` and `.ai/project/AGENTS.md`, then `node .ai/scripts/ctl-project-governance.mjs lint`
+   - Stop on lint failure; keep existing worktree changes
 
 3. **Search before creating.** Query several short domain and outcome terms; search covers linked worktrees and uncommitted bundles:
 
@@ -53,7 +45,7 @@ Open one user-approved, non-duplicate tracked task with a clear outcome, project
 
    Create `requirement.md` only when requirements alignment is requested or a requirements source is supplied. Resolve sources in this order: latest confirmed user instruction, confirmed `requirement.md`, host plan artifact, then model inference. Keep unresolved conflicts open.
 
-   Create `dev-docs/active/<slug>/` from the required [status](../../resources/task-governance/templates/01-status.md), [roadmap](../../resources/task-governance/templates/00-roadmap.md), [architecture](../../resources/task-governance/templates/02-architecture.md), and [verification](../../resources/task-governance/templates/verification.md) templates according to `dev-docs/AGENTS.md`. When selected above, instantiate the [requirements template](../../resources/task-governance/templates/requirement.md) in the same directory. Preserve contract-required structure, adapt the detail, and remove authoring comments. Leave `.ai-task.json` absent; the next sync owns its ID and initial metadata.
+   Create `dev-docs/active/<slug>/` from the required templates at `<repo-root>/dev-docs/templates/`: `01-status.md`, `00-roadmap.md`, `02-architecture.md`, and `verification.md`, according to `dev-docs/AGENTS.md`. When selected above, instantiate `<repo-root>/dev-docs/templates/requirement.md` in the same directory. Preserve contract-required structure, adapt the detail, and remove authoring comments. Leave `.ai-task.json` absent; the next sync owns its ID and initial metadata.
 
    Create the smallest truthful bundle that lets a fresh agent understand why the task exists, what is decided or still unknown, and the route currently proposed. A new task starts at `State: planned` with kickoff `pending`. Draft the major phases far enough for the user to judge the whole direction: make the first phase concrete and mark later phases provisional when evidence does not yet support their detail. Do not add effort estimates, quality scores, or speculative file-level steps. Read the [roadmap seed example](examples/sample-roadmap-seed.md) only when that initial shape is unclear.
 

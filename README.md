@@ -2,11 +2,12 @@
 
 可复用的 AI 辅助材料库：Agent Skill、共享仓库设施和全局 Agent 指令。
 
-**`system/` 是分发物，`checks/` 是本仓库唯一的执行入口。** `system/` 中的脚本随资源安装进目标仓库后运行，不以本仓库作为运行时。
+**`system/` 是分发物。** 本仓库有两个执行入口：`install-task-governance.mjs` 初始化目标仓库的 `.ai/` 与 `dev-docs/`；`checks/run.mjs` 校验这个库本身。`system/` 中的脚本随资源安装进目标仓库后运行，不以本仓库作为运行时。
 
 ## 结构
 
 ```text
+install-task-governance.mjs     # 目标仓库 .ai/ 与 dev-docs/ 初始化，可从 git 拉取
 system/          # 库本身：跟着人走的全局层
   skills/        #   所有 Skill，一层平铺（发现只扫这一层）
     <skill>/
@@ -18,8 +19,7 @@ system/          # 库本身：跟着人走的全局层
       project/                           # 安装进目标仓库的固定设施
         .ai/project/                     # hub 契约与初始视图模板
         .ai/scripts/                     # 治理 CLI 与实现
-        dev-docs/                        # task bundle 契约和目录骨架
-      templates/                         # 创建任务文档时使用的源模板
+        dev-docs/                        # 契约、目录骨架、开任务源模板
   docs/          #   全局 Agent 指令（CLAUDE.md / AGENTS.md）
 checks/          # 本仓库自己的校验，不是分发物
   run.mjs
@@ -27,7 +27,18 @@ checks/          # 本仓库自己的校验，不是分发物
 
 普通 Skill 应保持自包含；但依赖同一套仓库协议、控制脚本或持久化格式的工作流，可以共享 `system/resources/` 中的系统设施。此时 `system/` 是完整发布单元，不能只复制其中一个依赖设施的 Skill。
 
-`task-*`、`project-*` 与 `goal-mode` 工作流依赖 `task-governance`。它集中持有项目内 `.ai/` 运行时、`dev-docs` 契约和配套模板；`task-start` 在首次使用时将它初始化到目标仓库，其他相关 Skill 使用项目内已安装的设施。默认安装不会覆盖已有固定设施；内容不同时必须先预览并显式 refresh。每个 Agent 环境中的 `resources/` 必须与 `skills/` 同级，资源相对路径才能保持稳定。
+`task-*`、`project-*` 与 `goal-mode` 依赖 `task-governance`。用它们之前，目标仓库必须已经具备它提供的固定设施：
+
+- `.ai/scripts/` — 治理 CLI
+- `.ai/project/` — hub 契约与初始数据
+- `dev-docs/` — 任务文档契约、目录骨架，以及 `templates/` 开任务源模板
+
+设施来源是 `system/resources/task-governance/project/`，不是手写一份近似结构。落地方式二选一：
+
+1. **脚本（推荐）** — 在目标仓库根目录运行 `install-task-governance.mjs`；本地没有本库时加 `--from-git`。默认不覆盖已有固定设施；内容不同时先 `--dry-run --refresh`，再显式 `--refresh`。
+2. **手动复制** — 把 `project/` 下的固定文件拷进目标仓库根目录，缺失的 hub 数据按 `project/.ai/project/templates/` 初始化。不要改相对布局。
+
+这些技能常作为系统 Skill，一律从 `<repo-root>` 读。缺设施时去 https://github.com/willyu1007/AI-Related-Auxiliary 取 `system/resources/task-governance/project/`。
 
 控制脚本仍要落进目标仓库：这样任务记录与仓库内的契约一起工作，其他机器、LLM 或 CI 不需要知道全局资源安装在哪里。
 
@@ -80,13 +91,29 @@ checks/          # 本仓库自己的校验，不是分发物
 `system/` 是全局 Agent 配置的版本化镜像。改动流程：
 
 ```bash
-# 从本仓库同步到全局
+# 从本仓库同步到全局（各 Agent 环境里 resources/ 必须与 skills/ 同级）
 cp -R system/skills/. ~/.claude/skills/
 cp -R system/resources/. ~/.claude/resources/
 cp system/docs/CLAUDE.md ~/.claude/CLAUDE.md
+cp -R system/skills/. ~/.codex/skills/
+cp -R system/resources/. ~/.codex/resources/
 cp system/docs/AGENTS.md ~/.codex/AGENTS.md
+cp -R system/skills/. ~/.cursor/skills/
+cp -R system/resources/. ~/.cursor/resources/
+```
 
-# 从全局回收改动到本仓库
+目标仓库初始化（脚本最省事；等价做法是按上一节手动复制 `project/`）：
+
+```bash
+node install-task-governance.mjs
+node install-task-governance.mjs --from-git --dry-run
+```
+
+也可把该脚本拷到目标仓库根目录再跑。它写入 `.ai/`、`dev-docs/` 和 `dev-docs/templates/`。
+
+从全局回收改动到本仓库时，按实际改过的 Agent 目录回拷：
+
+```bash
 cp -R ~/.claude/skills/. system/skills/
 cp -R ~/.claude/resources/. system/resources/
 cp ~/.claude/CLAUDE.md system/docs/CLAUDE.md
@@ -103,14 +130,17 @@ node checks/run.mjs
 
 这是轻量静态检查：扫描 `system/` 中的悬空脚本引用、机器绝对路径、技能间耦合、技能发现布局，以及两份全局文档的漂移。行为验证留给使用这些材料的目标仓库，不在这个纯储存仓库里维护复制出来的集成测试。
 
-`checks/` **不是分发物** —— 它校验这个库，`system/` 才是库本身。这也是本仓库唯一会执行的东西。
+`checks/` **不是分发物** —— 它校验这个库，`system/` 才是库本身。`install-task-governance.mjs` 只负责初始化目标仓库，不参与库内容校验。
 
-## 贡献约定
+## 高质量 Skill
 
-- 内容必须可复用：不绑定某台机器、某个密钥、某条个人路径。
-- 一条规则只定义一次。每个技能只写自己那一刀，完整的规范交给脚本的 `lint` 去机器校验——复制粘贴出来的第二份一定会静默漂移。
-- 普通技能之间不互相提名；负责串联长任务的 `goal-mode` 是显式校验的编排例外。
-- 一行文字要么对齐一个模型推不出的偏好，要么抵消一个明知故犯的默认，要么是硬边界或引导；删掉后行为不变的行不该存在。
-- 理由只在支撑边界判断时保留：一句话、挂在规则上。独立成段的论证是说教。
-- 每个 Skill 都要写清边界：**不做什么**和做什么同样重要。
-- 文档要能独立读懂，不依赖未提交的本地文件。
+模型把它当系统 Skill 加载，当前工作区是目标仓库。按这个情景写：
+
+- **对齐使用偏好** — 只写模型推不出的偏好、会滑向的默认、硬边界。删了行为不变的行不要留。
+- **相信模型** — 给条件、路径、动作。不解释原理，不预演失败。
+- **从使用情景写** — 仓库内设施写 `<repo-root>/...`；Skill 自带材料写本目录的 `references/`、`templates/`。不要从 Skill 的安装位置往外跳。
+- **引导，不介绍** — 步骤回答「此刻做什么、缺什么、去哪取」。不写背景、花名册、独立论证。
+- **自包含** — 普通 Skill 不点名其他 Skill；共享协议进 `resources/`。`goal-mode` 是唯一编排例外。
+- **一处定义** — 规则只写一次。能 lint 的交给脚本。
+- **写清边界** — 不做什么和做什么同样重要。
+- **可复用** — 不绑机器、密钥、个人路径。不依赖未提交的本地文件。

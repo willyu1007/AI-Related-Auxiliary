@@ -127,14 +127,15 @@ function isOwnedFixedAsset(relative) {
   const normalized = toPosix(relative);
   return (
     OWNED_EXACT_FILES.has(normalized) ||
-    /^\.ai\/scripts\/lib\/governance-[a-z0-9-]+\.mjs$/.test(normalized)
+    /^\.ai\/scripts\/lib\/governance-[a-z0-9-]+\.mjs$/.test(normalized) ||
+    /^dev-docs\/templates\/[a-z0-9-]+\.md$/.test(normalized)
   );
 }
 
 function collectInstalledOwnedAssets(repoRoot) {
   const files = [...OWNED_EXACT_FILES]
     .filter((relative) => exists(path.join(repoRoot, relative)));
-  for (const relativeRoot of ['.ai/scripts/lib', '.ai/project/templates']) {
+  for (const relativeRoot of ['.ai/scripts/lib', '.ai/project/templates', 'dev-docs/templates']) {
     const absoluteRoot = path.join(repoRoot, relativeRoot);
     if (!exists(absoluteRoot)) continue;
     for (const relative of collectFiles(absoluteRoot, repoRoot)) {
