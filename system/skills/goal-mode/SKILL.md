@@ -1,9 +1,10 @@
 ---
 name: goal-mode
 description: >-
-  Use when a task or goal is expected to span hours, days, long-running
-  operations, external waits, automatic continuations, or context compaction,
-  or when the user explicitly asks to use goal mode.
+  Use when a task or goal is expected to span multiple work sessions or days,
+  requires unattended long-running operations or external waits, must survive
+  automatic continuations or context compaction, or when the user explicitly
+  asks to use goal mode.
 ---
 
 # Goal Mode
@@ -20,6 +21,10 @@ implementation before work advances.**
 - The host Goal owns the continuing objective and stopping condition. The task bundle owns the
   repository-recoverable goal, route, status, settled design, and verification evidence. Do not
   create a parallel roadmap, phase list, status record, or evidence log.
+- Within the kickoff gate's `Authorized boundary`, phase closeout is
+  pre-authorized: review fixes, residue removal, checkpoint commits. Ask only
+  for work beyond the boundary, destructive changes to pre-existing content,
+  goal or scope changes, or external side effects.
 - Each roadmap phase is one execution checkpoint. `task-plan` owns the route and
   phase shape; this skill drives the current phase through its closeout gate.
 - Roadmap kickoff must be `ready` before implementation begins. New evidence
@@ -42,10 +47,16 @@ task-start / task-resume
 -> next phase / done
 ```
 
-1. **Bind the goal.** Use `task-start` when no active bundle represents it and
-   `task-resume` when an existing bundle's context must be rebuilt from
-   repository state. Honor any identity or recovery stop condition instead of
-   choosing or duplicating a task.
+1. **Bind the goal.** Enter goal mode for a new goal when the user names it or
+   asks for unattended execution to a stopping condition, or when the work
+   clearly exceeds one attended session — phased work spanning multiple
+   sessions or days, long unattended runs, external waits. Confirm
+   model-identified entry in one line; hours of ordinary attended work do not
+   qualify. Resuming an active goal run needs no re-confirmation. Use
+   `task-start` when no active bundle represents it and `task-resume` when an
+   existing bundle's context must be rebuilt from repository state. Honor any
+   identity or recovery stop condition instead of choosing or duplicating a
+   task.
 2. **Prepare the route.** Use `task-plan` until kickoff is `ready` and the current
    phase is executable.
 3. **Execute the phase.** Complete its defined outcome through the relevant

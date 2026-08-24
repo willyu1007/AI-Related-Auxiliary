@@ -43,7 +43,7 @@ Converge one task bundle into a coherent current plan without creating a second 
    - If the user has proposed a solution, use it as the current direction. Otherwise, form a proposal from the user's goal, constraints, preferences, and the available evidence.
    - Identify only top-level decisions that can materially change the solution or its overall route. Where the direction is not already clear, lead with a recommendation for the user to confirm or revise; resolve ordinary implementation details directly.
    - Incorporate confirmed decisions and user corrections back into the proposal until it forms one coherent direction. Do not reopen settled choices unless new evidence invalidates them.
-   - If evidence invalidates a settled decision, assumption, or dependent route, immediately set kickoff to `pending`, uncheck the affected gate items, stop dependent implementation, and revise the affected decisions and phases. Independent evidence gathering may continue.
+   - If evidence invalidates a settled decision, assumption, or dependent route, immediately set kickoff to `pending`, uncheck the affected gate items, stop dependent implementation, and revise the affected decisions and phases. When the route materially changes — phases added, removed, or redirected rather than refined — also reset the gate's `Authorized boundary` to `none`; refinement inside the approved route keeps the existing boundary. Independent evidence gathering may continue.
 
 3. **Reconcile the task bundle into the current plan.** Use the current direction, top-level
    decisions, user feedback, and repository evidence to decide what must be added, revised,
@@ -145,8 +145,10 @@ Converge one task bundle into a coherent current plan without creating a second 
    If kickoff is `ready` and implementation scope is not already clear, recommend an execution
    boundary and list the current phases as cumulative stopping points, using outcomes rather than
    implementation detail. Mark provisional boundaries honestly and let the user choose how far to
-   proceed. Existing implementation authorization takes precedence; do not ask again when the user
-   has already selected a boundary or authorized the complete task.
+   proceed. Record the user's choice on the kickoff gate's `Authorized boundary` line so recovery
+   and later sessions inherit it. Existing implementation authorization — including a boundary
+   already recorded on the gate — takes precedence; do not ask again when the user has already
+   selected a boundary or authorized the complete task.
 
    Planning approval alone does not authorize implementation. Begin or resume implementation only
    within the authorized boundary and while kickoff remains `ready`; any selected scope remains

@@ -113,6 +113,11 @@ Implementation readiness lives separately in the roadmap kickoff gate:
   executable.
 - Kickoff is `pending` whenever evidence invalidates a gating premise or route; route-dependent
   implementation remains paused until alignment is restored.
+- The gate's `Authorized boundary` line records how far the user has authorized implementation:
+  `none`, a phase boundary such as `through phase 2`, or `complete task`. Because it lives in the
+  bundle, the authorization survives session recovery and continuation. Reset it to `none` when
+  the route materially changes — phases added, removed, or redirected — not when phase detail is
+  refined inside the approved route.
 - A `done` task must have kickoff `ready`.
 
 Checking every `Done when` item does not make a task `done`, and an outdated item must be revised

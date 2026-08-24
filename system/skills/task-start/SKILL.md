@@ -2,26 +2,23 @@
 name: task-start
 description: >-
   Use when the user asks to open a tracked task or persist a repository
-  roadmap, when work introduces a new product or system capability that should
-  be represented in the project hub, or when upcoming repository work needs
-  durable planning and progress records because it will span sessions, require
-  handoff, or carry high-risk or cross-cutting impact. Do not use for ordinary
-  in-chat planning or bounded, low-risk work that can be completed in one
-  session.
+  roadmap, when work delivers a project-level capability that belongs in the
+  project hub's feature map, or when work known to span sessions cannot be
+  recovered from git history and code alone. Do not use for maintenance of
+  existing capabilities or work that completes within the session.
 ---
 
 Open one user-approved, non-duplicate tracked task with a clear outcome, project placement, and preliminary roadmap. Leave implementation readiness to later planning.
 
 ## Workflow
 
-1. **Confirm durable tracking.** Open a task when any of these is true:
+1. **Confirm durable tracking.** Open a task only through one of these paths:
 
-   - The user explicitly requests a tracked task or durable roadmap.
-   - The work introduces a new product or system capability that belongs in the project hub.
-   - The record must survive a session boundary or handoff.
-   - Risk or cross-cutting impact requires durable decisions, verification, or recovery context.
+   - The user explicitly requests a tracked task or durable roadmap, or an execution flow the user initiated requires the bundle: open without asking.
+   - The work delivers a project-level capability: a new hub Feature or a material advance of an existing one. Fixes, tuning, refactors, and tooling chores are maintenance, not capabilities.
+   - The work is known to continue beyond this session or hand off, and git history and code alone cannot recover the context needed to continue — open decisions, route position, verification obligations.
 
-   Otherwise keep bounded, low-risk work in conversation. File count, step count, and estimated duration alone do not justify a task.
+   On the model-identified paths, propose in one compact message and create nothing until the user confirms. Otherwise keep the work in conversation; size, risk, and cross-cutting impact do not justify a task. Work covered by an active task continues there.
 
 2. **Protect the worktree and ensure governance.** Work from `<repo-root>`:
 
