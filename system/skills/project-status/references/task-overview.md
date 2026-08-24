@@ -18,8 +18,8 @@ resolve them from that worktree, not the current one.
 - Query returns one logical row per task ID across linked worktrees. Count that row once; report
   `stale_worktrees` when an older checked-out copy matters to the requested view.
 - Treat a conflict, invalid or missing metadata, or `status_doc_state: missing` as diagnostic
-  evidence rather than a task fact. Archived rows report `status_doc_state: not-required` and no
-  kickoff value.
+  evidence rather than a task fact. Archived rows report `not-required` for both
+  `status_doc_state` and `kickoff_status`.
 - Counts describe the tracked inventory, not effort, quality, scope coverage, or completion
   percentage.
 - Keep kickoff readiness separate from task state. Read a blocked task's documented `Blocker:`;

@@ -299,7 +299,27 @@ function getMarkdownListField(markdownRaw, heading, field) {
 function parseTableRowCells(line) {
   const trimmed = String(line || '').trim();
   if (!trimmed.startsWith('|') || !trimmed.endsWith('|')) return null;
-  return trimmed.slice(1, -1).split('|').map((cell) => cell.trim());
+  // Split on unescaped pipes only: `\|` is literal cell content and `\\|` is a literal
+  // backslash followed by a cell boundary, matching how markdownCell escapes on render.
+  const cells = [];
+  let current = '';
+  for (let index = 1; index < trimmed.length - 1; index++) {
+    const char = trimmed[index];
+    if (char === '\\' && index + 1 < trimmed.length - 1) {
+      const next = trimmed[index + 1];
+      current += next === '|' ? '|' : char + next;
+      index++;
+      continue;
+    }
+    if (char === '|') {
+      cells.push(current.trim());
+      current = '';
+      continue;
+    }
+    current += char;
+  }
+  cells.push(current.trim());
+  return cells;
 }
 
 function isTableSeparatorRow(cells) {
@@ -535,10 +555,12 @@ function collectBundleTaskRows({ repoRoot }) {
       meta_missing: metaRaw === null,
       meta_invalid: metaInvalid,
       meta_errors: metaErrors,
-      status_doc_state: task.phase === 'archive' ? 'not-required' : statusRaw ? 'present' : 'missing',
+      status_doc_state:
+        task.phase === 'archive' ? 'not-required' : statusRaw !== null ? 'present' : 'missing',
       status_doc_path: toPosix(path.relative(repoRoot, task.statusPath)),
       roadmap_path: toPosix(path.relative(repoRoot, task.roadmapPath)),
-      kickoff_status: getRoadmapKickoff(roadmapRaw).status || 'unknown',
+      kickoff_status:
+        task.phase === 'archive' ? 'not-required' : getRoadmapKickoff(roadmapRaw).status || 'unknown',
     });
   }
 
