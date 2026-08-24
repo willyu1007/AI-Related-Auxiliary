@@ -2,12 +2,13 @@
 
 可复用的 AI 辅助材料库：Agent Skill、共享仓库设施和全局 Agent 指令。
 
-**`system/` 是分发物。** 本仓库有两个执行入口：`install-task-governance.mjs` 初始化目标仓库的 `.ai/` 与 `dev-docs/`；`checks/run.mjs` 校验这个库本身。`system/` 中的脚本随资源安装进目标仓库后运行，不以本仓库作为运行时。
+**`system/` 是分发物。** 本仓库有三个执行入口：`install-task-governance.mjs` 初始化目标仓库的 `.ai/` 与 `dev-docs/`；`install-system-auxiliary.mjs` 把技能与全局文档同步进本机各 Agent 目录；`checks/run.mjs` 校验这个库本身。`system/` 中的脚本随资源安装进目标仓库后运行，不以本仓库作为运行时。
 
 ## 结构
 
 ```text
 install-task-governance.mjs     # 目标仓库 .ai/ 与 dev-docs/ 初始化，可从 git 拉取
+install-system-auxiliary.mjs    # 同步 skills 与全局文档到 ~/.claude ~/.codex ~/.cursor
 system/          # 库本身：跟着人走的全局层
   skills/        #   所有 Skill，一层平铺（发现只扫这一层）
     <skill>/
@@ -91,14 +92,13 @@ checks/          # 本仓库自己的校验，不是分发物
 `system/` 是全局 Agent 配置的版本化镜像。改动流程：
 
 ```bash
-# 从本仓库同步到全局（各 Agent 环境里 resources/ 必须与 skills/ 同级）
-cp -R system/skills/. ~/.claude/skills/
+# 从本仓库同步到全局：skills 按目录整体替换，Agent 目录不存在则跳过；
+# .codex 不装 codex-*；AGENTS.md 落 ~/.codex 和 ~/.cursor，CLAUDE.md 落 ~/.claude
+node install-system-auxiliary.mjs
+
+# resources/ 不在脚本范围内，仍手动同步（各 Agent 环境里 resources/ 必须与 skills/ 同级）
 cp -R system/resources/. ~/.claude/resources/
-cp system/docs/CLAUDE.md ~/.claude/CLAUDE.md
-cp -R system/skills/. ~/.codex/skills/
 cp -R system/resources/. ~/.codex/resources/
-cp system/docs/AGENTS.md ~/.codex/AGENTS.md
-cp -R system/skills/. ~/.cursor/skills/
 cp -R system/resources/. ~/.cursor/resources/
 ```
 
