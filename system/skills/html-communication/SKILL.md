@@ -21,7 +21,8 @@ Create one portable, script-free HTML file.
 
 ## Content Focus
 
-Present only the current result, without carrying the conversation, revision history, or decision process into the artifact.
+Present only the current result. Include conversation context, decision records, revision history,
+or process narrative only when the user explicitly asks for it.
 
 The artifact is user-facing and travels beyond this session. Report what a value means or how environments differ, never the credential, token, or private connection string itself.
 
@@ -31,6 +32,8 @@ When delivering a UI mock:
 
 - Render the proposed view, not a description of it.
 - For variants, label them `A`, `B`, `C`... and lay them out for direct comparison.
+- Represent tabs, overlays, pagination, and other interactive states as labeled static states or
+  variants in the same document.
 
 ## Artifact Lifecycle
 
