@@ -1,6 +1,6 @@
 ---
 name: html-communication
-description: Create a portable, script-free HTML artifact for a plan, spec, report, summary, findings, comparison, or UI mock. Use when the user requests HTML or another workflow calls for an HTML communication artifact; not for HTML that ships as part of a product.
+description: Use when a plan, spec, report, summary, findings, comparison, or UI mock should be delivered as an HTML communication artifact, whether requested directly or produced by another workflow.
 ---
 
 # HTML Communication
