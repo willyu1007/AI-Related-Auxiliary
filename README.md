@@ -8,7 +8,7 @@
 
 ```text
 install-task-governance.mjs     # 目标仓库 .ai/ 与 dev-docs/ 初始化，可从 git 拉取
-install-system-auxiliary.mjs    # 同步 skills 与全局文档到 ~/.claude ~/.codex ~/.cursor
+install-system-auxiliary.mjs    # 按档位同步 skills 与全局文档到 ~/.claude ~/.codex ~/.cursor
 system/          # 库本身：跟着人走的全局层
   skills/        #   所有 Skill，一层平铺（发现只扫这一层）
     <skill>/
@@ -91,10 +91,14 @@ checks/          # 本仓库自己的校验，不是分发物
 
 `system/` 是全局 Agent 配置的版本化镜像。改动流程：
 
+三级档位是包含关系：`minimal` / 最小集（治理主线 + review / research / tdd）、`general` / 通用（再加日常调试、UI、HTML、清理和 Codex）、`all` / 全量（再加 write-prompt、wizard、敏感信息、Prisma、`.ai/llm`）。默认 `general`。`.codex` 在通用和全量下仍不装三个 `codex-*` 技能。
+
 ```bash
-# 从本仓库同步到全局：skills 按目录整体替换，Agent 目录不存在则跳过；
-# .codex 不装 codex-*；AGENTS.md 落 ~/.codex 和 ~/.cursor，CLAUDE.md 落 ~/.claude
+# 从本仓库同步到全局：skills 按目录整体替换，当前档以外的本库技能会从目标删掉；
+# 默认 general；.codex 不装 codex-*；AGENTS.md 落 ~/.codex 和 ~/.cursor，CLAUDE.md 落 ~/.claude
 node install-system-auxiliary.mjs
+node install-system-auxiliary.mjs --profile minimal
+node install-system-auxiliary.mjs --profile all
 
 # resources/ 不在脚本范围内，仍手动同步（各 Agent 环境里 resources/ 必须与 skills/ 同级）
 cp -R system/resources/. ~/.claude/resources/

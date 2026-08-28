@@ -15,6 +15,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { assertSkillTiers } from '../install-system-auxiliary.mjs';
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SKILLS_DIR = path.join(REPO_ROOT, 'system', 'skills');
@@ -126,6 +127,12 @@ function runStatic() {
     }
     skillOwner.set(declared, entry.name);
     skillByDir.set(entry.name, declared);
+  }
+
+  // Profile membership lives in the installer. A new or renamed skill that is not assigned a
+  // lowest tier will silently miss every profile, or leave a stale name in the map.
+  for (const message of assertSkillTiers([...skillByDir.keys()])) {
+    fail('skill-profile', message);
   }
 
   // Cross-skill orchestration is exceptional and explicit. Validate the allowlist itself so a

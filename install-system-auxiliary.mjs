@@ -6,6 +6,7 @@
  * - Skills are replaced per directory: a skill shipped by this library overwrites the
  *   same-named skill in the target wholesale; skills the target has that this library
  *   does not ship are left untouched.
+ * - Library skills outside the selected profile are removed from the target.
  * - ~/.codex does not receive the codex-* skills (Codex does not delegate to itself).
  * - Docs: AGENTS.md -> ~/.codex and ~/.cursor; CLAUDE.md -> ~/.claude.
  * - An agent home that does not exist is skipped, never created.
@@ -15,6 +16,8 @@
  *
  * Usage:
  *   node install-system-auxiliary.mjs
+ *   node install-system-auxiliary.mjs --profile general
+ *   node install-system-auxiliary.mjs --profile all
  */
 
 import fs from 'node:fs';
@@ -33,9 +36,122 @@ const AGENTS = [
   { home: '.cursor', skillFilter: () => true, docs: ['AGENTS.md'] },
 ];
 
+const TIER_RANK = { minimal: 0, general: 1, all: 2 };
+const DEFAULT_PROFILE = 'general';
+const PROFILE_ALIASES = {
+  minimal: 'minimal',
+  general: 'general',
+  all: 'all',
+};
+
+/** Lowest profile that installs the skill. Profiles are inclusive. */
+export const SKILL_TIER = {
+  'review-code': 'minimal',
+  research: 'minimal',
+  tdd: 'minimal',
+  'task-start': 'minimal',
+  'task-plan': 'minimal',
+  'task-sync': 'minimal',
+  'task-resume': 'minimal',
+  'task-handoff': 'minimal',
+  'project-status': 'minimal',
+  'project-hub-maintain': 'minimal',
+  'debug-mode': 'general',
+  'resolve-vcs-conflicts': 'general',
+  'cleanup-project-residue': 'general',
+  'html-communication': 'general',
+  'manage-ui-style': 'general',
+  'goal-mode': 'general',
+  'codex-implementation': 'general',
+  'codex-review': 'general',
+  'codex-computer-use': 'general',
+  'write-prompt': 'all',
+  wizard: 'all',
+  'get-sensitive-info': 'all',
+  'sync-db-from-prisma': 'all',
+  'manage-llm-config': 'all',
+};
+
 function fail(message) {
   console.error(`[error] ${message}`);
   process.exit(1);
+}
+
+function usage(exitCode = 0) {
+  console.log(`
+Usage:
+  node install-system-auxiliary.mjs [options]
+
+Sync system/skills and global instruction docs into ~/.claude, ~/.codex, and ~/.cursor.
+
+Options:
+  --profile <name>  minimal | general | all
+                    Default: general. Profiles are inclusive.
+  -h, --help        Show this help
+
+Profiles:
+  minimal   task-* / project-* plus review-code, research, tdd
+  general   minimal plus everyday debug, UI, HTML, cleanup, and Codex skills
+  all       general plus write-prompt, wizard, get-sensitive-info, Prisma, and .ai/llm
+
+~/.codex never receives the three codex-* skills.
+Library skills outside the selected profile are removed from the target.
+`.trim());
+  process.exit(exitCode);
+}
+
+function parseArgs(argv) {
+  let profile = DEFAULT_PROFILE;
+  const seen = new Set();
+
+  for (let index = 2; index < argv.length; index++) {
+    const token = argv[index];
+    if (token === '-h' || token === '--help') usage(0);
+    if (!token.startsWith('--')) fail(`Unexpected positional argument: "${token}".`);
+
+    const key = token.slice(2);
+    if (key !== 'profile') fail(`Unknown option: --${key}.`);
+    if (seen.has(key)) fail(`Option --${key} was provided more than once.`);
+    seen.add(key);
+
+    const value = argv[++index];
+    if (!value || value.startsWith('--')) fail('Option --profile requires a value.');
+    const resolved = PROFILE_ALIASES[value];
+    if (!resolved) {
+      fail(`Unknown profile: "${value}". Use minimal, general, or all.`);
+    }
+    profile = resolved;
+  }
+
+  return { profile };
+}
+
+function listSkillDirs() {
+  return fs
+    .readdirSync(SKILLS_SRC, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => entry.name)
+    .sort();
+}
+
+export function assertSkillTiers(skillNames) {
+  const names = new Set(skillNames);
+  const missing = skillNames.filter((name) => !SKILL_TIER[name]);
+  const extra = Object.keys(SKILL_TIER).filter((name) => !names.has(name));
+  const invalid = Object.entries(SKILL_TIER)
+    .filter(([, tier]) => TIER_RANK[tier] === undefined)
+    .map(([name, tier]) => `${name}=${tier}`);
+  const errors = [];
+  if (missing.length > 0) errors.push(`skills missing a profile tier: ${missing.join(', ')}`);
+  if (extra.length > 0) errors.push(`profile tiers for unknown skills: ${extra.join(', ')}`);
+  if (invalid.length > 0) errors.push(`invalid profile tiers: ${invalid.join(', ')}`);
+  return errors;
+}
+
+export function skillsForProfile(skillNames, profile) {
+  const rank = TIER_RANK[profile];
+  if (rank === undefined) fail(`Unknown profile: "${profile}".`);
+  return skillNames.filter((name) => TIER_RANK[SKILL_TIER[name]] <= rank);
 }
 
 function copyTree(src, dest) {
@@ -45,23 +161,25 @@ function copyTree(src, dest) {
   });
 }
 
+function launchedDirectly() {
+  const entry = process.argv[1];
+  if (!entry) return false;
+  return path.resolve(entry) === fileURLToPath(import.meta.url);
+}
+
 function main() {
-  const [arg] = process.argv.slice(2);
-  if (arg === '-h' || arg === '--help') {
-    console.log('Usage: node install-system-auxiliary.mjs');
-    process.exit(0);
-  }
-  if (arg) fail(`Unknown option: ${arg}`);
+  const { profile } = parseArgs(process.argv);
 
   if (!fs.existsSync(SKILLS_SRC)) fail(`Missing source directory: ${SKILLS_SRC}`);
   if (!fs.existsSync(DOCS_SRC)) fail(`Missing source directory: ${DOCS_SRC}`);
 
-  const skillNames = fs
-    .readdirSync(SKILLS_SRC, { withFileTypes: true })
-    .filter((entry) => entry.isDirectory())
-    .map((entry) => entry.name)
-    .sort();
+  const skillNames = listSkillDirs();
   if (skillNames.length === 0) fail(`No skills found in ${SKILLS_SRC}`);
+
+  const tierErrors = assertSkillTiers(skillNames);
+  if (tierErrors.length > 0) fail(tierErrors.join('; '));
+
+  const profileSkills = skillsForProfile(skillNames, profile);
 
   for (const doc of new Set(AGENTS.flatMap((agent) => agent.docs))) {
     if (!fs.existsSync(path.join(DOCS_SRC, doc))) fail(`Missing source doc: system/docs/${doc}`);
@@ -74,11 +192,22 @@ function main() {
       continue;
     }
 
-    const selected = skillNames.filter(agent.skillFilter);
-    const excluded = skillNames.filter((name) => !agent.skillFilter(name));
+    const selected = profileSkills.filter(agent.skillFilter);
+    const excluded = profileSkills.filter((name) => !agent.skillFilter(name));
+    const selectedSet = new Set(selected);
 
     const skillsDest = path.join(homeDir, 'skills');
     fs.mkdirSync(skillsDest, { recursive: true });
+
+    const removed = [];
+    for (const name of skillNames) {
+      if (selectedSet.has(name)) continue;
+      const dest = path.join(skillsDest, name);
+      if (!fs.existsSync(dest)) continue;
+      fs.rmSync(dest, { recursive: true, force: true });
+      removed.push(name);
+    }
+
     for (const name of selected) {
       const dest = path.join(skillsDest, name);
       fs.rmSync(dest, { recursive: true, force: true });
@@ -89,12 +218,13 @@ function main() {
       fs.copyFileSync(path.join(DOCS_SRC, doc), path.join(homeDir, doc));
     }
 
-    const parts = [`${selected.length} skills`, `docs: ${agent.docs.join(', ')}`];
+    const parts = [`profile: ${profile}`, `${selected.length} skills`, `docs: ${agent.docs.join(', ')}`];
     if (excluded.length > 0) parts.push(`excluded: ${excluded.join(', ')}`);
+    if (removed.length > 0) parts.push(`removed: ${removed.join(', ')}`);
     console.log(`~/${agent.home}  ${parts.join('  |  ')}`);
   }
 
   console.log('Done.');
 }
 
-main();
+if (launchedDirectly()) main();
