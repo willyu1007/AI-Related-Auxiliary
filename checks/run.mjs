@@ -15,7 +15,11 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { assertSkillTiers, skillsForProfile } from '../install-system-auxiliary.mjs';
+import {
+  assertSkillTiers,
+  managedSkillsToRemove,
+  skillsForProfile,
+} from '../install-system-auxiliary.mjs';
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SKILLS_DIR = path.join(REPO_ROOT, 'system', 'skills');
@@ -136,6 +140,7 @@ function runStatic() {
   }
 
   const allSkillNames = [...skillByDir.keys()];
+  const minimalSkills = new Set(skillsForProfile(allSkillNames, 'minimal'));
   const generalSkills = new Set(skillsForProfile(allSkillNames, 'general'));
   const fullSkills = new Set(skillsForProfile(allSkillNames, 'all'));
   if (!generalSkills.has('wizard') || generalSkills.has('sensitive-ops')) {
@@ -143,6 +148,24 @@ function runStatic() {
   }
   if (fullSkills.has('wizard') || !fullSkills.has('sensitive-ops')) {
     fail('skill-profile', 'all must replace wizard with sensitive-ops');
+  }
+
+  const minimalRemovals = new Set(managedSkillsToRemove(allSkillNames, minimalSkills));
+  const generalRemovals = new Set(managedSkillsToRemove(allSkillNames, generalSkills));
+  const fullRemovals = new Set(managedSkillsToRemove(allSkillNames, fullSkills));
+  if (!minimalRemovals.has('wizard') || !minimalRemovals.has('sensitive-ops')) {
+    fail('skill-profile', 'minimal must remove wizard and sensitive-ops');
+  }
+  if (!generalRemovals.has('sensitive-ops') || generalRemovals.has('wizard')) {
+    fail('skill-profile', 'general must remove sensitive-ops and retain wizard');
+  }
+  if (!fullRemovals.has('wizard') || fullRemovals.has('sensitive-ops')) {
+    fail('skill-profile', 'all must remove wizard and retain sensitive-ops');
+  }
+  for (const removals of [minimalRemovals, generalRemovals, fullRemovals]) {
+    if (!removals.has('get-sensitive-info')) {
+      fail('skill-profile', 'every profile must remove the retired get-sensitive-info skill');
+    }
   }
 
   // Cross-skill orchestration is exceptional and explicit. Validate the allowlist itself so a

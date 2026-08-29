@@ -174,6 +174,12 @@ export function skillsForProfile(skillNames, profile) {
   return skillNames.filter((name) => TIER_RANK[SKILL_TIER[name]] <= rank && !excluded.has(name));
 }
 
+/** Every library-owned skill not selected for this agent and profile must be removed. */
+export function managedSkillsToRemove(skillNames, selectedSkillNames) {
+  const selected = new Set(selectedSkillNames);
+  return [...new Set([...skillNames, ...OBSOLETE_SKILLS])].filter((name) => !selected.has(name));
+}
+
 function copyTree(src, dest) {
   fs.cpSync(src, dest, {
     recursive: true,
@@ -214,14 +220,12 @@ function main() {
 
     const selected = profileSkills.filter(agent.skillFilter);
     const excluded = profileSkills.filter((name) => !agent.skillFilter(name));
-    const selectedSet = new Set(selected);
 
     const skillsDest = path.join(homeDir, 'skills');
     fs.mkdirSync(skillsDest, { recursive: true });
 
     const removed = [];
-    for (const name of new Set([...skillNames, ...OBSOLETE_SKILLS])) {
-      if (selectedSet.has(name)) continue;
+    for (const name of managedSkillsToRemove(skillNames, selected)) {
       const dest = path.join(skillsDest, name);
       if (!fs.existsSync(dest)) continue;
       fs.rmSync(dest, { recursive: true, force: true });
