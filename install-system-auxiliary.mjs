@@ -44,7 +44,7 @@ const PROFILE_ALIASES = {
   all: 'all',
 };
 
-/** Lowest profile that installs the skill. Profiles are inclusive. */
+/** Lowest profile that installs the skill before profile-specific exclusions. */
 export const SKILL_TIER = {
   'review-code': 'minimal',
   research: 'minimal',
@@ -65,12 +65,22 @@ export const SKILL_TIER = {
   'codex-implementation': 'general',
   'codex-review': 'general',
   'codex-computer-use': 'general',
+  wizard: 'general',
   'write-prompt': 'all',
-  wizard: 'all',
-  'get-sensitive-info': 'all',
+  'sensitive-ops': 'all',
   'sync-db-from-prisma': 'all',
   'manage-llm-config': 'all',
 };
+
+/** Higher profiles may replace a lower-profile skill with a broader one. */
+export const PROFILE_EXCLUSIONS = {
+  minimal: new Set(),
+  general: new Set(),
+  all: new Set(['wizard']),
+};
+
+/** Renamed or retired library skills that should not survive profile changes. */
+const OBSOLETE_SKILLS = new Set(['get-sensitive-info']);
 
 function fail(message) {
   console.error(`[error] ${message}`);
@@ -86,13 +96,15 @@ Sync system/skills and global instruction docs into ~/.claude, ~/.codex, and ~/.
 
 Options:
   --profile <name>  minimal | general | all
-                    Default: general. Profiles are inclusive.
+                    Default: general. Higher profiles build on lower ones,
+                    with documented replacements.
   -h, --help        Show this help
 
 Profiles:
   minimal   task-* / project-* plus review-code, research, tdd
-  general   minimal plus everyday debug, UI, HTML, cleanup, and Codex skills
-  all       general plus write-prompt, wizard, get-sensitive-info, Prisma, and .ai/llm
+  general   minimal plus everyday debug, UI, HTML, cleanup, Codex, and wizard
+  all       general with wizard replaced by sensitive-ops, plus write-prompt,
+            Prisma, and .ai/llm
 
 ~/.codex never receives the three codex-* skills.
 Library skills outside the selected profile are removed from the target.
@@ -141,17 +153,25 @@ export function assertSkillTiers(skillNames) {
   const invalid = Object.entries(SKILL_TIER)
     .filter(([, tier]) => TIER_RANK[tier] === undefined)
     .map(([name, tier]) => `${name}=${tier}`);
+  const invalidExclusions = Object.entries(PROFILE_EXCLUSIONS).flatMap(([profile, excluded]) => {
+    if (TIER_RANK[profile] === undefined) return [`unknown profile ${profile}`];
+    return [...excluded]
+      .filter((name) => !names.has(name))
+      .map((name) => `${profile} excludes unknown skill ${name}`);
+  });
   const errors = [];
   if (missing.length > 0) errors.push(`skills missing a profile tier: ${missing.join(', ')}`);
   if (extra.length > 0) errors.push(`profile tiers for unknown skills: ${extra.join(', ')}`);
   if (invalid.length > 0) errors.push(`invalid profile tiers: ${invalid.join(', ')}`);
+  if (invalidExclusions.length > 0) errors.push(`invalid profile exclusions: ${invalidExclusions.join(', ')}`);
   return errors;
 }
 
 export function skillsForProfile(skillNames, profile) {
   const rank = TIER_RANK[profile];
   if (rank === undefined) fail(`Unknown profile: "${profile}".`);
-  return skillNames.filter((name) => TIER_RANK[SKILL_TIER[name]] <= rank);
+  const excluded = PROFILE_EXCLUSIONS[profile];
+  return skillNames.filter((name) => TIER_RANK[SKILL_TIER[name]] <= rank && !excluded.has(name));
 }
 
 function copyTree(src, dest) {
@@ -200,7 +220,7 @@ function main() {
     fs.mkdirSync(skillsDest, { recursive: true });
 
     const removed = [];
-    for (const name of skillNames) {
+    for (const name of new Set([...skillNames, ...OBSOLETE_SKILLS])) {
       if (selectedSet.has(name)) continue;
       const dest = path.join(skillsDest, name);
       if (!fs.existsSync(dest)) continue;

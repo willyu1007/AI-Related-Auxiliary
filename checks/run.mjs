@@ -15,7 +15,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { assertSkillTiers } from '../install-system-auxiliary.mjs';
+import { assertSkillTiers, skillsForProfile } from '../install-system-auxiliary.mjs';
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SKILLS_DIR = path.join(REPO_ROOT, 'system', 'skills');
@@ -133,6 +133,16 @@ function runStatic() {
   // lowest tier will silently miss every profile, or leave a stale name in the map.
   for (const message of assertSkillTiers([...skillByDir.keys()])) {
     fail('skill-profile', message);
+  }
+
+  const allSkillNames = [...skillByDir.keys()];
+  const generalSkills = new Set(skillsForProfile(allSkillNames, 'general'));
+  const fullSkills = new Set(skillsForProfile(allSkillNames, 'all'));
+  if (!generalSkills.has('wizard') || generalSkills.has('sensitive-ops')) {
+    fail('skill-profile', 'general must install wizard without sensitive-ops');
+  }
+  if (fullSkills.has('wizard') || !fullSkills.has('sensitive-ops')) {
+    fail('skill-profile', 'all must replace wizard with sensitive-ops');
   }
 
   // Cross-skill orchestration is exceptional and explicit. Validate the allowlist itself so a

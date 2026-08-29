@@ -75,12 +75,12 @@ checks/          # 本仓库自己的校验，不是分发物
 | [sync-db-from-prisma](system/skills/sync-db-from-prisma/SKILL.md) | Prisma repo→DB migration 闸门：预览、单独的 apply 批准、按环境应用、验证 |
 | [manage-llm-config](system/skills/manage-llm-config/SKILL.md) | 集中管理 agent/workflow 的模型、参数、Prompt 与 Provider 配置；通过共享加载器读取 `.ai/llm` |
 | [debug-mode](system/skills/debug-mode/SKILL.md) | 根因不明故障的证据循环：准确症状信号、可证伪假设、授权修复、原始复现验证与自动清理 |
-| [get-sensitive-info](system/skills/get-sensitive-info/SKILL.md) | 获取并使用 `~/Documents/LLM/project-ops.md` 中的项目敏感信息；按项目标准机制落地配置，缺失内容用中文占位符反写并返回可点击文档链接 |
+| [sensitive-ops](system/skills/sensitive-ops/SKILL.md) | 从 `~/Documents/LLM/sensitive-ops.md` 获取敏感运维信息；缺失内容默认通过可恢复的交互脚本写回，用户拒绝脚本或无法交互时降级为直接填写文档 |
 | [manage-ui-style](system/skills/manage-ui-style/SKILL.md) | 继承、探索并沉淀项目 UI 风格，在需要时审计和修复视觉漂移 |
 | [cleanup-project-residue](system/skills/cleanup-project-residue/SKILL.md) | 清理当前 session、任务、近期工作或全项目中的过时测试、冗余内容、语义漂移、双轨/legacy 残留和技术债；证据+批准后删除，校验门收尾 |
 | [resolve-vcs-conflicts](system/skills/resolve-vcs-conflicts/SKILL.md) | 在已获授权且进行中的 merge、rebase、cherry-pick 或 revert 中恢复双方意图并解决 Git 冲突 |
 | [tdd](system/skills/tdd/SKILL.md) | 在行为与测试 seam 足够稳定时，以 red → green → refactor 推进测试优先实现 |
-| [wizard](system/skills/wizard/SKILL.md) | 为必须由用户持有私密访问、MFA 或实体设备才能完成的步骤生成临时交互式向导 |
+| [wizard](system/skills/wizard/SKILL.md) | `general` 档的通用交互向导；为必须由用户持有私密访问、MFA 或实体设备才能完成的步骤生成临时脚本，在 `all` 档由 sensitive-ops 替代 |
 | [write-prompt](system/skills/write-prompt/SKILL.md) | 为另一个 LLM、subagent、CLI agent 或运行时模型编写独立执行边界的 Prompt |
 
 ## 触发方式
@@ -91,7 +91,7 @@ checks/          # 本仓库自己的校验，不是分发物
 
 `system/` 是全局 Agent 配置的版本化镜像。改动流程：
 
-三级档位是包含关系：`minimal` / 最小集（治理主线 + review / research / tdd）、`general` / 通用（再加日常调试、UI、HTML、清理和 Codex）、`all` / 全量（再加 write-prompt、wizard、敏感信息、Prisma、`.ai/llm`）。默认 `general`。`.codex` 在通用和全量下仍不装三个 `codex-*` 技能。
+三级档位逐级扩展：`minimal` / 最小集（治理主线 + review / research / tdd）、`general` / 通用（再加日常调试、UI、HTML、清理、Codex 和 wizard）、`all` / 全量（以 sensitive-ops 替换 wizard，再加 write-prompt、Prisma 和 `.ai/llm`）。默认 `general`。`wizard` 与 `sensitive-ops` 不会同时安装；`.codex` 在通用和全量下仍不装三个 `codex-*` 技能。
 
 ```bash
 # 从本仓库同步到全局：skills 按目录整体替换，当前档以外的本库技能会从目标删掉；
