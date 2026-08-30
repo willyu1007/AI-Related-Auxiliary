@@ -13,12 +13,15 @@ OPS_FILE="${SENSITIVE_OPS_FILE:-${HOME}/Documents/LLM/sensitive-ops.md}"
 TOTAL_STAGES=0
 _STAGE_INDEX=0
 TRACKED_PLACEHOLDERS=()
+WORKFLOW_TITLE=""
+WORKFLOW_MARKER=""
+_ACTIVE_TMP=""
 
 if [[ -t 1 ]] && command -v tput >/dev/null 2>&1 && [[ "$(tput colors 2>/dev/null || echo 0)" -ge 8 ]]; then
   BOLD=$(tput bold); DIM=$(tput dim); RESET=$(tput sgr0)
-  BLUE=$(tput setaf 4); GREEN=$(tput setaf 2); YELLOW=$(tput setaf 3); RED=$(tput setaf 1)
+  BLUE=$(tput setaf 4); GREEN=$(tput setaf 2); YELLOW=$(tput setaf 3)
 else
-  BOLD=""; DIM=""; RESET=""; BLUE=""; GREEN=""; YELLOW=""; RED=""
+  BOLD=""; DIM=""; RESET=""; BLUE=""; GREEN=""; YELLOW=""
 fi
 
 _clear() {
@@ -31,26 +34,69 @@ step() { printf '  %s•%s %s\n' "$BLUE" "$RESET" "$1"; }
 note() { printf '  %s%s%s\n' "$DIM" "$1" "$RESET"; }
 warn() { printf '  %s⚠ %s%s\n' "$YELLOW" "$1" "$RESET"; }
 
+fail() {
+  warn "$1"
+  exit 1
+}
+
 defer() {
   printf '\n  %sProgress saved.%s Run this helper again when you are ready.\n\n' "$YELLOW" "$RESET"
   exit 2
 }
 
+cleanup() {
+  local status=$?
+  if [[ -n "$_ACTIVE_TMP" && -e "$_ACTIVE_TMP" ]]; then rm -f -- "$_ACTIVE_TMP"; fi
+  return "$status"
+}
+
+trap cleanup EXIT
 trap defer INT TERM
 
-ensure_ops_file() {
-  mkdir -p "$(dirname "$OPS_FILE")"
-  touch "$OPS_FILE"
-  chmod 600 "$OPS_FILE"
+configure_workflow() {
+  WORKFLOW_TITLE="$1"
+  WORKFLOW_MARKER="$2"
+  shift 2
+  TRACKED_PLACEHOLDERS=("$@")
+}
+
+prepare_workflow() {
+  local placeholder registered occurrences index previous
+  [[ -n "$WORKFLOW_TITLE" ]] || fail "helper has not been authored: workflow title is missing"
+  [[ -n "$WORKFLOW_MARKER" ]] || fail "helper has not been authored: workflow marker is missing"
+  (( ${#TRACKED_PLACEHOLDERS[@]} > 0 )) || fail "helper has not been authored: no outcomes are registered"
+  [[ -f "$OPS_FILE" ]] || fail "operations document does not exist: $OPS_FILE"
+  [[ -r "$OPS_FILE" && -w "$OPS_FILE" ]] || fail "operations document is not readable and writable: $OPS_FILE"
+  occurrences=$(occurrence_count "$WORKFLOW_MARKER")
+  [[ "$occurrences" -eq 1 ]] || fail "expected one workflow marker in $OPS_FILE, found $occurrences"
+  for (( index=0; index<${#TRACKED_PLACEHOLDERS[@]}; index++ )); do
+    placeholder=${TRACKED_PLACEHOLDERS[$index]}
+    [[ -n "$placeholder" ]] || fail "helper has not been authored: an outcome placeholder is empty"
+    for (( previous=0; previous<index; previous++ )); do
+      registered=${TRACKED_PLACEHOLDERS[$previous]}
+      [[ "$registered" != "$placeholder" ]] || fail "an outcome placeholder was registered more than once"
+    done
+    occurrences=$(occurrence_count "$placeholder")
+    [[ "$occurrences" -le 1 ]] || fail "expected at most one occurrence of placeholder, found $occurrences"
+  done
+  TOTAL_STAGES=$(count_pending "${TRACKED_PLACEHOLDERS[@]}")
+}
+
+occurrence_count() {
+  local needle="$1" line rest count=0
+  [[ -n "$needle" ]] || { printf '0'; return; }
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    rest="$line"
+    while [[ "$rest" == *"$needle"* ]]; do
+      rest=${rest#*"$needle"}
+      count=$((count + 1))
+    done
+  done < "$OPS_FILE"
+  printf '%s' "$count"
 }
 
 placeholder_exists() {
-  grep -Fq -- "$1" "$OPS_FILE"
-}
-
-track() {
-  local placeholder
-  for placeholder in "$@"; do TRACKED_PLACEHOLDERS+=("$placeholder"); done
+  [[ "$(occurrence_count "$1")" -gt 0 ]]
 }
 
 count_pending() {
@@ -79,12 +125,17 @@ stage() {
 open_url() {
   local url="$1"
   printf '  %s↗ opening%s %s\n' "$GREEN" "$RESET" "$url"
-  { if   command -v wslview      >/dev/null 2>&1; then wslview "$url"
-    elif command -v explorer.exe >/dev/null 2>&1; then explorer.exe "$url"
-    elif command -v xdg-open     >/dev/null 2>&1; then xdg-open "$url"
-    elif command -v open         >/dev/null 2>&1; then open "$url"
-    else warn "couldn't open a browser; visit it manually: $url"; fi
-  } >/dev/null 2>&1 || warn "couldn't open a browser, so visit it manually: $url"
+  if command -v wslview >/dev/null 2>&1; then
+    wslview "$url" >/dev/null 2>&1 || warn "couldn't open a browser; visit it manually: $url"
+  elif command -v explorer.exe >/dev/null 2>&1; then
+    explorer.exe "$url" >/dev/null 2>&1 || warn "couldn't open a browser; visit it manually: $url"
+  elif command -v xdg-open >/dev/null 2>&1; then
+    xdg-open "$url" >/dev/null 2>&1 || warn "couldn't open a browser; visit it manually: $url"
+  elif command -v open >/dev/null 2>&1; then
+    open "$url" >/dev/null 2>&1 || warn "couldn't open a browser; visit it manually: $url"
+  else
+    warn "couldn't open a browser; visit it manually: $url"
+  fi
 }
 
 confirm() {
@@ -96,14 +147,14 @@ confirm() {
 }
 
 # Replace an exact placeholder without exposing its value to a child process.
-# Placeholders must be unique and must not contain shell glob characters.
 replace_placeholder() {
-  local placeholder="$1" value="$2" tmp line prefix suffix found=0
-  if [[ "$placeholder" == *'*'* || "$placeholder" == *'?'* || "$placeholder" == *'['* ]]; then
-    warn "placeholder contains an unsupported glob character"
-    return 1
-  fi
+  local placeholder="$1" value="$2" tmp line prefix suffix found=0 occurrences
+  occurrences=$(occurrence_count "$placeholder")
+  [[ "$occurrences" -eq 1 ]] || fail "expected one occurrence of placeholder, found $occurrences"
   tmp=$(mktemp "${OPS_FILE}.tmp.XXXXXX")
+  _ACTIVE_TMP="$tmp"
+  cp -p "$OPS_FILE" "$tmp"
+  : > "$tmp"
   while IFS= read -r line || [[ -n "$line" ]]; do
     if [[ "$line" == *"$placeholder"* ]]; then
       prefix=${line%%"$placeholder"*}
@@ -115,20 +166,23 @@ replace_placeholder() {
   done < "$OPS_FILE"
   if [[ "$found" -ne 1 ]]; then
     rm -f "$tmp"
+    _ACTIVE_TMP=""
     warn "expected one occurrence of placeholder, found $found"
     return 1
   fi
-  chmod 600 "$tmp"
   mv "$tmp" "$OPS_FILE"
+  _ACTIVE_TMP=""
 }
 
 collect_value() {
   local placeholder="$1" prompt="$2" value=""
   placeholder_exists "$placeholder" || return 0
-  printf '  %s%s%s ' "$BOLD" "$prompt" "$RESET"
-  read -r value || defer
-  [[ "$value" == ":later" ]] && defer
-  if [[ -z "$value" ]]; then warn "a value is required, or enter :later"; return 2; fi
+  while [[ -z "$value" ]]; do
+    printf '  %s%s%s ' "$BOLD" "$prompt" "$RESET"
+    read -r value || defer
+    [[ "$value" == ":later" ]] && defer
+    [[ -n "$value" ]] || warn "a value is required, or enter :later"
+  done
   replace_placeholder "$placeholder" "$value"
   printf '  %s✓ saved%s\n' "$GREEN" "$RESET"
 }
@@ -136,11 +190,13 @@ collect_value() {
 collect_secret() {
   local placeholder="$1" prompt="$2" value=""
   placeholder_exists "$placeholder" || return 0
-  printf '  %s%s%s ' "$BOLD" "$prompt" "$RESET"
-  read -rs value || defer
-  printf '\n'
-  [[ "$value" == ":later" ]] && defer
-  if [[ -z "$value" ]]; then warn "a value is required, or enter :later"; return 2; fi
+  while [[ -z "$value" ]]; do
+    printf '  %s%s%s ' "$BOLD" "$prompt" "$RESET"
+    read -rs value || defer
+    printf '\n'
+    [[ "$value" == ":later" ]] && defer
+    [[ -n "$value" ]] || warn "a value is required, or enter :later"
+  done
   replace_placeholder "$placeholder" "$value"
   value=""
   printf '  %s✓ saved%s\n' "$GREEN" "$RESET"
@@ -169,30 +225,18 @@ finish() {
 }
 
 # ──────────────────────────────────────────────────────────────────────────
-# STAGES: replace this example with the current task's missing outcomes.
-# Each placeholder must already exist exactly once in OPS_FILE.
+# STAGES: replace this scaffold with the current task's missing outcomes.
+# The shipped template fails closed until this section is replaced.
 # ──────────────────────────────────────────────────────────────────────────
 
-ensure_ops_file
+# VALUE_PLACEHOLDER='<待填写：具体值>'
+# configure_workflow "Setup title" "<!-- sensitive-ops:workflow-id -->" "$VALUE_PLACEHOLDER"
+# prepare_workflow
+# banner "$WORKFLOW_TITLE"
+# if placeholder_exists "$VALUE_PLACEHOLDER"; then
+#   stage "Collect value"
+#   collect_secret "$VALUE_PLACEHOLDER" "Enter the value, or enter :later:"
+# fi
+# finish
 
-API_KEY_PLACEHOLDER='<待填写：Stripe test secret key>'
-OAUTH_PLACEHOLDER='<待完成：批准 GitHub OAuth>'
-track "$API_KEY_PLACEHOLDER" "$OAUTH_PLACEHOLDER"
-TOTAL_STAGES=$(count_pending "${TRACKED_PLACEHOLDERS[@]}")
-
-banner "Stripe setup"
-
-if placeholder_exists "$API_KEY_PLACEHOLDER"; then
-  stage "Stripe API key"
-  open_url "https://dashboard.stripe.com/test/apikeys"
-  step "Copy the test secret key."
-  collect_secret "$API_KEY_PLACEHOLDER" "Paste the secret key, or enter :later:"
-fi
-
-if placeholder_exists "$OAUTH_PLACEHOLDER"; then
-  stage "GitHub OAuth"
-  step "Approve the requested integration in the authenticated browser."
-  complete_action "$OAUTH_PLACEHOLDER" "已完成"
-fi
-
-finish
+fail "helper has not been authored: replace the STAGES section"

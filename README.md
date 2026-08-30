@@ -75,7 +75,7 @@ checks/          # 本仓库自己的校验，不是分发物
 | [sync-db-from-prisma](system/skills/sync-db-from-prisma/SKILL.md) | Prisma repo→DB migration 闸门：预览、单独的 apply 批准、按环境应用、验证 |
 | [manage-llm-config](system/skills/manage-llm-config/SKILL.md) | 集中管理 agent/workflow 的模型、参数、Prompt 与 Provider 配置；通过共享加载器读取 `.ai/llm` |
 | [debug-mode](system/skills/debug-mode/SKILL.md) | 根因不明故障的证据循环：准确症状信号、可证伪假设、授权修复、原始复现验证与自动清理 |
-| [sensitive-ops](system/skills/sensitive-ops/SKILL.md) | 从 `~/Documents/LLM/sensitive-ops.md` 获取敏感运维信息；缺失内容默认通过可恢复的交互脚本写回，用户拒绝脚本或无法交互时降级为直接填写文档 |
+| [sensitive-ops](system/skills/sensitive-ops/SKILL.md) | 从 `~/Documents/LLM/sensitive-ops.md` 获取敏感运维信息；缺失内容默认通过中文占位符让用户直接填写，仅在用户明确要求 `.sh` 或交互向导时生成可恢复脚本 |
 | [manage-ui-style](system/skills/manage-ui-style/SKILL.md) | 继承、探索并沉淀项目 UI 风格，在需要时审计和修复视觉漂移 |
 | [cleanup-project-residue](system/skills/cleanup-project-residue/SKILL.md) | 清理当前 session、任务、近期工作或全项目中的过时测试、冗余内容、语义漂移、双轨/legacy 残留和技术债；证据+批准后删除，校验门收尾 |
 | [resolve-vcs-conflicts](system/skills/resolve-vcs-conflicts/SKILL.md) | 在已获授权且进行中的 merge、rebase、cherry-pick 或 revert 中恢复双方意图并解决 Git 冲突 |

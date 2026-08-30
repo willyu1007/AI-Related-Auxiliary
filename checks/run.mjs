@@ -20,6 +20,7 @@ import {
   managedSkillsToRemove,
   skillsForProfile,
 } from '../install-system-auxiliary.mjs';
+import { sensitiveOpsTemplateFailures } from './sensitive-ops.mjs';
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SKILLS_DIR = path.join(REPO_ROOT, 'system', 'skills');
@@ -269,6 +270,15 @@ function runStatic() {
   }
 }
 
+function runBehavioral() {
+  console.log(c.bold('\nBehavioral checks'));
+  const messages = sensitiveOpsTemplateFailures();
+  for (const message of messages) {
+    fail('sensitive-ops-template', message);
+  }
+  if (messages.length === 0) console.log(c.green('  ok') + c.dim('  sensitive-ops template'));
+}
+
 function main() {
   const [arg] = process.argv.slice(2);
   if (arg === '-h' || arg === '--help') {
@@ -281,6 +291,7 @@ function main() {
   }
 
   runStatic();
+  runBehavioral();
 
   console.log('');
   if (failures.length > 0) {
