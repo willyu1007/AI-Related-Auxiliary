@@ -18,6 +18,8 @@ The document is human-authored Markdown and the durable source of sensitive oper
 
 Inspect the project and target workflow before requesting information. Complete everything the agent can perform directly, and leave only unavailable information or genuinely user-bound actions to the user. Read and use only what the current task requires; sensitivity alone is not a blocker.
 
+Difficulty, repetition, an unfamiliar interface, or a long command sequence do not make work user-bound. Do not delegate work the agent can perform.
+
 Resolve the legacy default `~/Documents/LLM/project-ops.md` when needed:
 
 - If only the legacy file exists, rename it to `sensitive-ops.md` while preserving its contents and permissions.

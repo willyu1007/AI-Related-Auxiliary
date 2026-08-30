@@ -152,6 +152,47 @@ prepare_workflow
     const duplicateRegistration = runHelper(duplicateRegistrationHelper, duplicateRegistrationDocument);
     check(failures, duplicateRegistration.status === 1, 'a helper must reject a placeholder registered more than once');
 
+    const partialHelper = path.join(tempDir, 'partial.sh');
+    const partialDocument = path.join(tempDir, 'partial.md');
+    const partialPlaceholder = '<待填写：剩余值>';
+    const partialMarker = '<!-- sensitive-ops:partial-test -->';
+    fs.writeFileSync(
+      partialHelper,
+      authoredTemplate(`
+PLACEHOLDER='${partialPlaceholder}'
+configure_workflow "Partial workflow" "${partialMarker}" "$PLACEHOLDER"
+prepare_workflow
+if placeholder_exists "$PLACEHOLDER"; then
+  collect_value "$PLACEHOLDER" "Value:"
+fi
+finish
+`),
+      { mode: 0o700 }
+    );
+    const manuallyCompletedLine = '- existing: manually completed';
+    fs.writeFileSync(
+      partialDocument,
+      `${partialMarker}\n${manuallyCompletedLine}\n- remaining: ${partialPlaceholder}\n`,
+      { mode: 0o600 }
+    );
+    const partial = runHelper(partialHelper, partialDocument, 'remaining value\n');
+    const partialContents = fs.readFileSync(partialDocument, 'utf8');
+    check(
+      failures,
+      partial.status === 0,
+      'a helper must accept a partially completed document when it registers only remaining outcomes'
+    );
+    check(
+      failures,
+      partialContents.includes(`${manuallyCompletedLine}\n`),
+      'a helper must leave manually completed values unchanged'
+    );
+    check(
+      failures,
+      partialContents.includes('remaining value<!-- sensitive-ops:partial-test:outcome-1:complete -->'),
+      'a helper must mark only the remaining outcome it completes'
+    );
+
     const writeHelper = path.join(tempDir, 'write-secret.sh');
     const writeDocument = path.join(tempDir, 'write-secret.md');
     const writePlaceholder = '<待填写：测试秘密>';

@@ -6,15 +6,16 @@ Read this reference only after the user explicitly requests a script, `.sh` file
 
 Resolve the effective operations document first: use the user-supplied private document when present, otherwise use `~/Documents/LLM/sensitive-ops.md`.
 
-1. Add one stable workflow marker such as `<!-- sensitive-ops:cloudflare-setup -->` and one unique placeholder per durable outcome to that document.
+1. Add one stable workflow marker such as `<!-- sensitive-ops:cloudflare-setup -->` and one unique placeholder for each remaining durable outcome the helper must collect or confirm. Leave durable values already present unchanged.
 2. Copy [template.sh](../template.sh) to a temporary path outside the repository. Keep its library above the `STAGES` marker unchanged and replace the fail-closed scaffold below it.
-3. Register the title, workflow marker, and every placeholder once with `configure_workflow`, then call `prepare_workflow` before presenting stages.
+3. Register the title, workflow marker, and only those remaining placeholders once with `configure_workflow`, then call `prepare_workflow` before presenting stages.
 
-Keep the registered outcome order stable. The template derives one completion marker per outcome and writes it with the durable value; never hand-author or remove those markers. A valid outcome contains exactly its pending placeholder or its completion marker.
+Keep the registered outcome order stable. The template derives one completion marker per registered outcome and writes it with the durable value; never hand-author or remove those markers. Leave manually completed values unregistered. A registered outcome contains exactly its pending placeholder or its completion marker.
 
 - Use one focused stage per outcome, in dependency order.
 - Use hidden input for durable secrets and visible input for non-secret values.
 - Open the relevant destination before asking the user to act there.
+- Verify dashboard paths and commands against the project, current environment, or reliable documentation. If they cannot be established, ask rather than inventing them.
 - Record only the durable result of MFA, OAuth, physical-device, or authenticated UI actions; never record one-time codes, temporary tokens, sessions, or other transient proof.
 - Confirm immediately before an irreversible user action.
 - Allow `:later` and Ctrl-C. Preserve completed outcomes in the document and skip them when the helper is rerun.
