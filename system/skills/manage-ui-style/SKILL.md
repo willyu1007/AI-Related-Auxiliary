@@ -107,8 +107,14 @@ leaves those decisions unchanged is trivial.
   preserve a reduced-motion path.
 
 - **Clean up and bound the change:** Remove rejected variants and temporary
-  switching code from production work. Do not turn a local UI task into a
-  retroactive design-system rewrite.
+  switching code from production work. If the change touches a statically
+  indexed instance-key map with no `*.style-reachability.json` beside its
+  source, write one there. Do not register token scales, public design-system
+  vocabularies, or dynamically indexed maps. Run this directory's
+  `scripts/lint-style-key-reachability.mjs` with `--repo-root` set to
+  `<repo-root>`. Delete unread keys it reports for this change; add a
+  `knownOrphans` entry only for unread keys that predate the registration.
+  Do not turn a local UI task into a retroactive design-system rewrite.
 
 ## Crystallize accepted decisions
 
@@ -132,11 +138,14 @@ leaves those decisions unchanged is trivial.
 Read [references/audit.md](references/audit.md) before auditing.
 
 - **Establish coverage:** Name the included and excluded scope, the project's
-  actual styling syntax, and the relevant gates, decisions, and accepted deviations.
+  actual styling syntax, `*.style-reachability.json` registrations, and the
+  relevant gates, decisions, and accepted deviations.
 
 - **Build evidence:** Calibrate probes against known project usage and trace
   declarations through to real consumers. Do not treat declarations, search hits,
-  or zero counts as proof by themselves.
+  or zero counts as proof by themselves. Run this directory's
+  `scripts/lint-style-key-reachability.mjs` with `--repo-root` set to
+  `<repo-root>`.
 
 - **Correct when authorized:** An audit-only request is read-only. When correction
   is requested or already authorized, fix clear in-scope findings. Distinguish

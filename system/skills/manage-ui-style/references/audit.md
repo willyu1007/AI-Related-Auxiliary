@@ -25,6 +25,10 @@ violations and supported consistency observations rather than preferences as dri
 - **Composition, hierarchy, density, and responsive behavior:** Inspect representative
   rendered states or available screenshots against the applicable expectation. When
   rendered evidence is unavailable, qualify the claim and disclose the coverage limit.
+- **Instance-key reachability:** Run
+  [../scripts/lint-style-key-reachability.mjs](../scripts/lint-style-key-reachability.mjs)
+  against `<repo-root>`. Treat its reports as findings. Do not grep for unused
+  style keys.
 - **Tokens, scales, and themes:** Compare declared scales with real usage, then trace
   `source declaration → generated value → styling-layer mapping → real call site`.
   Check the reverse path for values synthesized outside the source and themes expected
@@ -49,7 +53,8 @@ stronger evidence instead of silently choosing a convenient source.
 
 ## Assign ownership and severity
 
-- An unused optional token, dormant theme, or accepted deviation is not drift without
+- Unread instance keys reported by the reachability script are leftovers.
+  An unused optional token, dormant theme, or accepted deviation is not drift without
   evidence that it should govern the audited UI.
 - Assign contract definition or generation failures to the contract owner, feature
   misuse to the feature owner, and dependency defects to the upstream owner. Do not

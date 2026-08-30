@@ -26,7 +26,7 @@ Run this branch when the requested database structure changes.
 2. Follow the repository's existing package manager, scripts, schema layout, and migration strategy.
 3. Format and validate the schema, and regenerate the Prisma Client when required by the project's Prisma version and workflow.
 4. When the repository uses versioned migrations, generate a development migration according to the task scope. Use `prisma migrate dev --create-only --name <name>` when database synchronization is not part of the task or when the SQL must be edited before application.
-5. Review generated migration SQL for unintended drops, type changes, constraint failures, table rewrites, or data changes that require a separate backfill.
+5. Review generated or edited migration SQL for unintended drops, type changes, constraint failures, table rewrites, or data changes that require a separate backfill. Do not add a self-managed transaction to a Prisma migration file; the migrate runner owns the transaction.
 
 This branch may finish with repository changes only; it does not require synchronizing a database unless that is part of the task.
 
@@ -46,7 +46,7 @@ When both branches apply, update the repository schema and migration history bef
 
 ### 4. Verify
 
-For repository changes, run the project-relevant schema validation, Client generation when used, and affected tests. After database synchronization, check migration status when migrations are used and run the relevant integration or smoke checks. Report the applied migrations or schema result, verification result, and any remaining data migration work.
+For repository changes, run the project-relevant schema validation, Client generation when used, and affected tests. After database synchronization, when versioned migrations are used, require a clean migration history with `prisma migrate status` or the repository's existing equivalent; failed or unfinished history means the task is not done. If the repository already has a recurring verification or CI path, put that status check there rather than only in this session. Run the relevant integration or smoke checks. Report the applied migrations or schema result, verification result, and any remaining data migration work.
 
 ### Parallel work
 

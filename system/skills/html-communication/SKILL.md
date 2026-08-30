@@ -7,7 +7,8 @@ description: Use when a plan, spec, report, summary, findings, comparison, or UI
 
 ## HTML Document
 
-Create one portable, script-free HTML file.
+Create one portable, script-free HTML file. Write it as UTF-8 and put
+`<meta charset="utf-8">` as the first child of `<head>`.
 
 - Present information as a concise, scannable working document, not a landing page.
 - Use semantic HTML, inline CSS, and a responsive layout.
@@ -45,7 +46,6 @@ mock's product surface as developer-facing.
 
 - Keep it concise and structured. Prefer short sections, bullets, tables, diagrams, and labeled
   values over paragraphs.
-- Use prose only when needed to explain reasoning, causality, or tradeoffs; avoid long passages.
 
 ### Product-Facing UI
 
@@ -77,8 +77,10 @@ When delivering a UI mock:
 
 ## Artifact Lifecycle
 
-- Unless the user requests another location, use `<Desktop>/html-communication/<task-name>/` and keep files from the same task together.
-- Reuse the task directory for related follow-up work.
+- Unless the user requests another location, use `<Desktop>/html-communication/<slug>/`.
+- Name `<slug>` and every file in kebab-case from the subject, two or three words. Do not copy the request, document title, directory slug, or a date into a name.
+- Call the primary HTML file `index.html`.
+- Reuse that directory for related follow-up work.
 - Update the primary HTML file in place across iterations. Create versioned, numbered, or timestamped copies only when the user asks to preserve separate versions.
 - When the user prefers a quick visual review, render only the requested or changed views as images in `previews/`, update stable preview filenames in place, and present the images directly in the conversation.
 
