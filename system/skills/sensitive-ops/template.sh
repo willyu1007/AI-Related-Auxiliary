@@ -13,6 +13,7 @@ OPS_FILE="${SENSITIVE_OPS_FILE:-${HOME}/Documents/LLM/sensitive-ops.md}"
 TOTAL_STAGES=0
 _STAGE_INDEX=0
 TRACKED_PLACEHOLDERS=()
+TRACKED_COMPLETION_MARKERS=()
 WORKFLOW_TITLE=""
 WORKFLOW_MARKER=""
 _ACTIVE_TMP=""
@@ -55,32 +56,81 @@ trap cleanup EXIT
 trap defer INT TERM
 
 configure_workflow() {
+  local index marker_prefix='<!-- sensitive-ops:' marker_suffix=' -->' workflow_id
   WORKFLOW_TITLE="$1"
   WORKFLOW_MARKER="$2"
   shift 2
   TRACKED_PLACEHOLDERS=("$@")
+  [[ "$WORKFLOW_MARKER" == "$marker_prefix"*"$marker_suffix" ]] || fail "workflow marker must match <!-- sensitive-ops:workflow-id -->"
+  workflow_id=${WORKFLOW_MARKER#"$marker_prefix"}
+  workflow_id=${workflow_id%"$marker_suffix"}
+  [[ "$workflow_id" =~ ^[a-z0-9][a-z0-9-]*$ ]] || fail "workflow id must contain only lowercase letters, digits, and hyphens"
+  TRACKED_COMPLETION_MARKERS=()
+  for (( index=0; index<${#TRACKED_PLACEHOLDERS[@]}; index++ )); do
+    TRACKED_COMPLETION_MARKERS+=("<!-- sensitive-ops:${workflow_id}:outcome-$((index + 1)):complete -->")
+  done
+}
+
+document_mode() {
+  local mode
+  if mode=$(stat -f '%Lp' "$OPS_FILE" 2>/dev/null) && [[ "$mode" =~ ^[0-7]{3,4}$ ]]; then
+    printf '%s' "$mode"
+    return 0
+  fi
+  if mode=$(stat -c '%a' -- "$OPS_FILE" 2>/dev/null) && [[ "$mode" =~ ^[0-7]{3,4}$ ]]; then
+    printf '%s' "$mode"
+    return 0
+  fi
+  return 1
+}
+
+validate_document_safety() {
+  local mode ops_dir repo_root
+  [[ "$OPS_FILE" == /* ]] || fail "operations document path must be absolute: $OPS_FILE"
+  [[ ! -L "$OPS_FILE" ]] || fail "operations document must not be a symbolic link: $OPS_FILE"
+  [[ -O "$OPS_FILE" ]] || fail "operations document must be owned by the current user: $OPS_FILE"
+  mode=$(document_mode) || fail "could not determine operations document permissions: $OPS_FILE"
+  (( (8#$mode & 077) == 0 )) || fail "operations document must not grant group or other permissions: $OPS_FILE"
+  command -v git >/dev/null 2>&1 || fail "git is required to verify that the operations document is untracked"
+  ops_dir=${OPS_FILE%/*}
+  [[ -n "$ops_dir" ]] || ops_dir=/
+  if repo_root=$(git -C "$ops_dir" rev-parse --show-toplevel 2>/dev/null); then
+    if git -C "$repo_root" ls-files --error-unmatch -- "$OPS_FILE" >/dev/null 2>&1; then
+      fail "operations document must not be tracked by Git: $OPS_FILE"
+    fi
+  fi
 }
 
 prepare_workflow() {
-  local placeholder registered occurrences index previous
+  local occurrences
   [[ -n "$WORKFLOW_TITLE" ]] || fail "helper has not been authored: workflow title is missing"
   [[ -n "$WORKFLOW_MARKER" ]] || fail "helper has not been authored: workflow marker is missing"
   (( ${#TRACKED_PLACEHOLDERS[@]} > 0 )) || fail "helper has not been authored: no outcomes are registered"
   [[ -f "$OPS_FILE" ]] || fail "operations document does not exist: $OPS_FILE"
   [[ -r "$OPS_FILE" && -w "$OPS_FILE" ]] || fail "operations document is not readable and writable: $OPS_FILE"
+  validate_document_safety
   occurrences=$(occurrence_count "$WORKFLOW_MARKER")
   [[ "$occurrences" -eq 1 ]] || fail "expected one workflow marker in $OPS_FILE, found $occurrences"
+  validate_outcomes
+  TOTAL_STAGES=$(count_pending "${TRACKED_PLACEHOLDERS[@]}")
+}
+
+validate_outcomes() {
+  local completion completion_occurrences index occurrences placeholder previous registered
   for (( index=0; index<${#TRACKED_PLACEHOLDERS[@]}; index++ )); do
     placeholder=${TRACKED_PLACEHOLDERS[$index]}
+    completion=${TRACKED_COMPLETION_MARKERS[$index]}
     [[ -n "$placeholder" ]] || fail "helper has not been authored: an outcome placeholder is empty"
     for (( previous=0; previous<index; previous++ )); do
       registered=${TRACKED_PLACEHOLDERS[$previous]}
       [[ "$registered" != "$placeholder" ]] || fail "an outcome placeholder was registered more than once"
     done
     occurrences=$(occurrence_count "$placeholder")
+    completion_occurrences=$(occurrence_count "$completion")
     [[ "$occurrences" -le 1 ]] || fail "expected at most one occurrence of placeholder, found $occurrences"
+    [[ "$completion_occurrences" -le 1 ]] || fail "expected at most one occurrence of completion marker, found $completion_occurrences"
+    [[ $((occurrences + completion_occurrences)) -eq 1 ]] || fail "outcome $((index + 1)) must contain exactly one placeholder or completion marker"
   done
-  TOTAL_STAGES=$(count_pending "${TRACKED_PLACEHOLDERS[@]}")
 }
 
 occurrence_count() {
@@ -106,6 +156,17 @@ count_pending() {
     if placeholder_exists "$placeholder"; then count=$((count + 1)); fi
   done
   printf '%s' "$count"
+}
+
+completion_marker_for() {
+  local index placeholder="$1"
+  for (( index=0; index<${#TRACKED_PLACEHOLDERS[@]}; index++ )); do
+    if [[ "${TRACKED_PLACEHOLDERS[$index]}" == "$placeholder" ]]; then
+      printf '%s' "${TRACKED_COMPLETION_MARKERS[$index]}"
+      return 0
+    fi
+  done
+  return 1
 }
 
 banner() {
@@ -149,7 +210,9 @@ confirm() {
 
 # Replace an exact placeholder without exposing its value to a child process.
 replace_placeholder() {
-  local placeholder="$1" value="$2" tmp line prefix suffix found=0 occurrences
+  local placeholder="$1" value="$2" completion tmp line prefix suffix found=0 occurrences
+  validate_document_safety
+  completion=$(completion_marker_for "$placeholder") || fail "placeholder is not registered for this workflow"
   occurrences=$(occurrence_count "$placeholder")
   [[ "$occurrences" -eq 1 ]] || fail "expected one occurrence of placeholder, found $occurrences"
   tmp=$(mktemp "${OPS_FILE}.tmp.XXXXXX")
@@ -160,7 +223,7 @@ replace_placeholder() {
     if [[ "$line" == *"$placeholder"* ]]; then
       prefix=${line%%"$placeholder"*}
       suffix=${line#*"$placeholder"}
-      line="${prefix}${value}${suffix}"
+      line="${prefix}${value}${completion}${suffix}"
       found=$((found + 1))
     fi
     printf '%s\n' "$line" >> "$tmp"
@@ -214,6 +277,7 @@ complete_action() {
 
 finish() {
   local remaining
+  validate_outcomes
   remaining=$(count_pending "${TRACKED_PLACEHOLDERS[@]}")
   _clear
   if [[ "$remaining" -gt 0 ]]; then

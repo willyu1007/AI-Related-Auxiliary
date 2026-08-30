@@ -10,6 +10,8 @@ Resolve the effective operations document first: use the user-supplied private d
 2. Copy [template.sh](../template.sh) to a temporary path outside the repository. Keep its library above the `STAGES` marker unchanged and replace the fail-closed scaffold below it.
 3. Register the title, workflow marker, and every placeholder once with `configure_workflow`, then call `prepare_workflow` before presenting stages.
 
+Keep the registered outcome order stable. The template derives one completion marker per outcome and writes it with the durable value; never hand-author or remove those markers. A valid outcome contains exactly its pending placeholder or its completion marker.
+
 - Use one focused stage per outcome, in dependency order.
 - Use hidden input for durable secrets and visible input for non-secret values.
 - Open the relevant destination before asking the user to act there.
@@ -20,6 +22,8 @@ Resolve the effective operations document first: use the user-supplied private d
 ## Validate and hand off
 
 Run `bash -n <helper>` and `shellcheck` when available, then make the helper executable. Do not run it end to end because it depends on the user's access and input.
+
+The helper revalidates the effective document at startup and before every write. It rejects relative paths, symbolic links, files not owned by the current user, group/other permissions, and Git-tracked files. Do not weaken or bypass those checks.
 
 Return absolute clickable links to both the helper and the operations document. Give the exact, shell-safe command the user should run:
 

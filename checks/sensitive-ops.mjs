@@ -101,8 +101,17 @@ finish
     const withoutMarker = runHelper(authoredHelper, missingMarker);
     check(failures, withoutMarker.status === 1, 'an authored helper must reject a document without its workflow marker');
 
+    const missingOutcome = path.join(tempDir, 'missing-outcome.md');
+    fs.writeFileSync(missingOutcome, '<!-- sensitive-ops:test -->\n- value was removed\n', { mode: 0o600 });
+    const withoutOutcomeEvidence = runHelper(authoredHelper, missingOutcome);
+    check(failures, withoutOutcomeEvidence.status === 1, 'a helper must reject an outcome with neither its placeholder nor completion marker');
+
     const completedDocument = path.join(tempDir, 'completed.md');
-    fs.writeFileSync(completedDocument, '<!-- sensitive-ops:test -->\n- value: already configured\n', { mode: 0o600 });
+    fs.writeFileSync(
+      completedDocument,
+      '<!-- sensitive-ops:test -->\n- value: already configured<!-- sensitive-ops:test:outcome-1:complete -->\n',
+      { mode: 0o600 }
+    );
     const completedInDumbTerminal = runHelperInPty(authoredHelper, completedDocument, tempDir);
     check(
       failures,
@@ -164,6 +173,30 @@ finish
       `<!-- sensitive-ops:secret-test -->\n- secret: ${writePlaceholder}\n`,
       { mode: 0o600 }
     );
+
+    const broadModeDocument = path.join(tempDir, 'broad-mode.md');
+    const broadModeContents = `<!-- sensitive-ops:secret-test -->\n- secret: ${writePlaceholder}\n`;
+    fs.writeFileSync(broadModeDocument, broadModeContents, { mode: 0o644 });
+    const broadModeWrite = runHelper(writeHelper, broadModeDocument, 'mode-sentinel\n');
+    const broadModeOutput = `${broadModeWrite.stdout}${broadModeWrite.stderr}`;
+    check(failures, broadModeWrite.status === 1, 'a helper must reject an operations document accessible to group or other users');
+    check(failures, fs.readFileSync(broadModeDocument, 'utf8') === broadModeContents, 'a rejected broad-mode document must remain unchanged');
+    check(failures, !broadModeOutput.includes('mode-sentinel'), 'a rejected broad-mode document must not print the sensitive value');
+
+    const trackedRepo = path.join(tempDir, 'tracked-repo');
+    const trackedDocument = path.join(trackedRepo, 'tracked.md');
+    const trackedContents = `<!-- sensitive-ops:secret-test -->\n- secret: ${writePlaceholder}\n`;
+    fs.mkdirSync(trackedRepo);
+    const gitInit = spawnSync('git', ['init', '-q'], { cwd: trackedRepo, encoding: 'utf8' });
+    fs.writeFileSync(trackedDocument, trackedContents, { mode: 0o600 });
+    const gitAdd = spawnSync('git', ['add', '--', 'tracked.md'], { cwd: trackedRepo, encoding: 'utf8' });
+    check(failures, gitInit.status === 0 && gitAdd.status === 0, 'the tracked-document regression fixture must be constructible');
+    const trackedWrite = runHelper(writeHelper, trackedDocument, 'tracked-sentinel\n');
+    const trackedOutput = `${trackedWrite.stdout}${trackedWrite.stderr}`;
+    check(failures, trackedWrite.status === 1, 'a helper must reject a Git-tracked operations document');
+    check(failures, fs.readFileSync(trackedDocument, 'utf8') === trackedContents, 'a rejected tracked document must remain unchanged');
+    check(failures, !trackedOutput.includes('tracked-sentinel'), 'a rejected tracked document must not print the sensitive value');
+
     const stubBin = path.join(tempDir, 'bin');
     fs.mkdirSync(stubBin);
     fs.writeFileSync(path.join(stubBin, 'mv'), '#!/bin/sh\nexit 1\n', { mode: 0o700 });
@@ -181,14 +214,14 @@ finish
     fs.writeFileSync(
       successDocument,
       `<!-- sensitive-ops:secret-test -->\n- secret: ${writePlaceholder}\n`,
-      { mode: 0o640 }
+      { mode: 0o600 }
     );
     const successfulWrite = runHelper(writeHelper, successDocument, '\ndummy&secret\n');
     const successfulOutput = `${successfulWrite.stdout}${successfulWrite.stderr}`;
     const writtenMode = fs.statSync(successDocument).mode & 0o777;
     check(failures, successfulWrite.status === 0, 'empty input must re-prompt and accept the next non-empty value');
     check(failures, fs.readFileSync(successDocument, 'utf8').includes('dummy&secret'), 'a successful replacement must preserve the exact supplied value');
-    check(failures, writtenMode === 0o640, 'a successful replacement must preserve the document permission mode');
+    check(failures, writtenMode === 0o600, 'a successful replacement must preserve the document permission mode');
     check(failures, !successfulOutput.includes('dummy&secret'), 'a successful replacement must not print the sensitive value');
     const completedRerun = runHelper(writeHelper, successDocument);
     check(failures, completedRerun.status === 0, 'a completed helper must be safe to rerun');
@@ -215,12 +248,17 @@ open_url "https://example.invalid/setup"
       { mode: 0o700 }
     );
     fs.writeFileSync(browserDocument, `${browserMarker}\n- value: <待填写：浏览器测试>\n`, { mode: 0o600 });
-    const emptyBin = path.join(tempDir, 'empty-bin');
-    fs.mkdirSync(emptyBin);
-    const withoutBrowser = runHelper(browserHelper, browserDocument, '', { PATH: emptyBin });
-    const browserOutput = `${withoutBrowser.stdout}${withoutBrowser.stderr}`;
-    check(failures, withoutBrowser.status === 0, 'a missing browser opener must not fail the helper');
-    check(failures, browserOutput.includes("couldn't open a browser"), 'a missing browser opener must print a manual fallback');
+    const unavailableBrowserBin = path.join(tempDir, 'unavailable-browser-bin');
+    fs.mkdirSync(unavailableBrowserBin);
+    for (const opener of ['wslview', 'explorer.exe', 'xdg-open', 'open']) {
+      fs.writeFileSync(path.join(unavailableBrowserBin, opener), '#!/bin/sh\nexit 1\n', { mode: 0o700 });
+    }
+    const unavailableBrowser = runHelper(browserHelper, browserDocument, '', {
+      PATH: `${unavailableBrowserBin}${path.delimiter}${process.env.PATH}`,
+    });
+    const browserOutput = `${unavailableBrowser.stdout}${unavailableBrowser.stderr}`;
+    check(failures, unavailableBrowser.status === 0, 'an unavailable browser opener must not fail the helper');
+    check(failures, browserOutput.includes("couldn't open a browser"), 'an unavailable browser opener must print a manual fallback');
   } finally {
     fs.rmSync(tempDir, { recursive: true, force: true });
   }
