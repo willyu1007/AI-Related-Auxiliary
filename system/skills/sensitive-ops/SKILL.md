@@ -1,10 +1,11 @@
 ---
 name: sensitive-ops
 description: >-
-  Use when a task needs private project-specific operational context
-  for environment configuration or injection, API keys, cloud or
-  server access and permissions, deployment targets, third-party
-  accounts, or other credentials.
+  Use when a task needs private project-specific operational context such as
+  credentials, access, permissions, deployment targets, or accounts; or
+  contains sensitive setup steps bound to the user, such as secret entry,
+  MFA, OAuth approval, authenticated UI work, or a physical device. Also use
+  when the user explicitly requests a guided shell helper for those steps.
 ---
 
 # Sensitive Ops
@@ -15,7 +16,7 @@ The document is human-authored Markdown and the durable source of sensitive oper
 
 ## Establish the context
 
-Inspect the project and target workflow before requesting information. Read and use only what the current task requires; sensitivity alone is not a blocker.
+Inspect the project and target workflow before requesting information. Complete everything the agent can perform directly, and leave only unavailable information or genuinely user-bound actions to the user. Read and use only what the current task requires; sensitivity alone is not a blocker.
 
 Resolve the legacy default `~/Documents/LLM/project-ops.md` when needed:
 
@@ -45,17 +46,7 @@ Headings, explanations, placeholders, and pending-action text should be Chinese.
 
 Create an interactive helper only when the user explicitly requests a script, `.sh` file, interactive helper, or guided shell workflow.
 
-Before authoring it, add one stable workflow marker such as `<!-- sensitive-ops:cloudflare-setup -->` and one unique placeholder per outcome to the operations document. Copy [template.sh](template.sh) to a temporary path outside the repository, keep its library above the `STAGES` marker unchanged, and replace the fail-closed scaffold below it.
-
-- Register the title, workflow marker, and every placeholder once with `configure_workflow`, then call `prepare_workflow` before presenting stages.
-- Use one focused stage per outcome, in dependency order.
-- Use hidden input for durable secrets and visible input for non-secret values.
-- Open the relevant destination before asking the user to act there.
-- Record only the durable result of MFA, OAuth, physical-device, or authenticated UI actions; never record transient proof.
-- Confirm immediately before an irreversible user action.
-- Allow `:later` and Ctrl-C. Preserve completed outcomes in the document and skip them when the helper is rerun.
-
-Run `bash -n <script>` and `shellcheck` when available, then make the helper executable. Do not run it end to end because it depends on user access and input. If creation or execution fails, return to the document workflow with completed results intact and remaining placeholders visible.
+Only on that path, read and follow [the shell helper workflow](references/helper.md). Do not read the helper reference or [template.sh](template.sh) for the default document workflow.
 
 ## Apply and resume
 
