@@ -24,6 +24,45 @@ function runHelper(helper, opsFile, input = '', env = {}) {
   });
 }
 
+function shellQuote(value) {
+  return `'${value.replaceAll("'", `'\\''`)}'`;
+}
+
+function runHelperInPty(helper, opsFile, tempDir, env = {}) {
+  const driver = path.join(tempDir, 'pty-driver.sh');
+  const statusFile = path.join(tempDir, 'pty-helper.status');
+  fs.writeFileSync(
+    driver,
+    '#!/usr/bin/env bash\n"$HELPER_UNDER_TEST"\nprintf \'%s\\n\' "$?" > "$HELPER_STATUS_FILE"\n',
+    { mode: 0o700 }
+  );
+  const scriptArgs = process.platform === 'darwin'
+    ? ['-q', '/dev/null', '/bin/bash', driver]
+    : ['-q', '-e', '-c', `/bin/bash ${shellQuote(driver)}`, '/dev/null'];
+  const stdin = fs.openSync('/dev/null', 'r');
+  let result;
+  try {
+    result = spawnSync('/usr/bin/script', scriptArgs, {
+      encoding: 'utf8',
+      env: {
+        ...process.env,
+        TERM: 'dumb',
+        SENSITIVE_OPS_FILE: opsFile,
+        HELPER_UNDER_TEST: helper,
+        HELPER_STATUS_FILE: statusFile,
+        ...env,
+      },
+      stdio: [stdin, 'pipe', 'pipe'],
+    });
+  } finally {
+    fs.closeSync(stdin);
+  }
+  return {
+    ...result,
+    helperStatus: fs.existsSync(statusFile) ? Number(fs.readFileSync(statusFile, 'utf8').trim()) : null,
+  };
+}
+
 function check(failures, condition, message) {
   if (!condition) failures.push(message);
 }
@@ -48,6 +87,8 @@ export function sensitiveOpsTemplateFailures() {
       authoredTemplate(`
 configure_workflow "Test workflow" "<!-- sensitive-ops:test -->" "<待填写：测试值>"
 prepare_workflow
+banner "$WORKFLOW_TITLE"
+finish
 `),
       { mode: 0o700 }
     );
@@ -59,6 +100,20 @@ prepare_workflow
     fs.writeFileSync(missingMarker, '- value: <待填写：测试值>\n', { mode: 0o600 });
     const withoutMarker = runHelper(authoredHelper, missingMarker);
     check(failures, withoutMarker.status === 1, 'an authored helper must reject a document without its workflow marker');
+
+    const completedDocument = path.join(tempDir, 'completed.md');
+    fs.writeFileSync(completedDocument, '<!-- sensitive-ops:test -->\n- value: already configured\n', { mode: 0o600 });
+    const completedInDumbTerminal = runHelperInPty(authoredHelper, completedDocument, tempDir);
+    check(
+      failures,
+      completedInDumbTerminal.error === undefined && completedInDumbTerminal.status === 0,
+      `the PTY regression check must be runnable (status: ${completedInDumbTerminal.status ?? 'missing'}, stderr: ${JSON.stringify(completedInDumbTerminal.stderr)})`
+    );
+    check(
+      failures,
+      completedInDumbTerminal.helperStatus === 0,
+      `a helper must not fail when TERM=dumb cannot clear the TTY (helper status: ${completedInDumbTerminal.helperStatus ?? 'missing'}, PTY status: ${completedInDumbTerminal.status ?? 'missing'}, signal: ${completedInDumbTerminal.signal ?? 'none'})`
+    );
 
     const duplicatePlaceholder = path.join(tempDir, 'duplicate-placeholder.md');
     fs.writeFileSync(
