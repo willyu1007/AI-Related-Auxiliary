@@ -89,9 +89,20 @@ checks/          # 本仓库自己的校验，不是分发物
 
 两个极端才值得写下来。有破坏性或纯问答的技能只应由用户点名，description 里会写死 "user explicitly asks"（如 cleanup-project-residue）。反过来，有些义务对应的时刻**没有用户话语**——没人会说"现在做个检查点"或"现在把提示词写规范"——这类技能必须由处境触发，这也是它们存在的理由。
 
-`system/` 是全局 Agent 配置的版本化镜像。改动流程：
+`system/` 是全局 Agent 配置的版本化镜像。默认安装 `general`；安装器把所选档位视为完整目标状态，会删除当前档位不包含的本库技能，而不是与原档位叠加共存。
 
-三级档位逐级扩展：`minimal` / 最小集（治理主线 + review / research / tdd）、`general` / 通用（再加日常调试、UI、HTML、清理、Codex 和 script-first 的 wizard）、`all` / 全量（以 document-first 的 sensitive-ops 替换 wizard、覆盖相同的用户绑定步骤，再加 write-prompt、Prisma 和 `.ai/llm`）。默认 `general`。`wizard` 与 `sensitive-ops` 不会同时安装；`.codex` 在通用和全量下仍不装三个 `codex-*` 技能。
+| 档位 | 覆盖关系 | 内容 |
+|---|---|---|
+| `minimal` | 基础档 | 治理主线以及 review、research、tdd |
+| `general` | 包含 `minimal` | 增加日常调试、UI、HTML、清理、Codex 和 script-first 的 wizard |
+| `all` | 包含 `general`，但以 sensitive-ops 替换 wizard | 覆盖相同的用户绑定步骤，并增加 write-prompt、Prisma 和 `.ai/llm` |
+
+`wizard` 与 `sensitive-ops` 不会同时安装；`.codex` 在 `general` 和 `all` 下仍不安装三个 `codex-*` 技能。
+
+> [!CAUTION]
+> `all` 是仓库维护者的完整个人配置，包含较强的工作流与环境假设，并不代表更通用或更适合所有用户。使用前应逐项阅读相关 skill，尤其先确认 [sensitive-ops](system/skills/sensitive-ops/SKILL.md) 对敏感信息持久化、一次性凭证、生产授权和可选 shell helper 的处理方式符合你的设备、项目与团队安全要求；不符合时应调整 skill 或选择较低档位。
+
+全局同步：
 
 ```bash
 # 从本仓库同步到全局：skills 按目录整体替换，当前档以外的本库技能会从目标删掉；
