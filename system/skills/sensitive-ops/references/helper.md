@@ -23,7 +23,7 @@ Keep the registered outcome order stable. The template derives one completion ma
 
 Run `bash -n <helper>` and `shellcheck` when available, then make the helper executable. Do not run it end to end because it depends on the user's access and input.
 
-The helper revalidates the effective document at startup and before every write. It rejects relative paths, symbolic links, files not owned by the current user, group/other permissions, and Git-tracked files. Do not weaken or bypass those checks.
+The helper revalidates the effective document at startup and before every write. It rejects relative paths, symbolic links, files not owned by the current user, group/other permissions, and Git-tracked files. Git is required to verify that the document is untracked; if Git is unavailable, the helper exits `1` and the workflow falls back to the document path. Do not weaken or bypass those checks.
 
 Return absolute clickable links to both the helper and the operations document. Give the exact, shell-safe command the user should run:
 
