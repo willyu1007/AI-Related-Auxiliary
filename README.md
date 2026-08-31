@@ -47,7 +47,7 @@ checks/          # 本仓库自己的校验，不是分发物
 
 技能发现只扫 `system/skills/` 的第一层，所以那一层保持平铺，不要建分组子目录。
 
-## system/ —— 24 个技能
+## system/ —— 25 个技能
 
 任务治理的八个技能按实际操作划分；其中 `goal-mode` 串联同一 Goal 运行内的长任务主线，其余每个对应工作流程里的一个时刻。主线是 `start → plan → implementation`；新证据推翻路线时回到 plan，实施检查点通过 `sync → resume` 走仓库跨越时间，`handoff → 新会话` 则通过对话完成普通任务的零间隔交接。
 
@@ -62,7 +62,7 @@ checks/          # 本仓库自己的校验，不是分发物
 | [project-status](system/skills/project-status/SKILL.md) | 一项或多项任务及项目 hub 的只读状态、归档就绪度与一致性审查 | 仓库 |
 | [goal-mode](system/skills/goal-mode/SKILL.md) | 在同一 Goal 运行内串联 start、planning、分阶段执行、checkpoint、恢复与完成契约 | 仓库 + 对话 |
 
-另有 16 个与任务治理无关的技能：
+另有 17 个与任务治理无关的技能：
 
 | Skill | 用途 |
 |---|---|
@@ -80,6 +80,7 @@ checks/          # 本仓库自己的校验，不是分发物
 | [cleanup-project-residue](system/skills/cleanup-project-residue/SKILL.md) | 清理当前 session、任务、近期工作或全项目中的过时测试、冗余内容、语义漂移、双轨/legacy 残留和技术债；证据+批准后删除，校验门收尾 |
 | [resolve-vcs-conflicts](system/skills/resolve-vcs-conflicts/SKILL.md) | 在已获授权且进行中的 merge、rebase、cherry-pick 或 revert 中恢复双方意图并解决 Git 冲突 |
 | [tdd](system/skills/tdd/SKILL.md) | 在行为与测试 seam 足够稳定时，以 red → green → refactor 推进测试优先实现 |
+| [using-powershell](system/skills/using-powershell/SKILL.md) | 在 Windows PowerShell 5.1/PowerShell 7 中编写命令与 `.ps1`，避免 Bash/CMD 语法混入，并按需执行无依赖静态校验 |
 | [wizard](system/skills/wizard/SKILL.md) | `general` 档的通用交互向导；为必须由用户持有私密访问、MFA 或实体设备才能完成的步骤生成临时脚本，在 `all` 档由 sensitive-ops 替代 |
 | [write-prompt](system/skills/write-prompt/SKILL.md) | 为另一个 LLM、subagent、CLI agent 或运行时模型编写独立执行边界的 Prompt |
 
@@ -93,7 +94,7 @@ checks/          # 本仓库自己的校验，不是分发物
 
 | 档位 | 覆盖关系 | 内容 |
 |---|---|---|
-| `minimal` | 基础档 | 治理主线以及 review、research、tdd |
+| `minimal` | 基础档 | 治理主线以及 PowerShell、review、research、tdd |
 | `general` | 包含 `minimal` | 增加日常调试、UI、HTML、清理、Codex 和 script-first 的 wizard |
 | `all` | 包含 `general`，但以 sensitive-ops 替换 wizard | 覆盖相同的用户绑定步骤，并增加 write-prompt、Prisma 和 `.ai/llm` |
 

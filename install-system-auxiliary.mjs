@@ -49,6 +49,7 @@ export const SKILL_TIER = {
   'review-code': 'minimal',
   research: 'minimal',
   tdd: 'minimal',
+  'using-powershell': 'minimal',
   'task-start': 'minimal',
   'task-plan': 'minimal',
   'task-sync': 'minimal',
@@ -101,7 +102,7 @@ Options:
   -h, --help        Show this help
 
 Profiles:
-  minimal   task-* / project-* plus review-code, research, tdd
+  minimal   task-* / project-* plus PowerShell, review, research, and tdd
   general   minimal plus everyday debug, UI, HTML, cleanup, Codex, and wizard
   all       general with wizard replaced by sensitive-ops, plus write-prompt,
             Prisma, and .ai/llm
