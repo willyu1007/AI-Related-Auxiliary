@@ -80,6 +80,11 @@ export const PROFILE_EXCLUSIONS = {
   all: new Set(['wizard']),
 };
 
+/** Host platforms that may install the skill. A missing entry means every host. */
+export const SKILL_HOST = {
+  'using-powershell': new Set(['win32']),
+};
+
 /** Renamed or retired library skills that should not survive profile changes. */
 const OBSOLETE_SKILLS = new Set(['get-sensitive-info']);
 
@@ -102,13 +107,14 @@ Options:
   -h, --help        Show this help
 
 Profiles:
-  minimal   task-* / project-* plus PowerShell, review, research, and tdd
+  minimal   task-* / project-* plus PowerShell (Windows), review, research, and tdd
   general   minimal plus everyday debug, UI, HTML, cleanup, Codex, and wizard
   all       general with wizard replaced by sensitive-ops, plus write-prompt,
             Prisma, and .ai/llm
 
 ~/.codex never receives the three codex-* skills.
 Library skills outside the selected profile are removed from the target.
+using-powershell installs only on Windows (win32).
 `.trim());
   process.exit(exitCode);
 }
@@ -160,12 +166,29 @@ export function assertSkillTiers(skillNames) {
       .filter((name) => !names.has(name))
       .map((name) => `${profile} excludes unknown skill ${name}`);
   });
+  const invalidHosts = Object.entries(SKILL_HOST).flatMap(([name, platforms]) => {
+    if (!names.has(name)) return [`host constraint for unknown skill ${name}`];
+    if (!(platforms instanceof Set) || platforms.size === 0) {
+      return [`host constraint for ${name} is empty`];
+    }
+    return [];
+  });
   const errors = [];
   if (missing.length > 0) errors.push(`skills missing a profile tier: ${missing.join(', ')}`);
   if (extra.length > 0) errors.push(`profile tiers for unknown skills: ${extra.join(', ')}`);
   if (invalid.length > 0) errors.push(`invalid profile tiers: ${invalid.join(', ')}`);
   if (invalidExclusions.length > 0) errors.push(`invalid profile exclusions: ${invalidExclusions.join(', ')}`);
+  if (invalidHosts.length > 0) errors.push(`invalid host constraints: ${invalidHosts.join(', ')}`);
   return errors;
+}
+
+export function hostAllowsSkill(name, platform = process.platform) {
+  const allowed = SKILL_HOST[name];
+  return allowed === undefined || allowed.has(platform);
+}
+
+export function applyHostFilter(skillNames, platform = process.platform) {
+  return skillNames.filter((name) => hostAllowsSkill(name, platform));
 }
 
 export function skillsForProfile(skillNames, profile) {
@@ -207,6 +230,8 @@ function main() {
   if (tierErrors.length > 0) fail(tierErrors.join('; '));
 
   const profileSkills = skillsForProfile(skillNames, profile);
+  const hostSkills = applyHostFilter(profileSkills);
+  const hostSkipped = profileSkills.filter((name) => !hostAllowsSkill(name));
 
   for (const doc of new Set(AGENTS.flatMap((agent) => agent.docs))) {
     if (!fs.existsSync(path.join(DOCS_SRC, doc))) fail(`Missing source doc: system/docs/${doc}`);
@@ -219,8 +244,8 @@ function main() {
       continue;
     }
 
-    const selected = profileSkills.filter(agent.skillFilter);
-    const excluded = profileSkills.filter((name) => !agent.skillFilter(name));
+    const selected = hostSkills.filter(agent.skillFilter);
+    const excluded = hostSkills.filter((name) => !agent.skillFilter(name));
 
     const skillsDest = path.join(homeDir, 'skills');
     fs.mkdirSync(skillsDest, { recursive: true });
@@ -245,6 +270,7 @@ function main() {
 
     const parts = [`profile: ${profile}`, `${selected.length} skills`, `docs: ${agent.docs.join(', ')}`];
     if (excluded.length > 0) parts.push(`excluded: ${excluded.join(', ')}`);
+    if (hostSkipped.length > 0) parts.push(`host-skipped: ${hostSkipped.join(', ')}`);
     if (removed.length > 0) parts.push(`removed: ${removed.join(', ')}`);
     console.log(`~/${agent.home}  ${parts.join('  |  ')}`);
   }

@@ -16,6 +16,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
+  applyHostFilter,
   assertSkillTiers,
   managedSkillsToRemove,
   skillsForProfile,
@@ -167,6 +168,15 @@ function runStatic() {
     if (!removals.has('get-sensitive-info')) {
       fail('skill-profile', 'every profile must remove the retired get-sensitive-info skill');
     }
+  }
+
+  const winMinimal = new Set(applyHostFilter(skillsForProfile(allSkillNames, 'minimal'), 'win32'));
+  const unixMinimal = new Set(applyHostFilter(skillsForProfile(allSkillNames, 'minimal'), 'linux'));
+  if (!winMinimal.has('using-powershell')) {
+    fail('skill-host', 'using-powershell must install on win32 minimal');
+  }
+  if (unixMinimal.has('using-powershell')) {
+    fail('skill-host', 'using-powershell must not install on linux');
   }
 
   // Cross-skill orchestration is exceptional and explicit. Validate the allowlist itself so a

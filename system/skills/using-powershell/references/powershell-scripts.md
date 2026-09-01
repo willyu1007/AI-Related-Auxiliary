@@ -2,7 +2,14 @@
 
 ## Contract
 
-Start executable scripts with a parameter contract when they accept input. Use types and validation only where invalid input would otherwise reach a mutation or produce a confusing failure.
+Give executable scripts that accept input a typed parameter contract.
+Use types and validation only where invalid input would otherwise reach a
+mutation or produce a confusing failure. Add `Set-StrictMode -Version Latest`
+and `$ErrorActionPreference = 'Stop'` only when this script owns error
+policy — not fragments, dot-sourced configuration, or a host that already
+owns error policy.
+
+The following shows where the scaffold goes, not a required parameter shape:
 
 ```powershell
 [CmdletBinding()]
@@ -15,35 +22,19 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 ```
 
-Do not add this scaffold mechanically to fragments, dot-sourced configuration, or scripts whose host owns error policy.
+## Paths and errors
 
-## Paths and invocation
+- Resolve script-owned files from `$PSScriptRoot` with `Join-Path`.
+- Do not use `$args` as a custom argument-array name.
+- When rethrowing, add context and keep the original exception as inner
+  evidence when practical.
+- `exit` only at an executable script boundary. Functions return or throw.
+- Preserve an existing file's encoding. For new files, choose encoding for
+  the consumer; Windows PowerShell 5.1 and PowerShell 7 interpret `utf8`
+  differently.
 
-- Resolve script-owned files from `$PSScriptRoot`; combine segments with `Join-Path`.
-- Use `-LiteralPath` for a known path and `-Path` only when wildcard expansion is intended or the cmdlet lacks `-LiteralPath`.
-- Invoke a native executable with `& $exe @argList`. Capture `$LASTEXITCODE` before running another native command and throw or return it when nonzero is failure.
-- Do not use `$args` as a custom argument-array name; it is an automatic variable.
+## Output
 
-## Failures and output
-
-- Cmdlets and native executables have different failure models. `$LASTEXITCODE` does not validate a cmdlet; `try`/`catch` does not make a native nonzero exit terminating.
-- Add context when rethrowing an error, but preserve the original exception as the inner evidence when practical.
-- Emit pipeline data with `Write-Output` or bare expressions, diagnostics with `Write-Verbose`/`Write-Warning`, and errors with `Write-Error` or `throw`.
-- Keep `exit` at an executable script boundary; reusable functions should return values or throw.
-
-## Text and structured data
-
-- Use single-quoted strings and here-strings for literal content; use double quotes only for intentional interpolation.
-- Build JSON from objects with `ConvertTo-Json -Depth <required-depth>` instead of hand-escaped strings.
-- Preserve an existing file's encoding. For new files, choose encoding for the consumer explicitly; PowerShell 5.1 and 7 interpret `utf8` differently.
-- Avoid backtick continuation. Prefer splatting, arrays, parentheses, and natural line breaks after pipes or commas.
-
-## Verify
-
-Run the Skill's validator from its directory:
-
-```powershell
-& './scripts/Test-PowerShell.ps1' -LiteralPath '.\script.ps1'
-```
-
-Then execute the script's non-destructive path under every supported PowerShell runtime available for the task.
+Emit pipeline data with `Write-Output` or a bare expression, diagnostics
+with `Write-Verbose` / `Write-Warning`, and errors with `Write-Error` or
+`throw`.
