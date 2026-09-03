@@ -62,6 +62,10 @@ Within a UI mock's product surface, write for the actual user in the concrete pr
 
 When delivering a UI mock:
 
+- When the request focuses on a feature rather than the frame or an overall
+  scheme, place it in its existing outer frame.
+- Follow the project's visual conventions and templates already in use.
+- If the user asks to break the current state, drop only what that request overrides.
 - Render the product, not a presentation about the product. Make the proposed UI the visual center
   of the artifact.
 - Keep content outside the product surface to the minimum needed for identification. A short title
