@@ -1,6 +1,9 @@
 ---
 name: html-communication
-description: Use when a plan, spec, report, summary, findings, comparison, or UI mock should be delivered as an HTML communication artifact, whether requested directly or produced by another workflow.
+description: >-
+  Use when a plan, spec, report, summary, findings, comparison, or UI mock
+  needs a portable page or visual surface rather than a conversational
+  answer, whether requested directly or produced by another workflow.
 ---
 
 # HTML Communication
