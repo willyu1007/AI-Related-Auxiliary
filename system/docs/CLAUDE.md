@@ -77,26 +77,22 @@ Channel both "measure twice, cut once" and "yagni". Fight scope creep. Honor the
 
 Rankings, higher = better. Cost reflects what I actually pay (OpenAI is near-free for me due to a deal), not list price. Intelligence is how hard a problem you can hand the model unsupervised. Taste covers UI/UX, code quality, API design, and copy.
 
-| model         | cost | intelligence | taste |
-| ------------- | ---- | ------------ | ----- |
-| gpt-6-astra   | 9    | 9            | 7     |
-| gpt-5.6-sol   | 9    | 8            | 5     |
-| gpt-5.6-terra | 9    | 7            | 5     |
-| gpt-5.6-luna  | 9    | 5            | 4     |
-| opus-5        | 4    | 8            | 8     |
-| fable-5.1     | 2    | 9            | 9     |
-
-The gpt-5.6 Terra/Luna intelligence/taste numbers are provisional estimates from launch positioning (Terra balanced, Luna fast/cheap) — tune them after real use.
+| model       | cost | intelligence | taste |
+| ----------- | ---- | ------------ | ----- |
+| gpt-6-astra | 9    | 9            | 7     |
+| opus-5      | 4    | 8            | 8     |
+| fable-5.1   | 2    | 9            | 9     |
 
 How to apply:
 
 - These are defaults, not limits. You have standing permission to override them: if a cheaper model's output doesn't meet the bar, rerun or redo the work with a smarter model without asking. Judge the output, not the price tag. Escalating costs less than shipping mediocre work.
-- Codex tier selection (Claude picks per task, no fixed default): Astra for hard/broad work handed over unsupervised, independent reviews, and any task whose tier is unclear; Terra only for everyday clear-spec implementation; Luna for simple, high-volume mechanical work. Sol is the flagship fallback when Astra is unavailable in the harness. Reasoning effort defaults to high (pinned in `~/.codex/config.toml`, decided 2026-09-05) — it costs latency, not money. Raise per-invocation (`-c model_reasoning_effort=xhigh` or max) when unsupervised hard work needs more thinking; lower it (`medium` or low) for high-volume mechanical Luna-type runs where latency dominates. `max` exists above xhigh — use sparingly, output-token bloat.
+- Codex work all goes to gpt-6-astra; what you pick is the reasoning effort, not the model. `high` is the pinned default (`~/.codex/config.toml`, decided 2026-09-05) — effort costs latency, not money. Raise per-invocation for hard unsupervised work (`-c model_reasoning_effort=xhigh`; `max` sparingly, output-token bloat); lower to `medium`/`low` for high-volume mechanical runs where latency dominates.
+- gpt-5.6-{sol,terra,luna} are legacy: use one only when astra is unavailable in the harness.
 - Anything user-facing (UI, copy, API design) needs taste ≥ 7.
 - Cross-model review: for plans or implementations involving requirements, observable behavior, architecture, security, or non-trivial failure modes, use gpt-6-astra as the primary reviewer when Claude produced the work, and Claude as the primary reviewer when Codex produced it. For Codex-authored changes, Codex may still run deterministic checks and add a supplemental self-review. Purely mechanical changes fully covered by deterministic checks do not require cross-model review.
 - Never use Haiku.
 - If computer use is helpful for completing or verifying work, shell out to Codex for it.
-- Mechanics: gpt-6-astra and gpt-5.6 models are only reachable through the Codex CLI — `codex exec` / `codex review`, tier via `--model gpt-6-astra` or `--model gpt-5.6-{sol,terra,luna}` (`~/.codex/config.toml` pins `gpt-6-astra` + `model_reasoning_effort = "high"` as the default). Use the codex-implementation, codex-review, and codex-computer-use skills; for work they don't cover (investigation, data analysis), run `codex exec -s read-only` directly with a self-contained prompt.
+- Mechanics: you reach Codex models only by shelling out to the Codex CLI — `codex exec` / `codex review` (`~/.codex/config.toml` already pins `gpt-6-astra` + `model_reasoning_effort = "high"`, so `--model` is only needed to override). Use the codex-implementation, codex-review, and codex-computer-use skills; for work they don't cover (investigation, data analysis), run `codex exec -s read-only` directly with a self-contained prompt.
 - Claude models (opus-5, fable-5.1) run via the Agent/Workflow model parameter.
 
 Using Codex inside workflows and subagents (the model parameter only takes Claude models, so use a wrapper):
