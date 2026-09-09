@@ -18,6 +18,7 @@
  *   node install-system-auxiliary.mjs
  *   node install-system-auxiliary.mjs --profile general
  *   node install-system-auxiliary.mjs --profile all
+ *   node install-system-auxiliary.mjs --profile will
  */
 
 import fs from 'node:fs';
@@ -36,12 +37,13 @@ const AGENTS = [
   { home: '.cursor', skillFilter: () => true, docs: ['AGENTS.md'] },
 ];
 
-const TIER_RANK = { minimal: 0, general: 1, all: 2 };
+const TIER_RANK = { minimal: 0, general: 1, all: 2, will: 2 };
 const DEFAULT_PROFILE = 'general';
 const PROFILE_ALIASES = {
   minimal: 'minimal',
   general: 'general',
   all: 'all',
+  will: 'will',
 };
 
 /** Lowest profile that installs the skill before profile-specific exclusions. */
@@ -75,11 +77,12 @@ export const SKILL_TIER = {
   'manage-llm-config': 'all',
 };
 
-/** Higher profiles may replace a lower-profile skill with a broader one. */
+/** A profile may replace or omit skills from the ranks it otherwise includes. */
 export const PROFILE_EXCLUSIONS = {
   minimal: new Set(),
   general: new Set(),
   all: new Set(['wizard']),
+  will: new Set(['wizard', 'cpp-code-style', 'cpp-code-style-manager', 'using-powershell']),
 };
 
 /** Host platforms that may install the skill. A missing entry means every host. */
@@ -103,7 +106,7 @@ Usage:
 Sync system/skills and global instruction docs into ~/.claude, ~/.codex, and ~/.cursor.
 
 Options:
-  --profile <name>  minimal | general | all
+  --profile <name>  minimal | general | all | will
                     Default: general. Higher profiles build on lower ones,
                     with documented replacements.
   -h, --help        Show this help
@@ -113,10 +116,11 @@ Profiles:
   general   minimal plus everyday debug, UI, HTML, cleanup, Codex, and wizard
   all       general with wizard replaced by sensitive-ops, plus write-prompt,
             Prisma, and .ai/llm
+  will      personal: same as all, without C++ or PowerShell
 
 ~/.codex never receives the three codex-* skills.
 Library skills outside the selected profile are removed from the target.
-using-powershell installs only on Windows (win32).
+using-powershell installs only on Windows (win32), and never in will.
 `.trim());
   process.exit(exitCode);
 }
@@ -139,7 +143,7 @@ function parseArgs(argv) {
     if (!value || value.startsWith('--')) fail('Option --profile requires a value.');
     const resolved = PROFILE_ALIASES[value];
     if (!resolved) {
-      fail(`Unknown profile: "${value}". Use minimal, general, or all.`);
+      fail(`Unknown profile: "${value}". Use minimal, general, all, or will.`);
     }
     profile = resolved;
   }

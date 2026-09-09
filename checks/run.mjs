@@ -153,16 +153,27 @@ function runStatic() {
   const minimalSkills = new Set(skillsForProfile(allSkillNames, 'minimal'));
   const generalSkills = new Set(skillsForProfile(allSkillNames, 'general'));
   const fullSkills = new Set(skillsForProfile(allSkillNames, 'all'));
+  const willSkills = new Set(skillsForProfile(allSkillNames, 'will'));
   if (!generalSkills.has('wizard') || generalSkills.has('sensitive-ops')) {
     fail('skill-profile', 'general must install wizard without sensitive-ops');
   }
   if (fullSkills.has('wizard') || !fullSkills.has('sensitive-ops')) {
     fail('skill-profile', 'all must replace wizard with sensitive-ops');
   }
+  if (willSkills.has('wizard') || !willSkills.has('sensitive-ops')) {
+    fail('skill-profile', 'will must replace wizard with sensitive-ops');
+  }
+  for (const name of ['cpp-code-style', 'cpp-code-style-manager', 'using-powershell']) {
+    if (willSkills.has(name)) fail('skill-profile', `will must not install ${name}`);
+  }
+  for (const name of ['write-prompt', 'sync-db-from-prisma', 'manage-llm-config']) {
+    if (!willSkills.has(name)) fail('skill-profile', `will must install ${name}`);
+  }
 
   const minimalRemovals = new Set(managedSkillsToRemove(allSkillNames, minimalSkills));
   const generalRemovals = new Set(managedSkillsToRemove(allSkillNames, generalSkills));
   const fullRemovals = new Set(managedSkillsToRemove(allSkillNames, fullSkills));
+  const willRemovals = new Set(managedSkillsToRemove(allSkillNames, willSkills));
   if (!minimalRemovals.has('wizard') || !minimalRemovals.has('sensitive-ops')) {
     fail('skill-profile', 'minimal must remove wizard and sensitive-ops');
   }
@@ -172,7 +183,13 @@ function runStatic() {
   if (!fullRemovals.has('wizard') || fullRemovals.has('sensitive-ops')) {
     fail('skill-profile', 'all must remove wizard and retain sensitive-ops');
   }
-  for (const removals of [minimalRemovals, generalRemovals, fullRemovals]) {
+  if (!willRemovals.has('wizard') || willRemovals.has('sensitive-ops')) {
+    fail('skill-profile', 'will must remove wizard and retain sensitive-ops');
+  }
+  for (const name of ['cpp-code-style', 'cpp-code-style-manager', 'using-powershell']) {
+    if (!willRemovals.has(name)) fail('skill-profile', `will must remove ${name}`);
+  }
+  for (const removals of [minimalRemovals, generalRemovals, fullRemovals, willRemovals]) {
     if (!removals.has('get-sensitive-info')) {
       fail('skill-profile', 'every profile must remove the retired get-sensitive-info skill');
     }

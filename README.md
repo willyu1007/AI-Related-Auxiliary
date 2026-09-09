@@ -99,8 +99,9 @@ checks/          # 本仓库自己的校验，不是分发物
 | `minimal` | 基础档 | 治理主线以及 C++、PowerShell（仅 Windows）、review、research、tdd |
 | `general` | 包含 `minimal` | 增加日常调试、UI、HTML、清理、Codex 和 script-first 的 wizard |
 | `all` | 包含 `general`，但以 sensitive-ops 替换 wizard | 覆盖相同的用户绑定步骤，并增加 write-prompt、Prisma 和 `.ai/llm` |
+| `will` | 个人档：与 `all` 相同，但不装 C++ 与 PowerShell | 不安装 `cpp-code-style`、`cpp-code-style-manager`、`using-powershell` |
 
-`wizard` 与 `sensitive-ops` 不会同时安装；`.codex` 在 `general` 和 `all` 下仍不安装三个 `codex-*` 技能。`using-powershell` 只在 Windows（`win32`）安装；macOS / Linux 会跳过，并删掉目标里已有的副本。
+`wizard` 与 `sensitive-ops` 不会同时安装；`.codex` 在 `general`、`all` 和 `will` 下仍不安装三个 `codex-*` 技能。`using-powershell` 只在 Windows（`win32`）安装，且从不进入 `will`；macOS / Linux 会跳过，并删掉目标里已有的副本。
 
 > [!CAUTION]
 > `all` 是仓库维护者的完整个人配置，包含较强的工作流与环境假设，并不代表更通用或更适合所有用户。使用前应逐项阅读相关 skill，尤其先确认 [sensitive-ops](system/skills/sensitive-ops/SKILL.md) 对敏感信息持久化、一次性凭证、生产授权和可选 shell helper 的处理方式符合你的设备、项目与团队安全要求；不符合时应调整 skill 或选择较低档位。
@@ -113,6 +114,7 @@ checks/          # 本仓库自己的校验，不是分发物
 node install-system-auxiliary.mjs
 node install-system-auxiliary.mjs --profile minimal
 node install-system-auxiliary.mjs --profile all
+node install-system-auxiliary.mjs --profile will
 
 # resources/ 不在脚本范围内，仍手动同步（各 Agent 环境里 resources/ 必须与 skills/ 同级）
 cp -R system/resources/. ~/.claude/resources/
