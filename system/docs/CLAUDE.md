@@ -75,30 +75,36 @@ Channel both "measure twice, cut once" and "yagni". Fight scope creep. Honor the
 
 ## Picking the Right Models for Workflows and Subagents
 
-Rankings, higher = better. Cost reflects what I actually pay (OpenAI is near-free for me due to a deal), not list price. Intelligence is how hard a problem you can hand the model unsupervised. Taste covers UI/UX, code quality, API design, and copy.
+Rankings, higher = better. Economy is how economical the model is at what I actually pay (OpenAI is near-free for me due to a deal), not list price. Intelligence is how hard a problem you can hand the model unsupervised. Taste covers UI/UX, code quality, API design, and copy. Breadth is how well the model holds a whole-system view instead of collapsing to a local answer.
 
-| model       | cost | intelligence | taste |
-| ----------- | ---- | ------------ | ----- |
-| gpt-6-astra | 9    | 9            | 7     |
-| opus-5      | 4    | 8            | 8     |
-| fable-5.1   | 2    | 9            | 9     |
+| model         | economy | intelligence | taste | breadth |
+| ------------- | ------- | ------------ | ----- | ------- |
+| gpt-6-astra   | 6    | 9            | 7     | 8       |
+| gpt-5.6-sol   | 9    | 8            | 5     | 6       |
+| gpt-5.6-luna  | 9    | 5            | 4     | 2       |
+| opus-5        | 4    | 8            | 8     | 6       |
+| fable-5.1     | 2    | 9            | 9     | 9       |
 
 How to apply:
 
-- These are defaults, not limits. You have standing permission to override them: if a cheaper model's output doesn't meet the bar, rerun or redo the work with a smarter model without asking. Judge the output, not the price tag. Escalating costs less than shipping mediocre work.
-- Codex work all goes to gpt-6-astra; what you pick is the reasoning effort, not the model. `high` is the pinned default (`~/.codex/config.toml`, decided 2026-09-05) — effort costs latency, not money. Raise per-invocation for hard unsupervised work (`-c model_reasoning_effort=xhigh`; `max` sparingly, output-token bloat); lower to `medium`/`low` for high-volume mechanical runs where latency dominates.
-- gpt-5.6-{sol,terra,luna} are legacy: use one only when astra is unavailable in the harness.
+- These are defaults, not limits. You have standing permission to override them: if a more economical model's output doesn't meet the bar, rerun or redo the work with a stronger model without asking. Judge the output, not the economy score. A less economical model still beats shipping mediocre work.
+- Codex routing is by job type. Pass `--model` every time — `~/.codex/config.toml` still pins `gpt-6-astra`, so omitting the flag misroutes review and implementation onto the planner.
+  - gpt-6-astra — architecture, planning, and computer use; anything that needs a full-system view.
+  - gpt-5.6-sol — code review and hard unsupervised directed tasks.
+  - gpt-5.6-luna — mechanical, high-volume, clear-spec grind.
+- Every Codex model uses `high` reasoning effort by default (`~/.codex/config.toml`, decided 2026-09-05) — effort costs latency, not money. Do not drop to `medium`/`low` as a routing choice. Raise per-invocation only for unusually hard unsupervised work (`-c model_reasoning_effort=xhigh`; `max` sparingly, output-token bloat).
+- gpt-5.6-terra is not in the active rotation.
 - Anything user-facing (UI, copy, API design) needs taste ≥ 7.
-- Cross-model review: for plans or implementations involving requirements, observable behavior, architecture, security, or non-trivial failure modes, use gpt-6-astra as the primary reviewer when Claude produced the work, and Claude as the primary reviewer when Codex produced it. For Codex-authored changes, Codex may still run deterministic checks and add a supplemental self-review. Purely mechanical changes fully covered by deterministic checks do not require cross-model review.
+- Cross-model review: when Claude produced the work, use gpt-6-astra as the primary Codex reviewer for plans and architecture, and gpt-5.6-sol as the primary Codex reviewer for code. Claude is the primary reviewer when Codex produced the work; Codex may still run deterministic checks and add a supplemental self-review (astra for plans, sol for code). Purely mechanical changes fully covered by deterministic checks do not require cross-model review.
 - Never use Haiku.
-- If computer use is helpful for completing or verifying work, shell out to Codex for it.
-- Mechanics: you reach Codex models only by shelling out to the Codex CLI — `codex exec` / `codex review` (`~/.codex/config.toml` already pins `gpt-6-astra` + `model_reasoning_effort = "high"`, so `--model` is only needed to override). Use the codex-implementation, codex-review, and codex-computer-use skills; for work they don't cover (investigation, data analysis), run `codex exec -s read-only` directly with a self-contained prompt.
+- If computer use is helpful for completing or verifying work, shell out to Codex on gpt-6-astra.
+- Mechanics: you reach Codex models only by shelling out to the Codex CLI — `codex exec` / `codex review`, always with `--model gpt-6-astra`, `--model gpt-5.6-sol`, or `--model gpt-5.6-luna`. Use the codex-implementation, codex-review, and codex-computer-use skills; for work they don't cover (investigation, data analysis), run `codex exec -s read-only` directly with a self-contained prompt.
 - Claude models (opus-5, fable-5.1) run via the Agent/Workflow model parameter.
 
 Using Codex inside workflows and subagents (the model parameter only takes Claude models, so use a wrapper):
 
 - Spawn a thin Claude wrapper agent with `model: 'sonnet', effort: 'low'` whose prompt instructs it to write a self-contained codex prompt, run `codex exec` via Bash, and return the report (use `schema` on the wrapper to get structured output back).
-- Always label these agents with a `codex:` prefix naming the tier, e.g. `{label: 'codex:astra:review-auth'}` — the workflow UI shows the wrapper's Claude model, so the label is the only indication the real worker is a Codex model.
+- Always label these agents with a `codex:` prefix naming the tier, e.g. `{label: 'codex:sol:review-auth'}` or `{label: 'codex:astra:plan-routing'}` — the workflow UI shows the wrapper's Claude model, so the label is the only indication the real worker is a Codex model.
 - Codex runs can exceed Bash's 10-minute timeout: pass an explicit timeout, or run in the background and poll for the report file.
 - Parallel Codex implementation agents must use `isolation: 'worktree'` so codex edits don't collide in the shared checkout.
 - Workflow token budgets only count Claude tokens; codex work is free and invisible to `budget.spent()`.

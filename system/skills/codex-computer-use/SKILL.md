@@ -26,17 +26,17 @@ mkdir -p "$TMP_ROOT"
 ARTIFACT_DIR="$(mktemp -d "$TMP_ROOT/codex-computer-use.XXXXXX")"
 REPORT="$ARTIFACT_DIR/report.md"
 PROMPT="$ARTIFACT_DIR/prompt.md"
+MODEL="gpt-6-astra"
 
 # Write a self-contained prompt to $PROMPT, then run:
-codex exec \
-  -C "$PWD" \
+codex -C "$PWD" --model "$MODEL" exec \
   --add-dir "$ARTIFACT_DIR" \
   -s danger-full-access \
   -o "$REPORT" \
   - < "$PROMPT"
 ```
 
-Pick the model tier per the model-selection rubric in CLAUDE.md and pass it with `--model`; UI verification rarely needs the top tier.
+Always pass `--model gpt-6-astra`. Do not substitute sol or luna for computer use.
 
 Use `-s danger-full-access` only when GUI automation, simulators, desktop app launching, screenshots, or other host access requires it and the environment is controlled. Otherwise prefer `-s workspace-write`. Add `--skip-git-repo-check` when the working directory is not a git repository.
 
