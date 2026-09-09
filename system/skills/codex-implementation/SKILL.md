@@ -27,17 +27,17 @@ Use this command shape:
 ARTIFACT_DIR="$(mktemp -d "${TMPDIR:-/tmp}/codex-implementation.XXXXXX")"
 REPORT="$ARTIFACT_DIR/report.md"
 PROMPT="$ARTIFACT_DIR/prompt.md"
+MODEL="gpt-5.6-sol"
 
 # Write a self-contained prompt to $PROMPT, then run:
-codex exec \
-  -C "$PWD" \
+codex -C "$PWD" --model "$MODEL" exec \
   --add-dir "$ARTIFACT_DIR" \
   -s workspace-write \
   -o "$REPORT" \
   - < "$PROMPT"
 ```
 
-Pick the model tier per the model-selection rubric in CLAUDE.md and pass it with `--model`; omit the flag to use the `~/.codex/config.toml` default.
+Pass `--model gpt-5.6-sol` for hard or unsupervised directed tasks; pass `--model gpt-5.6-luna` for mechanical, high-volume, clear-spec work. Leave reasoning effort at the pinned `high` default. Do not omit `--model` — the `~/.codex/config.toml` default is `gpt-6-astra`, which is for architecture, planning, and computer use.
 
 Use `-s workspace-write` by default. Use `-s danger-full-access` only when the implementation truly needs access outside the repo, app launch automation, simulator work, package manager global state, or other machine-level operations.
 

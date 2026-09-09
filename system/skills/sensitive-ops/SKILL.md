@@ -38,11 +38,15 @@ When required durable information is missing:
 
 Do not create a shell helper by default.
 
-Reflect durable operational details supplied in the current conversation into the document only when the current task needs them persisted. Do not ask the user to paste secrets into chat, and never echo a sensitive value already supplied there.
+Reflect a newly supplied operate-or-inject fact into the document only when the current task still needs that fact later. Do not ask the user to paste secrets into chat, and never echo a sensitive value already supplied there.
 
-Keep durable credentials, endpoints, account details, IAM identities and permissions, deployment targets, operational commands, and completed integration state in the document. Keep one-time codes, temporary tokens, sessions, and transient output out of the document and every incidental artifact.
+Keep durable credentials, endpoints, account details, IAM identities and permissions, deployment targets, and the operational commands needed to use or inject those values. Current integration facts belong here only when they are still required to operate: where a secret lives, which app or grant is enabled, and whether a required user action is still pending.
 
-Headings, explanations, placeholders, and pending-action text should be Chinese. Preserve literal identifiers, commands, endpoints, and values.
+Do not record incident investigation, repair or migration play-by-play, leftover design questions, session status, or other task process. Work that happened while using a secret or a private database does not become operational context.
+
+Keep one-time codes, temporary tokens, sessions, and transient output out of the document and every incidental artifact.
+
+Headings, labels, placeholders, and pending-action text should be Chinese. Preserve literal identifiers, commands, endpoints, and values.
 
 ## Use a shell helper only when requested
 

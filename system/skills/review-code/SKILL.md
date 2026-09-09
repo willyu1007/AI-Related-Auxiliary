@@ -31,6 +31,22 @@ Use incremental review only with a reliable prior baseline; otherwise review the
 full related change set. In a re-review, check the prior findings, their fixes,
 and related regressions.
 
+## Joint review
+
+The current agent always continues this skill.
+
+- **Also start one subagent when** — this conversation implemented any
+  material part of the in-scope code, unless the change is a mechanical
+  edit already covered by deterministic checks that ran.
+- **Otherwise** — do not start a subagent.
+- **Pass** — send the resolved target, comparison basis, accepted intent
+  source, and exclusions. You may also tell the subagent it must not start
+  a subagent. Do not pass findings, suspicions, a preferred framing, or
+  fix authorization. The subagent reports only.
+- **Once** — at most one subagent per invocation; authorized fixes made
+  during the review do not start another. The subagent does not start a
+  subagent.
+
 ## Set the review policy
 
 - **Outcome** — apply explicit review priorities, identify the accepted source

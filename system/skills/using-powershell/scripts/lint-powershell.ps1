@@ -14,7 +14,7 @@ try {
     }
 }
 catch {
-    [Console]::Error.WriteLine("Test-PowerShell: unable to read '$LiteralPath': $($_.Exception.Message)")
+    [Console]::Error.WriteLine("lint-powershell: unable to read '$LiteralPath': $($_.Exception.Message)")
     exit 2
 }
 
@@ -29,7 +29,7 @@ try {
     )
 }
 catch {
-    [Console]::Error.WriteLine("Test-PowerShell: unable to analyze '$resolvedPath': $($_.Exception.Message)")
+    [Console]::Error.WriteLine("lint-powershell: unable to analyze '$resolvedPath': $($_.Exception.Message)")
     exit 2
 }
 
@@ -55,8 +55,13 @@ foreach ($parseError in $parseErrors) {
     Add-Finding -Extent $parseError.Extent -Category 'parse' -Message $parseError.Message
 }
 
+$lineContinuation = [System.Management.Automation.Language.TokenKind]::LineContinuation
+
 foreach ($token in $tokens) {
-    if ($token.Extent.Text -in @('&&', '||')) {
+    if ($token.Kind -eq $lineContinuation) {
+        Add-Finding -Extent $token.Extent -Category 'continuation' -Message 'Do not use backtick line continuation.'
+    }
+    elseif ($token.Extent.Text -in @('&&', '||')) {
         Add-Finding -Extent $token.Extent -Category 'bash' -Message "Use PowerShell statements and explicit success handling instead of '$($token.Extent.Text)'."
     }
     elseif ($token.Extent.Text -eq '/dev/null') {
@@ -76,6 +81,28 @@ foreach ($command in $commands) {
     if ($commandName -eq 'export') {
         Add-Finding -Extent $command.CommandElements[0].Extent -Category 'bash' -Message 'Use $env:NAME = value instead of Bash export syntax.'
     }
+}
+
+$argUses = $ast.FindAll({
+    param($node)
+    (
+        $node -is [System.Management.Automation.Language.AssignmentStatementAst] -and
+        $node.Left -is [System.Management.Automation.Language.VariableExpressionAst] -and
+        $node.Left.VariablePath.UserPath -eq 'args'
+    ) -or (
+        $node -is [System.Management.Automation.Language.ParameterAst] -and
+        $node.Name.VariablePath.UserPath -eq 'args'
+    )
+}, $true)
+
+foreach ($argUse in $argUses) {
+    $extent = if ($argUse -is [System.Management.Automation.Language.ParameterAst]) {
+        $argUse.Name.Extent
+    }
+    else {
+        $argUse.Left.Extent
+    }
+    Add-Finding -Extent $extent -Category 'args' -Message 'Do not use $args as a custom argument-array name.'
 }
 
 $findings |
