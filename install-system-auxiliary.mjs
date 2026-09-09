@@ -46,6 +46,8 @@ const PROFILE_ALIASES = {
 
 /** Lowest profile that installs the skill before profile-specific exclusions. */
 export const SKILL_TIER = {
+  'cpp-code-style': 'minimal',
+  'cpp-code-style-manager': 'minimal',
   'review-code': 'minimal',
   research: 'minimal',
   tdd: 'minimal',
@@ -102,7 +104,7 @@ Options:
   -h, --help        Show this help
 
 Profiles:
-  minimal   task-* / project-* plus PowerShell, review, research, and tdd
+  minimal   task-* / project-* plus C++, PowerShell, review, research, and tdd
   general   minimal plus everyday debug, UI, HTML, cleanup, Codex, and wizard
   all       general with wizard replaced by sensitive-ops, plus write-prompt,
             Prisma, and .ai/llm

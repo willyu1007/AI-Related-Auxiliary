@@ -1,0 +1,14 @@
+schemaVersion: 1
+rules:
+  - id: naming.model-private-field
+    summary: Prefix private model fields with m_
+    appliesTo: Private C++ model-class data members
+    enabled: true
+    severity: required
+    execution:
+      check: semantic
+      fix: semantic
+    detail: details/model-private-field.yaml
+    overrides:
+      - naming.struct-field
+    source: Synthetic test fixture

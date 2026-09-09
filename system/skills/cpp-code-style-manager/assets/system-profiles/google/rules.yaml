@@ -1,0 +1,195 @@
+schemaVersion: 1
+profile:
+  id: google
+  name: Google C++ Style
+  origin: bundled
+  revision: 2026.09.1
+  sources:
+    - kind: url
+      locator: https://google.github.io/styleguide/cppguide.html
+      retrievedOn: "2026-09-09"
+baseStyle: Google
+rules:
+  - id: headers.self-contained
+    summary: Headers include their prerequisites and compile independently
+    appliesTo: C++ header files
+    enabled: true
+    severity: required
+    execution: {check: semantic, fix: semantic}
+    detail: details/headers.self-contained.yaml
+    source: Google C++ Style Guide § Self-contained Headers (retrieved 2026-09-09)
+  - id: headers.include-what-you-use
+    summary: Include the declaring header directly
+    appliesTo: C++ source and header includes
+    enabled: true
+    severity: required
+    execution: {check: semantic, fix: semantic}
+    detail: details/headers.include-what-you-use.yaml
+    source: Google C++ Style Guide § Include What You Use (retrieved 2026-09-09)
+  - id: namespaces.usage
+    summary: Use named project-owned namespaces without using-directives
+    appliesTo: C++ namespace declarations and namespace use
+    enabled: true
+    severity: required
+    execution: {check: semantic, fix: semantic}
+    detail: details/namespaces.usage.yaml
+    source: Google C++ Style Guide § Namespaces (retrieved 2026-09-09)
+  - id: classes.explicit-conversions
+    summary: Make converting constructors and operators explicit
+    appliesTo: C++ constructors and conversion operators
+    enabled: true
+    severity: required
+    execution: {check: semantic, fix: semantic}
+    detail: details/classes.explicit-conversions.yaml
+    source: Google C++ Style Guide § Implicit Conversions (retrieved 2026-09-09)
+  - id: classes.struct-vs-class
+    summary: Choose struct for passive data and class for invariants
+    appliesTo: C++ class and struct declarations
+    enabled: true
+    severity: required
+    execution: {check: semantic, fix: semantic}
+    detail: details/classes.struct-vs-class.yaml
+    source: Google C++ Style Guide § Structs vs. Classes (retrieved 2026-09-09)
+  - id: ownership.smart-pointers
+    summary: Prefer one fixed owner and unique_ptr for ownership transfer
+    appliesTo: C++ ownership and smart pointer usage
+    enabled: true
+    severity: advisory
+    execution: {check: semantic, fix: semantic}
+    detail: details/ownership.smart-pointers.yaml
+    source: Google C++ Style Guide § Ownership and Smart Pointers (retrieved 2026-09-09)
+  - id: language.casts
+    summary: Use C++ casts or brace conversion instead of C-style casts
+    appliesTo: C++ conversions and casts
+    enabled: true
+    severity: required
+    execution: {check: semantic, fix: semantic}
+    detail: details/language.casts.yaml
+    source: Google C++ Style Guide § Casting (retrieved 2026-09-09)
+  - id: language.nullptr
+    summary: Use nullptr for pointers and '\0' for the null character
+    appliesTo: C++ null pointer and null character expressions
+    enabled: true
+    severity: required
+    execution: {check: semantic, fix: semantic}
+    config:
+      requirement: Use nullptr for pointers and '\0' for the null character.
+    source: Google C++ Style Guide § 0 and nullptr/NULL (retrieved 2026-09-09)
+  - id: language.type-deduction
+    summary: Use type deduction only when it improves clarity or safety
+    appliesTo: C++ auto, decltype, and public return type deduction
+    enabled: true
+    severity: advisory
+    execution: {check: semantic, fix: semantic}
+    detail: details/language.type-deduction.yaml
+    source: Google C++ Style Guide § Type Deduction (retrieved 2026-09-09)
+  - id: language.const
+    summary: Use const where it clarifies non-mutation
+    appliesTo: C++ APIs and local values
+    enabled: true
+    severity: advisory
+    execution: {check: semantic, fix: semantic}
+    config:
+      requirement: Use const in APIs where it clarifies non-mutation; prefer constexpr for true constants where suitable.
+    source: Google C++ Style Guide § Use of const (retrieved 2026-09-09)
+  - id: preprocessor.avoid-macros
+    summary: Prefer language constructs and localize unavoidable macros
+    appliesTo: C++ preprocessor macros
+    enabled: true
+    severity: advisory
+    execution: {check: semantic, fix: semantic}
+    detail: details/preprocessor.avoid-macros.yaml
+    source: Google C++ Style Guide § Preprocessor Macros (retrieved 2026-09-09)
+  - id: preprocessor.no-macro-api
+    summary: Do not define pieces of a C++ API through macros
+    appliesTo: C++ public and private API declarations
+    enabled: true
+    severity: required
+    execution: {check: semantic, fix: semantic}
+    config:
+      requirement: Do not define pieces of a C++ API through macros.
+    source: Google C++ Style Guide § Preprocessor Macros (retrieved 2026-09-09)
+  - id: naming.files
+    summary: Prefer lowercase specific file names and the local separator convention
+    appliesTo: C++ source and header file names
+    enabled: true
+    severity: advisory
+    execution: {check: semantic, fix: semantic}
+    detail: details/naming.files.yaml
+    source: Google C++ Style Guide § File Names (retrieved 2026-09-09)
+  - id: naming.types
+    summary: Use PascalCase without underscores for type names
+    appliesTo: C++ classes, structs, aliases, enums, and type parameters
+    enabled: true
+    severity: required
+    execution: {check: semantic, fix: semantic}
+    config:
+      requirement: Use PascalCase without underscores for classes, structs, aliases, enums, and type template parameters.
+    source: Google C++ Style Guide § Type Names (retrieved 2026-09-09)
+  - id: naming.variables
+    summary: Use snake_case for variables and member-specific suffixes
+    appliesTo: C++ variables and data members
+    enabled: true
+    severity: required
+    execution: {check: semantic, fix: semantic}
+    detail: details/naming.variables.yaml
+    source: Google C++ Style Guide § Variable Names (retrieved 2026-09-09)
+  - id: naming.constants
+    summary: Use k-prefixed mixed case for program-lifetime constants
+    appliesTo: C++ constants
+    enabled: true
+    severity: required
+    execution: {check: semantic, fix: semantic}
+    detail: details/naming.constants.yaml
+    source: Google C++ Style Guide § Constant Names (retrieved 2026-09-09)
+  - id: naming.functions
+    summary: Use PascalCase for functions with accessor exceptions
+    appliesTo: C++ function declarations and definitions
+    enabled: true
+    severity: required
+    execution: {check: semantic, fix: semantic}
+    detail: details/naming.functions.yaml
+    source: Google C++ Style Guide § Function Names (retrieved 2026-09-09)
+  - id: naming.namespaces
+    summary: Use lowercase snake_case for namespaces
+    appliesTo: C++ namespace names
+    enabled: true
+    severity: required
+    execution: {check: semantic, fix: semantic}
+    config:
+      requirement: Use lowercase snake_case and a recognizable project-owned top-level namespace name.
+    source: Google C++ Style Guide § Namespace Names (retrieved 2026-09-09)
+  - id: naming.enumerators
+    summary: Name enumerators like constants with a k prefix
+    appliesTo: C++ enumerator names
+    enabled: true
+    severity: required
+    execution: {check: semantic, fix: semantic}
+    config:
+      requirement: Name enumerators like constants, using a leading k rather than macro style.
+    source: Google C++ Style Guide § Enumerator Names (retrieved 2026-09-09)
+  - id: naming.macros
+    summary: Use uppercase underscore macro names with a project prefix
+    appliesTo: C++ macro names
+    enabled: true
+    severity: required
+    execution: {check: semantic, fix: semantic}
+    config:
+      requirement: Use uppercase underscores with a project-specific prefix when a macro is unavoidable.
+    source: Google C++ Style Guide § Macro Names (retrieved 2026-09-09)
+  - id: comments.non-obvious
+    summary: Explain non-obvious intent invariants and tricky choices
+    appliesTo: C++ implementation comments
+    enabled: true
+    severity: required
+    execution: {check: semantic, fix: semantic}
+    detail: details/comments.non-obvious.yaml
+    source: Google C++ Style Guide § Implementation Comments (retrieved 2026-09-09)
+  - id: comments.api-contracts
+    summary: Document non-obvious API contracts
+    appliesTo: C++ function and API comments
+    enabled: true
+    severity: advisory
+    execution: {check: semantic, fix: semantic}
+    detail: details/comments.api-contracts.yaml
+    source: Google C++ Style Guide § Function Comments (retrieved 2026-09-09)

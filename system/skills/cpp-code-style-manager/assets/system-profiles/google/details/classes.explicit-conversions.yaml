@@ -1,0 +1,5 @@
+id: classes.explicit-conversions
+config:
+  requirement: Mark conversion operators and single-argument converting constructors explicit.
+  exceptions:
+    - Copy constructors, move constructors, and initializer-list constructors follow their documented exceptions.

@@ -1,0 +1,3 @@
+id: naming.functions
+config:
+  requirement: Use PascalCase, with snake_case accessors and mutators allowed.

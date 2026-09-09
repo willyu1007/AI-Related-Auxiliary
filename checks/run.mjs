@@ -32,6 +32,14 @@ const SCRIPT_REF_RE = /\.ai\/scripts\/[a-z0-9-]+\.mjs/g;
 const MACHINE_PATH_RE = /(?:\/Users\/|\/home\/[a-z]|\/Volumes\/|[A-Z]:\\\\)/;
 const SKILL_CROSSLINK_ALLOWLIST = new Map([
   [
+    'cpp-code-style',
+    new Set(['cpp-code-style-manager']),
+  ],
+  [
+    'cpp-code-style-manager',
+    new Set(['cpp-code-style']),
+  ],
+  [
     'goal-mode',
     new Set([
       'cleanup-project-residue',

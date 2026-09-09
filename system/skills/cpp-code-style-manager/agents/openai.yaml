@@ -1,0 +1,3 @@
+interface:
+  display_name: "C++ 规范管理"
+  short_description: "初始化、发现、升级和维护分层 C++ 规则，所有写入均需确认"

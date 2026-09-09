@@ -1,0 +1,3 @@
+id: naming.struct-field
+config:
+  requirement: Use lowercase snake_case for struct data members.

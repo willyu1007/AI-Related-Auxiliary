@@ -1,0 +1,3 @@
+id: language.casts
+config:
+  requirement: Use C++ casts or brace conversion; reject C-style casts except casts to void.

@@ -1,0 +1,5 @@
+id: naming.constants
+config:
+  requirement: Use leading k plus mixed case for program-lifetime constants.
+  exceptions:
+    - Local variables may use the local-variable convention documented by the project.

@@ -1,0 +1,5 @@
+id: naming.variables
+config:
+  requirement: Use snake_case; class data members add a trailing underscore and struct fields do not.
+  exceptions:
+    - Preserve a project-specific convention only when an explicit project rule overrides this rule.

@@ -1,0 +1,5 @@
+id: namespaces.usage
+config:
+  requirement: Use project-owned named namespaces; reject using-directives and inline namespaces.
+  exceptions:
+    - Preserve documented local exceptions when the surrounding project explicitly requires them.

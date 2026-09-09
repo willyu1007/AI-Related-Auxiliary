@@ -1,0 +1,12 @@
+schemaVersion: 1
+rules:
+  - id: naming.struct-field
+    summary: Use snake_case for struct fields
+    appliesTo: C++ struct data members
+    enabled: true
+    severity: required
+    execution:
+      check: semantic
+      fix: semantic
+    detail: details/struct-field.yaml
+    source: Synthetic test fixture

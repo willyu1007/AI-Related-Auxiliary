@@ -1,0 +1,6 @@
+id: naming.model-private-field
+config:
+  requirement: Prefix private model-class data members with m_.
+  selection:
+    access: private
+    typeCategory: model-class

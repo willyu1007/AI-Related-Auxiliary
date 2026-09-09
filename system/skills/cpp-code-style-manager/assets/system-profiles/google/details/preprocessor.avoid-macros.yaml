@@ -1,0 +1,3 @@
+id: preprocessor.avoid-macros
+config:
+  requirement: Prefer language constructs and keep unavoidable macros local and balanced.

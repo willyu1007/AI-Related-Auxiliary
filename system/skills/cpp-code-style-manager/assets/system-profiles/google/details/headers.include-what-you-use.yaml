@@ -1,0 +1,3 @@
+id: headers.include-what-you-use
+config:
+  requirement: Include the declaring header directly and do not rely on transitive includes.

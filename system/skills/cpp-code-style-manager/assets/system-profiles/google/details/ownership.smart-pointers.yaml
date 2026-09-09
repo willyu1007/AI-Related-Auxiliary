@@ -1,0 +1,3 @@
+id: ownership.smart-pointers
+config:
+  requirement: Prefer one fixed owner and unique_ptr for ownership transfer; require a strong reason for shared ownership.

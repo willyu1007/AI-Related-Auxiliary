@@ -1,0 +1,263 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "rules"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "baseStyle": {
+      "enum": [
+        "LLVM",
+        "Google",
+        "Chromium",
+        "Mozilla",
+        "WebKit",
+        "Microsoft",
+        "GNU"
+      ]
+    },
+    "toolchain": {
+      "type": "object",
+      "properties": {
+        "clangFormatVersion": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "profile": {
+      "type": "object",
+      "required": [
+        "id",
+        "name",
+        "origin",
+        "revision",
+        "sources"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]*$"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "origin": {
+          "enum": [
+            "bundled",
+            "custom"
+          ]
+        },
+        "revision": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sources": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": [
+              "kind",
+              "locator",
+              "retrievedOn"
+            ],
+            "properties": {
+              "kind": {
+                "enum": [
+                  "url",
+                  "file",
+                  "document"
+                ]
+              },
+              "locator": {
+                "type": "string",
+                "minLength": 1
+              },
+              "retrievedOn": {
+                "type": "string",
+                "format": "date"
+              }
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "rules": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "summary",
+          "appliesTo",
+          "enabled",
+          "severity",
+          "execution"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9]*(?:[.-][a-z0-9]+)*$"
+          },
+          "summary": {
+            "type": "string",
+            "minLength": 1
+          },
+          "appliesTo": {
+            "type": "string",
+            "minLength": 1
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "severity": {
+            "enum": [
+              "required",
+              "advisory"
+            ]
+          },
+          "execution": {
+            "type": "object",
+            "required": [
+              "check",
+              "fix"
+            ],
+            "properties": {
+              "check": {
+                "enum": [
+                  "automated",
+                  "semantic",
+                  "hybrid",
+                  "unavailable"
+                ]
+              },
+              "fix": {
+                "enum": [
+                  "automated",
+                  "semantic",
+                  "hybrid",
+                  "unavailable"
+                ]
+              }
+            },
+            "additionalProperties": false
+          },
+          "detail": {
+            "type": "string",
+            "pattern": "^details/[a-zA-Z0-9_./-]+\\.yaml$"
+          },
+          "config": {
+            "type": "object",
+            "properties": {
+              "handler": {
+                "type": "string"
+              },
+              "options": {
+                "type": "object"
+              },
+              "requirement": {},
+              "parameters": {
+                "type": "object"
+              },
+              "selection": {},
+              "exceptions": {
+                "type": "array"
+              },
+              "check": {},
+              "fix": {},
+              "examples": {
+                "type": "array"
+              },
+              "references": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "additionalProperties": false
+          },
+          "overrides": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "uniqueItems": true
+          },
+          "reason": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false,
+        "oneOf": [
+          {
+            "required": [
+              "detail"
+            ],
+            "not": {
+              "required": [
+                "config"
+              ]
+            }
+          },
+          {
+            "required": [
+              "config"
+            ],
+            "not": {
+              "required": [
+                "detail"
+              ]
+            }
+          }
+        ]
+      }
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "config": {
+      "type": "object",
+      "properties": {
+        "handler": {
+          "type": "string"
+        },
+        "options": {
+          "type": "object"
+        },
+        "requirement": {},
+        "parameters": {
+          "type": "object"
+        },
+        "selection": {},
+        "exceptions": {
+          "type": "array"
+        },
+        "check": {},
+        "fix": {},
+        "examples": {
+          "type": "array"
+        },
+        "references": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

@@ -1,0 +1,25 @@
+schemaVersion: 1
+defaultProfile: google
+profiles:
+  - id: google
+    name: Google C++ Style
+    revision: 2026.09.1
+    path: google/rules.yaml
+    summary: Curated, progressively disclosed Google C++ baseline
+    coverage:
+      included:
+        - headers
+        - namespaces
+        - classes
+        - ownership
+        - language-clarity
+        - preprocessor
+        - naming
+        - comments
+      omitted:
+        - google-internal-libraries
+        - google-build-and-tooling
+        - project-language-version
+        - exception-and-rtti-policy
+        - platform-specific-exceptions
+        - formatting-prose-covered-by-clang-format

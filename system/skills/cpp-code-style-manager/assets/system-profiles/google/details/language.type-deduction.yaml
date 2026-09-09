@@ -1,0 +1,5 @@
+id: language.type-deduction
+config:
+  requirement: Use deduction only when it improves clarity or safety; avoid unclear public return-type deduction.
+  exceptions:
+    - Preserve deduction when the deduced type is clear from the initializer and the API contract remains obvious.

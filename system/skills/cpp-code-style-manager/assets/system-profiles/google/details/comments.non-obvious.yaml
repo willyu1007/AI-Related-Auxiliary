@@ -1,0 +1,3 @@
+id: comments.non-obvious
+config:
+  requirement: Explain non-obvious intent, invariants, ownership, and tricky implementation choices; do not restate obvious code.

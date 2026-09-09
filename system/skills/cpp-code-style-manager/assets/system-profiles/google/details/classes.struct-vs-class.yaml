@@ -1,0 +1,3 @@
+id: classes.struct-vs-class
+config:
+  requirement: Use struct for passive public data without invariants; otherwise use class.

@@ -47,7 +47,7 @@ checks/          # 本仓库自己的校验，不是分发物
 
 技能发现只扫 `system/skills/` 的第一层，所以那一层保持平铺，不要建分组子目录。
 
-## system/ —— 25 个技能
+## system/ —— 27 个技能
 
 任务治理的八个技能按实际操作划分；其中 `goal-mode` 串联同一 Goal 运行内的长任务主线，其余每个对应工作流程里的一个时刻。主线是 `start → plan → implementation`；新证据推翻路线时回到 plan，实施检查点通过 `sync → resume` 走仓库跨越时间，`handoff → 新会话` 则通过对话完成普通任务的零间隔交接。
 
@@ -62,10 +62,12 @@ checks/          # 本仓库自己的校验，不是分发物
 | [project-status](system/skills/project-status/SKILL.md) | 一项或多项任务及项目 hub 的只读状态、归档就绪度与一致性审查 | 仓库 |
 | [goal-mode](system/skills/goal-mode/SKILL.md) | 在同一 Goal 运行内串联 start、planning、分阶段执行、checkpoint、恢复与完成契约 | 仓库 + 对话 |
 
-另有 17 个与任务治理无关的技能：
+另有 19 个与任务治理无关的技能：
 
 | Skill | 用途 |
 |---|---|
+| [cpp-code-style](system/skills/cpp-code-style/SKILL.md) | 按系统、用户和项目分层规则编写、审查、格式化和检查 C++ |
+| [cpp-code-style-manager](system/skills/cpp-code-style-manager/SKILL.md) | 初始化、发现、升级和维护分层 C++ 规则，所有写入均需确认 |
 | [codex-computer-use](system/skills/codex-computer-use/SKILL.md) | 当代码和 shell 不足时，通过 GUI、截图、模拟器或实时应用状态完成或验证工作 |
 | [codex-implementation](system/skills/codex-implementation/SKILL.md) | 把已明确的行为或设计交给 Codex CLI 实施，并保留调用方的范围、审查和交付责任 |
 | [codex-review](system/skills/codex-review/SKILL.md) | 使用 Codex CLI 审查实施计划或代码改动，并按产出模型确定主审或补充审查角色 |
@@ -94,7 +96,7 @@ checks/          # 本仓库自己的校验，不是分发物
 
 | 档位 | 覆盖关系 | 内容 |
 |---|---|---|
-| `minimal` | 基础档 | 治理主线以及 PowerShell、review、research、tdd |
+| `minimal` | 基础档 | 治理主线以及 C++、PowerShell、review、research、tdd |
 | `general` | 包含 `minimal` | 增加日常调试、UI、HTML、清理、Codex 和 script-first 的 wizard |
 | `all` | 包含 `general`，但以 sensitive-ops 替换 wizard | 覆盖相同的用户绑定步骤，并增加 write-prompt、Prisma 和 `.ai/llm` |
 

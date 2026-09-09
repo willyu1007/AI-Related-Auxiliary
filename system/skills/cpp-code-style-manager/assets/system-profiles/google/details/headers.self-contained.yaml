@@ -1,0 +1,5 @@
+id: headers.self-contained
+config:
+  requirement: Headers include their prerequisites and compile independently.
+  exceptions:
+    - .inc files may be included only in their documented narrow use.
