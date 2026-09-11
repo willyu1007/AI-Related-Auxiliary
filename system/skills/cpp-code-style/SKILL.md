@@ -7,14 +7,6 @@ description: Use when writing, reviewing, formatting, or checking C++ code again
 
 本技能负责日常 C++ 编写、审查、格式化和检查；规则初始化、发现、导入、学习、升级及维护由 sibling `cpp-code-style-manager` 负责。用户级和项目级只保存规则数据，不因调用本技能扩大任务到全仓格式化、安装、构建或规则学习。
 
-## 来源与运行时边界
-
-- 唯一开发来源是仓库中的 `<repo-root>/system/skills/cpp-code-style/`。
-- 运行时 `<skill-root>` 是当前被加载的 `SKILL.md` 所在技能目录；CLI 固定为 `<skill-root>/scripts/style.py`，规则和引用文档必须来自同一份技能目录。
-- `.skills-manager` 是外部全局 Skill 管理器；`.codex/skills/cpp-code-style` 是其 Windows 文件链接视图。它们是安装产物，不是第二份源码，不应直接作为开发修改目标。
-- 更新仓库来源后，先通过全局 Skill 管理器同步，再使用新的链接运行时验证；不要混用旧安装目录中的脚本和当前来源的文档。
-- CLI 支持 Python 3.9 及以上版本，不锁定某个小版本；依赖版本见同目录 `requirements.txt`。
-
 ## 日常流程
 
 1. 解析用户明确指定的项目根目录，运行 `status`。
