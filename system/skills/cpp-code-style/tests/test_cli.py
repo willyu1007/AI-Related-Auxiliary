@@ -10,6 +10,9 @@ import unittest
 import yaml
 
 CLI = Path(__file__).resolve().parents[1] / "scripts" / "style.py"
+sys.path.insert(0, str(CLI.parent))
+from core import digest
+
 MANAGER = CLI.parents[2] / "cpp-code-style-manager"
 CATALOG = MANAGER / "assets" / "system-profiles" / "index.yaml"
 GOOGLE = MANAGER / "assets" / "system-profiles" / "google" / "rules.yaml"
@@ -81,15 +84,135 @@ class CLITest(unittest.TestCase):
     def propose(self, data, layer="project", *extra):
         source = self.root / "incoming.yaml"
         self.write(source, data)
-        result = self.output("propose", "--layer", layer, "--input", source, *extra)
         proposal = self.root / "proposal.json"
-        proposal.write_text(json.dumps(result), encoding="utf-8")
-        return proposal, result
+        result = self.invoke(
+            "propose", "--layer", layer, "--input", source,
+            "--proposal-file", proposal, *extra,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
+        return proposal, json.loads(proposal.read_text(encoding="utf-8"))
 
     def incoming_path(self, data, name="incoming.yaml"):
         path = self.root / name
         self.write(path, data)
         return path
+
+    def test_proposal_file_alias_writes_full_plan_and_stdout_is_summary(self):
+        self.initialize_empty_layers()
+        source = self.incoming_path({"schemaVersion": 1, "rules": [rule()]})
+        proposal_path = self.root / "proposal.json"
+        result = self.invoke(
+            "propose", "--layer", "project", "--input-file", source,
+            "--proposal-file", proposal_path,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        summary = json.loads(result.stdout)
+        full = json.loads(proposal_path.read_text(encoding="utf-8"))
+        self.assertEqual(summary["proposalFile"], str(proposal_path.resolve()))
+        self.assertEqual(summary["digest"], full["digest"])
+        self.assertNotIn("before", summary["writes"][0])
+        self.assertIn("before", full["writes"][0])
+
+    def test_proposal_diff_and_quiet_modes(self):
+        self.initialize_empty_layers()
+        source = self.incoming_path({"schemaVersion": 1, "rules": [rule()]})
+        diff_path = self.root / "diff-proposal.json"
+        diff = self.invoke(
+            "propose", "--layer", "project", "--input", source,
+            "--out", diff_path, "--diff",
+        )
+        self.assertEqual(diff.returncode, 0, diff.stderr)
+        self.assertIn("diff", json.loads(diff.stdout)["writes"][0])
+
+        quiet_path = self.root / "quiet-proposal.json"
+        quiet = self.invoke(
+            "propose", "--layer", "project", "--input", source,
+            "--out", quiet_path, "--quiet",
+        )
+        self.assertEqual(quiet.returncode, 0, quiet.stderr)
+        self.assertEqual(quiet.stdout, "")
+        self.assertTrue(quiet_path.is_file())
+
+    def test_missing_propose_layer_shows_copyable_example(self):
+        source = self.incoming_path({"schemaVersion": 1, "rules": []})
+        result = self.invoke("propose", "--input-file", source, ok=False)
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("--layer project", result.stderr)
+
+    def test_apply_alias_and_verbose_phase_diagnostics(self):
+        self.initialize_empty_layers()
+        source = self.incoming_path({"schemaVersion": 1, "rules": [rule()]})
+        proposal_path = self.root / "proposal.json"
+        generated = self.invoke(
+            "propose", "--layer", "project", "--input", source,
+            "--proposal-file", proposal_path,
+        )
+        self.assertEqual(generated.returncode, 0, generated.stderr)
+        plan = json.loads(proposal_path.read_text(encoding="utf-8"))
+        applied = self.invoke(
+            "apply", "--proposal-file", proposal_path, "--confirm", plan["digest"],
+            "--verbose",
+        )
+        self.assertEqual(applied.returncode, 0, applied.stderr)
+        self.assertIn("preflight", applied.stderr)
+        self.assertIn("write", applied.stderr)
+
+    def test_digest_error_identifies_provided_and_actual_values(self):
+        self.initialize_empty_layers()
+        source = self.incoming_path({"schemaVersion": 1, "rules": [rule()]})
+        proposal_path = self.root / "proposal.json"
+        generated = self.invoke(
+            "propose", "--layer", "project", "--input", source,
+            "--proposal-file", proposal_path,
+        )
+        self.assertEqual(generated.returncode, 0, generated.stderr)
+        plan = json.loads(proposal_path.read_text(encoding="utf-8"))
+
+        wrong = self.invoke(
+            "apply", "--proposal-file", proposal_path, "--confirm", "wrong-digest", ok=False,
+        )
+        self.assertIn("providedDigest", wrong.stderr)
+        self.assertIn("digest mismatch", wrong.stderr)
+
+        plan["impact"] = "tampered"
+        proposal_path.write_text(json.dumps(plan), encoding="utf-8")
+        changed = self.invoke(
+            "apply", "--proposal-file", proposal_path, "--confirm", plan["digest"], ok=False,
+        )
+        self.assertIn("proposal file was modified", changed.stderr.lower())
+        self.assertIn("actualDigest", changed.stderr)
+
+    def test_format_rule_group_is_accepted(self):
+        self.layer(self.system_data, profile=profile(), baseStyle="Google", rules=[])
+        self.layer(self.user_data)
+        self.layer(self.project_data, rule())
+        source = self.project / "a.cpp"
+        source.write_text("int x;\n", encoding="utf-8")
+        result = self.invoke("check", source, "--rule", "format", ok=False)
+        self.assertNotEqual(result.returncode, 2)
+        output = json.loads(result.stdout)
+        self.assertEqual(output["results"][0]["id"], "format")
+        self.assertEqual(output["results"][0]["ruleIds"], ["format.indentation"])
+
+    def test_check_reports_automated_and_semantic_summaries(self):
+        semantic = {
+            "id": "comments.api-contracts", "summary": "Document contracts",
+            "appliesTo": "Public C++ APIs", "enabled": True, "severity": "advisory",
+            "execution": {"check": "semantic", "fix": "semantic"},
+            "config": {"requirement": "Document non-obvious API contracts"},
+        }
+        self.layer(self.system_data, profile=profile(), baseStyle="Google", rules=[])
+        self.layer(self.user_data)
+        self.layer(self.project_data, semantic)
+        source = self.project / "a.cpp"
+        source.write_text("int x;\n", encoding="utf-8")
+        result = self.invoke("check", source, ok=False)
+        self.assertEqual(result.returncode, 1)
+        result = json.loads(result.stdout)
+        self.assertIn("automated", result)
+        self.assertIn("semantic", result)
+        self.assertTrue(result["semantic"]["needsReview"])
+        self.assertFalse(result["complete"])
 
     def test_status_reports_missing_without_writing(self):
         result = self.output("status")
@@ -251,9 +374,13 @@ class CLITest(unittest.TestCase):
         self.assertEqual(self.invoke("status", "--catalog", mismatch, ok=False).returncode, 2)
 
     def install_google_system(self):
-        plan = self.output("propose", "--layer", "system", "--input", GOOGLE)
         proposal = self.root / "system.json"
-        proposal.write_text(json.dumps(plan), encoding="utf-8")
+        result = self.invoke(
+            "propose", "--layer", "system", "--input", GOOGLE,
+            "--proposal-file", proposal,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
+        plan = json.loads(proposal.read_text(encoding="utf-8"))
         self.output("apply", "--proposal", proposal, "--confirm", plan["digest"])
 
     def test_shipped_google_profile_initializes_system_offline(self):
@@ -281,9 +408,13 @@ class CLITest(unittest.TestCase):
         self.assertFalse((MANAGER / "scripts").exists())
 
     def test_complete_initialization_then_query_and_check(self):
-        plan = self.output("propose", "--layer", "system", "--input", GOOGLE)
         proposal = self.root / "system.json"
-        proposal.write_text(json.dumps(plan), encoding="utf-8")
+        result = self.invoke(
+            "propose", "--layer", "system", "--input", GOOGLE,
+            "--proposal-file", proposal,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
+        plan = json.loads(proposal.read_text(encoding="utf-8"))
         self.output("apply", "--proposal", proposal, "--confirm", plan["digest"])
         self.layer(self.user_data)
         self.layer(self.project_data)
@@ -319,9 +450,13 @@ class CLITest(unittest.TestCase):
         disabled["enabled"] = False
         self.layer(self.project_data, disabled)
         self.assertFalse(self.output("get", disabled["id"])["rule"]["enabled"])
-        plan = self.output("propose", "--layer", "project", "--unset", disabled["id"])
         path = self.root / "unset.json"
-        path.write_text(json.dumps(plan), encoding="utf-8")
+        result = self.invoke(
+            "propose", "--layer", "project", "--unset", disabled["id"],
+            "--proposal-file", path,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
+        plan = json.loads(path.read_text(encoding="utf-8"))
         self.output("apply", "--proposal", path, "--confirm", plan["digest"])
         self.assertEqual(self.output("get", disabled["id"])["layer"], "user")
 
@@ -333,6 +468,7 @@ class CLITest(unittest.TestCase):
         result = self.output("apply", "--proposal", path, "--confirm", plan["digest"])
         self.assertTrue((self.user_data / "rules.yaml").exists())
         self.assertEqual(result["effective"][0]["layer"], "project")
+        self.assertNotIn("note", result)
 
     def test_detail_change_invalidates_proposal(self):
         item = rule()
@@ -344,7 +480,52 @@ class CLITest(unittest.TestCase):
         path, plan = self.propose({"schemaVersion": 1, "rules": [rule(options={"IndentWidth": 8})]})
         self.write(detail, {"id": item["id"], "config": {"handler": "clang-format", "options": {"IndentWidth": 3}}})
         self.assertNotEqual(self.invoke("apply", "--proposal", path, "--confirm", plan["digest"], ok=False).returncode, 0)
-        self.assertIn("detail", (self.project_data / "rules.yaml").read_text())
+
+    def test_stale_error_identifies_changed_rules_and_hashes(self):
+        self.initialize_empty_layers()
+        source = self.incoming_path({"schemaVersion": 1, "rules": [rule()]})
+        proposal_path = self.root / "proposal.json"
+        generated = self.invoke(
+            "propose", "--layer", "project", "--input", source,
+            "--proposal-file", proposal_path,
+        )
+        self.assertEqual(generated.returncode, 0, generated.stderr)
+        plan = json.loads(proposal_path.read_text(encoding="utf-8"))
+        self.layer(self.project_data, rule(options={"IndentWidth": 2}))
+        result = self.invoke(
+            "apply", "--proposal-file", proposal_path, "--confirm", plan["digest"], ok=False,
+        )
+        self.assertIn("rules changed", result.stderr)
+        self.assertIn("expectedHash", result.stderr)
+        self.assertIn("actualHash", result.stderr)
+
+    def test_write_failure_reports_target_and_operation(self):
+        self.initialize_empty_layers()
+        source = self.incoming_path({"schemaVersion": 1, "rules": [rule()]})
+        proposal_path = self.root / "proposal.json"
+        generated = self.invoke(
+            "propose", "--layer", "project", "--input", source,
+            "--proposal-file", proposal_path,
+        )
+        self.assertEqual(generated.returncode, 0, generated.stderr)
+        plan = json.loads(proposal_path.read_text(encoding="utf-8"))
+        target = self.project_data / "details" / "blocked.yaml"
+        target.mkdir(parents=True)
+        plan["writes"] = [{
+            "path": str(target), "beforeHash": None, "before": None,
+            "after": "id: blocked\n", "diff": "",
+        }]
+        body = {key: value for key, value in plan.items() if key != "digest"}
+        plan["digest"] = digest(body)
+        proposal_path.write_text(json.dumps(plan), encoding="utf-8")
+        result = self.invoke(
+            "apply", "--proposal-file", proposal_path, "--confirm", plan["digest"], ok=False,
+        )
+        error = json.loads(result.stderr)["error"]
+        self.assertIn("Write failed", error)
+        self.assertIn("replace", error)
+        self.assertIn(str(target), error)
+        self.assertTrue(target.is_dir())
 
     def test_tampered_plan_is_rejected(self):
         path, plan = self.propose({"schemaVersion": 1, "rules": [rule()]})
@@ -434,12 +615,14 @@ class CLITest(unittest.TestCase):
         self.initialize_system()
         fixtures = Path(__file__).parent / "fixtures" / "layers"
         for layer in ("user", "project"):
-            plan = self.output(
+            result = self.invoke(
                 "propose", "--layer", layer,
                 "--input", fixtures / layer / "rules.yaml",
+                "--proposal-file", self.root / f"{layer}.json",
             )
             proposal = self.root / f"{layer}.json"
-            proposal.write_text(json.dumps(plan), encoding="utf-8")
+            self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
+            plan = json.loads(proposal.read_text(encoding="utf-8"))
             self.output("apply", "--proposal", proposal, "--confirm", plan["digest"])
         self.assertTrue(self.output("validate")["valid"])
         private = self.output("get", "naming.model-private-field")
@@ -548,9 +731,13 @@ class CLITest(unittest.TestCase):
         item["detail"] = "details/./indent.yaml"
         self.write(incoming, {"schemaVersion": 1, "rules": [item]})
         self.write(incoming.parent / "details/indent.yaml", body)
-        plan = self.output("propose", "--layer", "project", "--input", incoming)
         path = self.root / "alias.json"
-        path.write_text(json.dumps(plan), encoding="utf-8")
+        result = self.invoke(
+            "propose", "--layer", "project", "--input", incoming,
+            "--proposal-file", path,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
+        plan = json.loads(path.read_text(encoding="utf-8"))
         self.output("apply", "--proposal", path, "--confirm", plan["digest"])
         self.assertEqual(self.output("get", item["id"])["rule"]["config"], config)
 

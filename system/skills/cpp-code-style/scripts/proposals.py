@@ -4,6 +4,7 @@ import difflib
 import json
 from pathlib import Path
 import os
+import sys
 import tempfile
 
 from core import (LAYERS, RuleError, Store, detail_path, digest, dump, file_hash,
@@ -92,31 +93,87 @@ def propose(store, layer, incoming=None, unset=(), base_style=None, with_format=
             "touched": sorted(set(touched)), "writes": writes,
             "formatSnapshot": {"path": str((store.project / ".clang-format").resolve()),
                                "hash": file_hash(store.project / ".clang-format")} if with_format else None,
-            "impact": impact[layer],
-            "note": "Ask the user whether to persist and which layer; the digest is not proof of human consent"}
+            "impact": impact[layer]}
     plan["digest"] = digest(plan)
     return plan
 
 
-def apply(store, proposal_path, confirmation):
-    plan = json.loads(Path(proposal_path).read_text(encoding="utf-8"))
+def _log(verbose, message):
+    if verbose:
+        print(f"[cpp-code-style] {message}", file=sys.stderr)
+
+
+def _digest_text(value):
+    return "null" if value is None else str(value)
+
+
+def _snapshot_changes(expected, actual):
+    changes = []
+    for path in sorted(set(expected) | set(actual)):
+        if expected.get(path) == actual.get(path):
+            continue
+        name = Path(path).name
+        if name == "rules.schema.json":
+            kind = "schema"
+        elif name == "rules.yaml":
+            kind = "rules"
+        elif Path(path).parent.name == "details":
+            kind = "detail"
+        else:
+            kind = "tracked file"
+        changes.append(
+            f"{kind} changed at {path} "
+            f"(expectedHash={expected.get(path)}, actualHash={actual.get(path)})"
+        )
+    return changes
+
+
+def apply(store, proposal_path, confirmation=None, verbose=False):
+    proposal_path = Path(proposal_path).resolve()
+    _log(verbose, f"load proposal: {proposal_path}")
+    plan = json.loads(proposal_path.read_text(encoding="utf-8"))
     original_digest = plan.get("digest")
     body = {key: value for key, value in plan.items() if key != "digest"}
-    if not confirmation or original_digest != confirmation or digest(body) != confirmation:
-        raise RuleError("Explicit confirmation of the unchanged proposal digest is required")
+    actual_digest = digest(body)
+    if not confirmation:
+        raise RuleError(
+            "Confirmation digest is required; "
+            f"providedDigest={_digest_text(confirmation)}, "
+            f"proposalDigest={_digest_text(original_digest)}"
+        )
+    if original_digest != confirmation and actual_digest == original_digest:
+        raise RuleError(
+            "Proposal digest mismatch; "
+            f"providedDigest={_digest_text(confirmation)}, "
+            f"proposalDigest={_digest_text(original_digest)}"
+        )
+    if actual_digest != original_digest:
+        raise RuleError(
+            "Proposal file was modified; "
+            f"proposalDigest={_digest_text(original_digest)}, "
+            f"actualDigest={_digest_text(actual_digest)}"
+        )
+    _log(verbose, "proposal digest validated")
     if plan["project"] != str(store.project) or plan["userHome"] != str(store.user_home):
         raise RuleError("Proposal belongs to a different project or user")
     if plan["layer"] not in LAYERS:
         raise RuleError("Unknown proposal layer")
-    if plan["snapshot"] != store.snapshot():
-        raise RuleError("Stale proposal: rules or details changed; propose and confirm again")
+    current_snapshot = store.snapshot()
+    if plan["snapshot"] != current_snapshot:
+        changes = _snapshot_changes(plan["snapshot"], current_snapshot)
+        raise RuleError("Stale proposal: " + "; ".join(changes) + "; propose and confirm again")
     root = store.roots[plan["layer"]].resolve()
     allowed_index = store.index_path(plan["layer"])
     allowed_format = (store.project / ".clang-format").resolve()
     format_snapshot = plan.get("formatSnapshot")
     if format_snapshot is not None:
-        if format_snapshot != {"path": str(allowed_format), "hash": file_hash(allowed_format)}:
-            raise RuleError("Stale proposal: the requested format target changed")
+        actual_format_snapshot = {"path": str(allowed_format), "hash": file_hash(allowed_format)}
+        if format_snapshot != actual_format_snapshot:
+            raise RuleError(
+                "Stale proposal: the requested format target changed; "
+                f"expected={format_snapshot}, actual={actual_format_snapshot}"
+            )
+    _log(verbose, "preflight proposal targets")
     files = {}
     for write in plan["writes"]:
         path = Path(write["path"]).resolve()
@@ -126,28 +183,43 @@ def apply(store, proposal_path, confirmation):
             detail_path(root, path.relative_to(root).as_posix())
         if str(path) in files:
             raise RuleError("Duplicate proposal write")
-        if file_hash(path) != write["beforeHash"]:
-            raise RuleError(f"Stale proposal target: {path}")
+        actual_hash = file_hash(path)
+        if actual_hash != write["beforeHash"]:
+            raise RuleError(
+                f"Stale proposal target: {path} changed; "
+                f"expectedHash={write['beforeHash']}, actualHash={actual_hash}"
+            )
         files[str(path)] = write["after"]
     future = Store(store.project, store.user_home, files)
     future.validate()
+    _log(verbose, f"preflight complete: {len(files)} target(s)")
     done = []
+    current_write = None
     try:
         for write in plan["writes"]:
+            current_write = write
             path = Path(write["path"])
+            operation = "delete" if write["after"] is None else "replace"
+            _log(verbose, f"write start ({operation}): {path}")
             if write["after"] is None:
                 path.unlink(missing_ok=True)
             else:
                 write_atomic(path, write["after"])
             done.append(write)
-    except OSError:
+            _log(verbose, f"write complete ({operation}): {path}")
+    except OSError as exc:
+        failed_path = current_write["path"] if current_write is not None else "<unknown>"
+        operation = "delete" if current_write is not None and current_write["after"] is None else "replace"
+        _log(verbose, f"write failed ({operation}): {failed_path}: {type(exc).__name__}: {exc}")
         for write in reversed(done):
             path = Path(write["path"])
             if write["before"] is None:
                 path.unlink(missing_ok=True)
             else:
                 write_atomic(path, write["before"])
-        raise
+        raise RuleError(
+            f"Write failed ({operation}) at {failed_path}: {type(exc).__name__}: {exc}"
+        ) from exc
     current = Store(store.project, store.user_home)
     effective = []
     for key in plan["touched"]:
@@ -155,6 +227,7 @@ def apply(store, proposal_path, confirmation):
             effective.append({"id": key, **current.get(key)})
         else:
             effective.append({"id": key, "layer": None, "rule": None})
+    _log(verbose, f"apply complete: {len(plan['writes'])} target(s)")
     return {"written": [{"path": w["path"], "content": w["after"], "diff": w["diff"]}
                         for w in plan["writes"]],
             "layer": plan["layer"], "effective": effective, "digest": confirmation}

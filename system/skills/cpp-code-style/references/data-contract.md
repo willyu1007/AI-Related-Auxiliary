@@ -45,7 +45,9 @@
 
 ## 手工维护与提案
 
-允许手工编辑，之后运行 `validate`。YAML 重复键、重复 ID、错误参数和路径越界不接受。`propose` 按 ID upsert，不移除未提及规则；显式 `--unset` 才删除覆盖。所有层的写入都必须经过提案、完整 diff、目标层确认和 `apply --confirm <digest>`。提案过期则拒绝，重新生成并确认。
+正常 Agent 工作流不得手工编辑 `rules.yaml` 或 `details/*.yaml`；所有层的常规写入都必须经过提案、完整 diff、目标层确认和 `apply --confirm <digest>`。只有用户明确授权的应急托底，或 `apply` 已完成诊断但无法继续时，才允许手工修复目标层；修改后必须立即运行 `validate`，并报告手工来源和校验结果。
+
+YAML 重复键、重复 ID、错误参数和路径越界不接受。`propose` 按 ID upsert，不移除未提及规则；显式 `--unset` 才删除覆盖。提案过期则拒绝，重新生成并确认。
 
 写入以单文件原子替换实现，异常时回滚已写文件；不是跨进程事务。详情删除只清理由本次替换或 unset 造成的不再引用文件。系统升级是差异提案，永不自动写入；custom 系统 profile 不受 bundled catalog 自动替换。
 

@@ -37,14 +37,30 @@ def export_format(store, executable):
             "toolVersion": version, "optionSources": owners, "ruleIds": ids}
 
 
+def select_rules(store, only):
+    metadata = store.metadata()
+    if not only:
+        return metadata
+    selected_ids = set()
+    unknown = []
+    for rule_id in only:
+        if rule_id == "format":
+            selected_ids.update(
+                key for key in metadata
+                if store.get(key)["rule"].get("config", {}).get("handler") == "clang-format"
+            )
+        elif rule_id in metadata:
+            selected_ids.add(rule_id)
+        else:
+            unknown.append(rule_id)
+    if unknown:
+        raise RuleError(f"Unknown rules: {sorted(unknown)}")
+    return {key: item for key, item in metadata.items() if key in selected_ids}
+
+
 def check_files(store, paths, executable, fix=False, only=None):
     store.validate()
-    selected = store.metadata()
-    if only:
-        missing = set(only) - selected.keys()
-        if missing:
-            raise RuleError(f"Unknown rules: {sorted(missing)}")
-        selected = {key: value for key, value in selected.items() if key in only}
+    selected = select_rules(store, only)
     active = [store.get(key)["rule"] for key, meta in selected.items() if meta["enabled"]]
     all_format_rules = [store.get(key)["rule"] for key, meta in store.metadata().items()
                         if meta["enabled"] and store.get(key)["rule"]["config"].get("handler") == "clang-format"]
@@ -69,7 +85,8 @@ def check_files(store, paths, executable, fix=False, only=None):
             raise RuleError(f"Not a supported C/C++ source path: {path}")
         content = path.read_bytes()
         if run_format:
-            row = {"id": "format", "ruleIds": [r["id"] for r in format_rules], "file": str(path)}
+            row = {"id": "format", "ruleIds": [r["id"] for r in format_rules],
+                   "file": str(path), "kind": "automated"}
             if format_error:
                 row.update(status="not-executed", message=format_error)
             else:
@@ -92,7 +109,8 @@ def check_files(store, paths, executable, fix=False, only=None):
             results.append(row)
         for item in others:
             mode = item["execution"]["check"]
-            row = {"id": item["id"], "file": str(path), "severity": item["severity"]}
+            row = {"id": item["id"], "file": str(path), "severity": item["severity"],
+                   "kind": "semantic" if mode == "semantic" else mode}
             handler = item["config"].get("handler")
             if mode == "semantic":
                 row.update(status="needs-review", message="Load this rule's detail and review applicable code")
@@ -110,4 +128,22 @@ def check_files(store, paths, executable, fix=False, only=None):
                 row.update(status="not-executed", message=f"Handler not implemented: {handler}")
             # No semantic rewrite is performed by --fix.
             results.append(row)
-    return {"results": results, "complete": all(r["status"] == "pass" for r in results)}
+    automated = [row for row in results if row["kind"] in {"automated", "hybrid"}]
+    semantic = [row for row in results if row["kind"] in {"semantic", "hybrid"}]
+    automated_failures = sum(row["status"] in {"violation", "error"} for row in automated)
+    automated_not_executed = sum(row["status"] == "not-executed" for row in automated)
+    semantic_pending = sum(row["status"] == "needs-review" for row in semantic)
+    return {
+        "results": results,
+        "automated": {
+            "passed": automated_failures == 0 and automated_not_executed == 0,
+            "failed": automated_failures,
+            "notExecuted": automated_not_executed,
+        },
+        "semantic": {
+            "needsReview": semantic_pending > 0,
+            "pending": semantic_pending,
+            "ruleCount": len(semantic),
+        },
+        "complete": all(r["status"] == "pass" for r in results),
+    }
