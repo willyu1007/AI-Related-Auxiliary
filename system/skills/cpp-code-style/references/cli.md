@@ -6,17 +6,17 @@
 
 ## 命令
 
-- `status [--catalog <index.yaml>]`：只读报告 system/user/project 的 `missing`、`empty`、`valid`、`invalid` 状态和初始化路径；带 catalog 时额外报告 bundled profile 升级提示。
-- `list [--layer effective|system|user|project]`：只返回规则元数据，不读取详情。
+- `status [--catalog <index.yaml>]`：只读报告 system/user/organization/project 的 `missing`、`empty`、`valid`、`invalid` 状态和初始化路径；组织层无项目引用时为 `unbound`。带 catalog 时额外报告 bundled 系统 profile 升级提示。
+- `list [--layer effective|system|user|organization|project]`：只返回规则元数据，不读取详情。
 - `get <id> [--layer ...]`：返回完整规则，按需读取详情。
 - `explain <id>`：返回覆盖链、当前来源和 handler 就绪情况。
-- `validate`：校验所有存在层、详情、规则配置和完整三层的 scoped override/格式冲突；不是 C++ 代码检查。
-- `export`：返回有效合并配置和工具信息，不写文件；要求三层已初始化。
-- `propose --layer system|user|project --input-file <rules.yaml> [--unset <id>] [--base-style Google] [--with-format] [--proposal-file <提案.json>] [--summary|--diff|--quiet]`：生成提案，不写规则；`--input`、`--out` 仍是兼容别名。
+- `validate`：校验所有启用层、详情、规则配置和 scoped override/格式冲突；不是 C++ 代码检查。
+- `export`：返回有效合并配置和工具信息，不写文件；要求系统、用户、项目已初始化，且组织层未绑定或已就绪。
+- `propose --layer system|user|organization|project --input-file <rules.yaml> [--unset <id>] [--base-style Google] [--with-format] [--proposal-file <提案.json>] [--summary|--diff|--quiet]`：生成提案，不写规则；`--input`、`--out` 仍是兼容别名。
 - `apply --proposal-file <提案.json> --confirm <digest> [--verbose] [--quiet]`：仅应用用户已审查并确认的提案；`--proposal` 是兼容别名。
-- `check <项目内明确文件...> [--rule <id>|format] [--fix]`：要求三层已初始化，只检查明确文件；`format` 是所有启用 clang-format 规则的规则组。
+- `check <项目内明确文件...> [--rule <id>|format] [--fix]`：要求系统、用户、项目已初始化，且组织层未绑定或已就绪；只检查明确文件；`format` 是所有启用 clang-format 规则的规则组。
 
-`propose` 的 system 输入必须含 `profile` 和 `baseStyle`；user/project 输入不得含 `profile`。`--input` 可含多条规则，详情相对输入索引解析后复制到目标层。`--unset` 可重复。`--with-format` 将当前项目 `.clang-format` 的完整差异纳入提案；目标即使无内容差异也纳入过期检查。
+`propose` 的 system 输入必须含 `profile` 和 `baseStyle`；organization 输入必须含 `organization.id` 与 `organization.revision`，不得含 `profile` 或 `baseStyle`；user/project 输入不得含 `profile` 或 `organization`。组织层提案在写入本机缓存的同时写入项目 `organization.yaml` 引用。`--input` 可含多条规则，详情相对输入索引解析后复制到目标层。`--unset` 可重复。`--with-format` 将当前项目 `.clang-format` 的完整差异纳入提案；目标即使无内容差异也纳入过期检查。
 
 `status`、`list`、`get`、`explain`、`validate`、`propose` 不修改规则层；`--out` 只保存供审阅的提案 JSON。`apply` 是唯一的规则写入命令，并要求 digest 与提案内容完全一致。设置 `enabled:false` 是禁用；`--unset` 是恢复继承，两者不同。
 

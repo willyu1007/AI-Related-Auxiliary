@@ -1,0 +1,5 @@
+id: cpp.iteration
+config:
+  requirement:
+  - 第一层迭代器命名 it，第二层 iter
+  - 尽量避免三层及以上嵌套遍历；按职责提取函数或使用标准算法

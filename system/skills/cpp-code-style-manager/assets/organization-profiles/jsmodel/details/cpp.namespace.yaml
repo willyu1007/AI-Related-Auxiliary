@@ -1,0 +1,5 @@
+id: cpp.namespace
+config:
+  requirement:
+  - 命名空间嵌套尽量不超过三层
+  - 不添加 // namespace 结束注释；命名空间结束布局由格式规则处理

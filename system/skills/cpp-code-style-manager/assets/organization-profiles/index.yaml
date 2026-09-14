@@ -1,0 +1,23 @@
+schemaVersion: 1
+defaultProfile: jsmodel
+profiles:
+  - id: jsmodel
+    name: JSModel C++ Style
+    revision: 2026.09.1
+    path: jsmodel/rules.yaml
+    summary: JSModel organization overlay promoted from the confirmed user-layer draft
+    coverage:
+      included:
+        - format
+        - files
+        - naming
+        - classes
+        - preprocessor
+        - cpp-language
+        - comments
+        - git
+      omitted:
+        - headers
+        - ownership
+        - project-language-version
+        - exception-and-rtti-policy

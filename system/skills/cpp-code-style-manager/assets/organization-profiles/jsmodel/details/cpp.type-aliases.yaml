@@ -1,0 +1,7 @@
+id: cpp.type-aliases
+config:
+  requirement:
+  - 有实际用途的容器、指针别名在类型声明后就近提供
+  - 数组使用 TypeArray，链使用 TypeList，共享指针使用 TypePtr、TypeCPtr、TypeWPtr 等
+  - 集中复用项目已有类型别名宏，具体头文件属于项目约定；不强制引入 PV2 的 TypeAliasMacros.h
+  - 不能为了补齐别名引入没有用途的类型

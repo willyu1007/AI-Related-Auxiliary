@@ -5,12 +5,12 @@ description: Use when writing, reviewing, formatting, or checking C++ code again
 
 # C++ 分层代码规范
 
-本技能负责日常 C++ 编写、审查、格式化和检查；规则初始化、发现、导入、学习、升级及维护由 sibling `cpp-code-style-manager` 负责。用户级和项目级只保存规则数据，不因调用本技能扩大任务到全仓格式化、安装、构建或规则学习。
+本技能负责日常 C++ 编写、审查、格式化和检查；规则初始化、发现、导入、学习、升级及维护由 sibling `cpp-code-style-manager` 负责。用户级、组织级和项目级只保存规则数据，不因调用本技能扩大任务到全仓格式化、安装、构建或规则学习。组织缓存如何构建不由本技能规定；本技能只读已确认的本机缓存和项目引用。
 
 ## 日常流程
 
 1. 解析用户明确指定的项目根目录，运行 `status`。
-2. 如果任一层为 `missing` 或 `invalid`，暂停依赖规范的写作或审查，转入 `cpp-code-style-manager`；不自动写入、安装或覆盖。
+2. 如果系统、用户或项目层为 `missing` 或 `invalid`，或项目已绑定组织但组织层为 `missing` 或 `invalid`，暂停依赖规范的写作或审查，转入 `cpp-code-style-manager`；不自动写入、安装或覆盖。组织层为 `unbound` 时继续使用其余已就绪层。
 3. 如果已 `ready`，运行 `list` 读取元数据；根据本次涉及的文件、类型、字段、函数和注释，使用 `get` 读取所有适用复杂规则，只有在需要追溯或解释覆盖时使用 `explain`。
 4. 只对明确指定的项目文件运行具名确定性处理器。保持 automated、semantic、hybrid、unavailable 和 error 的真实含义。
 5. 不把聚焦任务扩大为全仓格式化、重命名、构建或规则学习。
@@ -23,7 +23,7 @@ description: Use when writing, reviewing, formatting, or checking C++ code again
 
 合并规则如下：
 
-1. 相同 ID：项目层完整替换用户层，用户层完整替换系统层；被替换规则不再作为有效规则执行。
+1. 相同 ID：项目层完整替换组织层，组织层完整替换用户层，用户层完整替换系统层；被替换规则不再作为有效规则执行。组织层是政策，压过用户层同 ID 覆盖。
 2. 不同 ID：默认同时生效，不得自动推断其中一条替代另一条。只有存在适用的 `overrides` 声明时，才按声明范围进行局部替代。
 3. 格式规则：合并后的相同格式选项叶子值不一致，属于实际配置冲突；以 `validate` 结果为准，不凭人工阅读摘要判定。
 4. 语义范围重叠：不同 ID 的 `appliesTo` 存在交集时，先报告为规则范围重叠。如果规则方向不同但没有覆盖声明，报告为缺少显式覆盖建模；只有确认规则内容无法同时满足时，才报告实际冲突。
@@ -42,9 +42,9 @@ description: Use when writing, reviewing, formatting, or checking C++ code again
 - 判定：有效覆盖 / 规则并存 / 语义重叠 / 缺少覆盖声明 / 实际配置冲突
 ```
 
-例如，`system.naming.variables` 使用 `snake_case`，而 `user.naming.identifiers` 使用 `camelCase` 时，两个 ID 不同，当前按设计同时存在；它们可能在变量命名范围上语义重叠，但不构成优先级冲突。若要替代系统规则，应在用户层使用相同的 `naming.variables` ID，或由用户明确建模适用的 `overrides`。
+例如，`system.naming.variables` 使用 `snake_case`，而 `user.naming.identifiers` 使用 `camelCase` 时，两个 ID 不同，当前按设计同时存在；它们可能在变量命名范围上语义重叠，但不构成优先级冲突。若要替代系统规则，应在组织层或用户层使用相同的 `naming.variables` ID，或由用户明确建模适用的 `overrides`。组织层已规定的 ID，用户层同 ID 覆盖不生效。
 
-项目层缺失时，`status` 应报告整体 `ready: false`，但仍应分别保留和说明有效的系统层、用户层规则；不得因为项目层尚未初始化，就错误否定上层规则。
+项目层缺失时，`status` 应报告整体 `ready: false`，但仍应分别保留和说明有效的系统层、用户层和组织层规则；不得因为项目层尚未初始化，就错误否定上层规则。项目未写组织引用时，组织层为 `unbound`，不参与合并，也不阻止另外三层就绪。
 
 ## 规则粒度
 
@@ -65,4 +65,4 @@ description: Use when writing, reviewing, formatting, or checking C++ code again
 
 目前只有 clang-format 和 UTF-8 无 BOM 处理器已实现。命名、类型识别、注释语义等规则保持语义审查状态，不能虚构 AST 检查器或工具结果。工具版本、SDK 和编译上下文缺失时报告实际限制。
 
-规则优先级为项目 > 用户 > 系统。同 ID 是整条替换；不同 ID 的局部替代由 `overrides` 表达。系统活动快照位于 `<用户主目录>/.agents/skill-data/cpp-code-style/system/rules.yaml`，用户和项目规则分别位于各自层的 `rules.yaml`。不读取或自动启用仓库外的示例规则包。
+规则优先级为项目 > 组织 > 用户 > 系统。同 ID 是整条替换；不同 ID 的局部替代由 `overrides` 表达。系统活动快照位于 `<用户主目录>/.agents/skill-data/cpp-code-style/system/rules.yaml`，组织缓存在 `<用户主目录>/.agents/skill-data/cpp-code-style/organization/rules.yaml`，用户和项目规则分别位于各自层的 `rules.yaml`。项目通过 `<项目根>/.agents/skill-data/cpp-code-style/organization.yaml` 用 `id` 和 `revision` 引用本机组织缓存；无引用则组织层不生效。运行时不读取技能内 `assets`，也不自动启用仓库外的规则包。

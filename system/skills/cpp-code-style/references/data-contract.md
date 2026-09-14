@@ -6,15 +6,18 @@
 
 - 系统：`<用户主目录>/.agents/skill-data/cpp-code-style/system/rules.yaml`
 - 用户：`<用户主目录>/.agents/skill-data/cpp-code-style/rules.yaml`
+- 组织：`<用户主目录>/.agents/skill-data/cpp-code-style/organization/rules.yaml`
 - 项目：`<项目根>/.agents/skill-data/cpp-code-style/rules.yaml`
 
-优先级为项目 > 用户 > 系统。系统层必须包含顶层 `profile` 和 `baseStyle`；`profile` 只能出现在系统层，包含 `id`、`name`、`origin`、`revision` 和 `sources`。`origin` 为 `bundled` 或 `custom`，来源保存类型、定位和日期，不复制完整原文。运行时不为缺失 `baseStyle` 静默补入 LLVM、Google 或其他预设。
+项目通过 `<项目根>/.agents/skill-data/cpp-code-style/organization.yaml` 引用组织缓存，文件只含 `schemaVersion`、`id` 和 `revision`。没有该文件时组织层为 `unbound`，即使本机已有组织缓存也不参与合并。
 
-`baseStyle` 选择 clang-format 外部格式预设；`toolchain.clangFormatVersion` 可固定精确版本号。系统快照可以来自技能内 bundled profile，也可以来自用户提供的 URL、文件或文档。
+优先级为项目 > 组织 > 用户 > 系统。组织层是政策，压过用户层同 ID 规则。系统层必须包含顶层 `profile` 和 `baseStyle`；`profile` 只能出现在系统层，包含 `id`、`name`、`origin`、`revision` 和 `sources`。组织层必须包含顶层 `organization.id` 和 `organization.revision`，不得声明 `profile` 或 `baseStyle`。`origin` 为 `bundled` 或 `custom`，来源保存类型、定位和日期，不复制完整原文。运行时不为缺失 `baseStyle` 静默补入 LLVM、Google 或其他预设。
+
+`baseStyle` 选择 clang-format 外部格式预设；`toolchain.clangFormatVersion` 可固定精确版本号。系统快照可以来自技能内 bundled profile，也可以来自用户提供的 URL、文件或文档。组织缓存可以来自技能内 `organization-profiles` 种子或其它已校验规则目录；运行时只读本机缓存，不读取 `assets`，也不要求 Git。
 
 ## 初始化状态
 
-规则文件本身表达状态：缺失为 `missing`，存在但校验失败为 `invalid`，有效且零规则为 `empty`，有效且有规则为 `valid`。`empty` 是已初始化状态，不是待办状态；三层都为 `empty` 或 `valid` 才是 `ready`。无效文件不得被当作缺失文件覆盖。`status` 只读且不得创建目录。
+规则文件本身表达状态：缺失为 `missing`，存在但校验失败为 `invalid`，有效且零规则为 `empty`，有效且有规则为 `valid`。组织层额外使用 `unbound` 表示项目未声明引用。`empty` 是已初始化状态，不是待办状态；系统、用户和项目都为 `empty` 或 `valid`，且组织层为 `unbound`、`empty` 或 `valid` 时才是 `ready`。项目已绑定但缓存缺失、无效，或缓存 `id`/`revision` 与引用不一致时，组织层为 `missing` 或 `invalid`。无效文件不得被当作缺失文件覆盖。`status` 只读且不得创建目录。
 
 ## 规则结构
 
@@ -24,7 +27,7 @@
 
 ## 合并
 
-同 ID：项目整条替换用户，用户整条替换系统，包括 config/详情。不同 ID 组合生效；格式规则的原生选项按嵌套叶子汇总，重复叶子报冲突。修改格式参数时保存该层完整 ID 配置，不对同 ID config 深合并。
+同 ID：项目整条替换组织，组织整条替换用户，用户整条替换系统，包括 config/详情。不同 ID 组合生效；格式规则的原生选项按嵌套叶子汇总，重复叶子报冲突。修改格式参数时保存该层完整 ID 配置，不对同 ID config 深合并。
 
 `enabled: false` 禁用该 ID；`unset` 删除本层覆盖并恢复继承。上下级相同的显式设置仍保留。`overrides` 只在更具体适用范围内替代其他 ID，不全局删除；工具检测悬空引用和循环，语义重叠由审查者判断。
 
@@ -45,7 +48,7 @@
 
 ## 手工维护与提案
 
-正常 Agent 工作流不得手工编辑 `rules.yaml` 或 `details/*.yaml`；所有层的常规写入都必须经过提案、完整 diff、目标层确认和 `apply --confirm <digest>`。只有用户明确授权的应急托底，或 `apply` 已完成诊断但无法继续时，才允许手工修复目标层；修改后必须立即运行 `validate`，并报告手工来源和校验结果。
+正常 Agent 工作流不得手工编辑 `rules.yaml`、`details/*.yaml` 或项目 `organization.yaml`；所有层的常规写入都必须经过提案、完整 diff、目标层确认和 `apply --confirm <digest>`。只有用户明确授权的应急托底，或 `apply` 已完成诊断但无法继续时，才允许手工修复目标层；修改后必须立即运行 `validate`，并报告手工来源和校验结果。
 
 YAML 重复键、重复 ID、错误参数和路径越界不接受。`propose` 按 ID upsert，不移除未提及规则；显式 `--unset` 才删除覆盖。提案过期则拒绝，重新生成并确认。
 

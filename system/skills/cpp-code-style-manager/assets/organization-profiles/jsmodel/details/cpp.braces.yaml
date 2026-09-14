@@ -1,0 +1,5 @@
+id: cpp.braces
+config:
+  requirement:
+  - 控制语句体必须带大括号，即使只有一条语句
+  - 检查宏和预处理上下文；不把 clang-format 的格式通过当作全部结构要求已通过

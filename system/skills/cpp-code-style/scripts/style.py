@@ -68,10 +68,10 @@ def main():
     parser.add_argument("--clang-format", default="clang-format")
     commands = parser.add_subparsers(dest="command", required=True)
     listing = commands.add_parser("list", help="Read metadata only")
-    listing.add_argument("--layer", choices=["effective", "system", "user", "project"], default="effective")
+    listing.add_argument("--layer", choices=["effective", "system", "user", "organization", "project"], default="effective")
     getting = commands.add_parser("get", help="Read one full rule")
     getting.add_argument("id")
-    getting.add_argument("--layer", choices=["effective", "system", "user", "project"], default="effective")
+    getting.add_argument("--layer", choices=["effective", "system", "user", "organization", "project"], default="effective")
     explaining = commands.add_parser("explain", help="Read rule provenance and capability readiness")
     explaining.add_argument("id")
     commands.add_parser("validate", help="Validate every layer, detail, and scoped override")
@@ -79,7 +79,7 @@ def main():
     status_command.add_argument("--catalog", type=Path)
     commands.add_parser("export", help="Return effective .clang-format text without writing it")
     proposing = commands.add_parser("propose", help="Upsert rules or remove overrides; no rule writes")
-    proposing.add_argument("--layer", choices=["system", "user", "project"])
+    proposing.add_argument("--layer", choices=["system", "user", "organization", "project"])
     proposing.add_argument("--input", "--input-file", dest="input", type=Path,
                            help="Incoming rules.yaml with details relative to it")
     proposing.add_argument("--unset", action="append", default=[])
@@ -121,7 +121,7 @@ def main():
         result = store.get(args.id, args.layer)
     elif args.command == "explain":
         effective = store.get(args.id)
-        chain = [store.get(args.id, layer) for layer in ("system", "user", "project")
+        chain = [store.get(args.id, layer) for layer in ("system", "user", "organization", "project")
                  if args.id in store.metadata(layer)]
         handler = effective["rule"]["config"].get("handler")
         readiness = "semantic"

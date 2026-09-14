@@ -16,6 +16,7 @@ from core import digest
 MANAGER = CLI.parents[2] / "cpp-code-style-manager"
 CATALOG = MANAGER / "assets" / "system-profiles" / "index.yaml"
 GOOGLE = MANAGER / "assets" / "system-profiles" / "google" / "rules.yaml"
+JSMODEL = MANAGER / "assets" / "organization-profiles" / "jsmodel" / "rules.yaml"
 
 
 def rule(rule_id="format.indentation", options=None):
@@ -51,6 +52,7 @@ class CLITest(unittest.TestCase):
         self.project.mkdir()
         self.user_data = self.home / ".agents/skill-data/cpp-code-style"
         self.system_data = self.user_data / "system"
+        self.organization_data = self.user_data / "organization"
         self.project_data = self.project / ".agents/skill-data/cpp-code-style"
 
     def write(self, path, data):
@@ -80,6 +82,21 @@ class CLITest(unittest.TestCase):
         self.initialize_system()
         self.layer(self.user_data)
         self.layer(self.project_data)
+
+    def organization_identity(self, org_id="jsmodel", revision="2026.09.1"):
+        return {"id": org_id, "revision": revision}
+
+    def write_organization_ref(self, org_id="jsmodel", revision="2026.09.1"):
+        self.write(self.project_data / "organization.yaml", {
+            "schemaVersion": 1, "id": org_id, "revision": revision,
+        })
+
+    def initialize_organization(self, *rules, org_id="jsmodel", revision="2026.09.1"):
+        self.write_organization_ref(org_id, revision)
+        self.layer(
+            self.organization_data, *rules,
+            organization=self.organization_identity(org_id, revision),
+        )
 
     def propose(self, data, layer="project", *extra):
         source = self.root / "incoming.yaml"
@@ -219,7 +236,12 @@ class CLITest(unittest.TestCase):
         self.assertFalse(result["ready"])
         self.assertEqual(
             {key: value["state"] for key, value in result["layers"].items()},
-            {"system": "missing", "user": "missing", "project": "missing"},
+            {
+                "system": "missing",
+                "user": "missing",
+                "organization": "unbound",
+                "project": "missing",
+            },
         )
         self.assertFalse(self.user_data.exists())
         self.assertFalse(self.project_data.exists())
@@ -228,7 +250,11 @@ class CLITest(unittest.TestCase):
         self.initialize_empty_layers()
         result = self.output("status")
         self.assertTrue(result["ready"])
-        self.assertTrue(all(row["state"] == "empty" for row in result["layers"].values()))
+        self.assertEqual(result["layers"]["organization"]["state"], "unbound")
+        self.assertTrue(all(
+            result["layers"][name]["state"] == "empty"
+            for name in ("system", "user", "project")
+        ))
 
     def test_status_reports_invalid_without_overwriting(self):
         path = self.user_data / "rules.yaml"
@@ -304,7 +330,7 @@ class CLITest(unittest.TestCase):
             "profile": profile(),
             "rules": [],
         })
-        for layer in ("user", "project"):
+        for layer in ("user", "organization", "project"):
             result = self.invoke("propose", "--layer", layer, "--input", incoming, ok=False)
             self.assertEqual(result.returncode, 2)
 
@@ -394,6 +420,22 @@ class CLITest(unittest.TestCase):
             yaml.safe_load((self.system_data / "rules.yaml").read_text(encoding="utf-8"))["baseStyle"],
             "Google",
         )
+
+    def test_shipped_jsmodel_organization_pack_binds_current_project(self):
+        self.initialize_empty_layers()
+        proposal = self.root / "organization.json"
+        result = self.invoke(
+            "propose", "--layer", "organization", "--input", JSMODEL,
+            "--proposal-file", proposal,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
+        plan = json.loads(proposal.read_text(encoding="utf-8"))
+        self.output("apply", "--proposal", proposal, "--confirm", plan["digest"])
+        status = self.output("status")
+        self.assertTrue(status["ready"])
+        self.assertEqual(status["layers"]["organization"]["state"], "valid")
+        self.assertEqual(status["layers"]["organization"]["id"], "jsmodel")
+        self.assertEqual(self.output("get", "naming.variables")["layer"], "organization")
 
     def test_shipped_google_profile_is_progressively_disclosed(self):
         self.install_google_system()
@@ -740,6 +782,88 @@ class CLITest(unittest.TestCase):
         plan = json.loads(path.read_text(encoding="utf-8"))
         self.output("apply", "--proposal", path, "--confirm", plan["digest"])
         self.assertEqual(self.output("get", item["id"])["rule"]["config"], config)
+
+    def test_unbound_organization_cache_is_ignored(self):
+        self.initialize_empty_layers()
+        self.layer(
+            self.organization_data, rule(options={"IndentWidth": 2}),
+            organization=self.organization_identity(),
+        )
+        self.layer(self.user_data, rule(options={"IndentWidth": 8}))
+        result = self.output("list")
+        self.assertEqual(result["rules"][0]["layer"], "user")
+        self.assertEqual(self.output("status")["layers"]["organization"]["state"], "unbound")
+
+    def test_bound_missing_organization_cache_is_not_ready(self):
+        self.initialize_empty_layers()
+        self.write_organization_ref()
+        result = self.output("status")
+        self.assertFalse(result["ready"])
+        self.assertEqual(result["layers"]["organization"]["state"], "missing")
+
+    def test_organization_identity_mismatch_is_invalid(self):
+        self.initialize_empty_layers()
+        self.write_organization_ref(revision="2026.09.1")
+        self.layer(
+            self.organization_data, rule(),
+            organization=self.organization_identity(revision="other"),
+        )
+        result = self.output("status")
+        self.assertFalse(result["ready"])
+        self.assertEqual(result["layers"]["organization"]["state"], "invalid")
+        self.assertIn("revision", result["layers"]["organization"]["error"])
+
+    def test_organization_overrides_user_and_loses_to_project(self):
+        self.initialize_system()
+        self.layer(self.user_data, rule(options={"IndentWidth": 2}))
+        self.initialize_organization(rule(options={"IndentWidth": 4}))
+        self.layer(self.project_data)
+        self.assertEqual(self.output("get", "format.indentation")["layer"], "organization")
+        self.assertEqual(
+            [item["layer"] for item in self.output("explain", "format.indentation")["chain"]],
+            ["user", "organization"],
+        )
+        self.layer(self.project_data, rule(options={"IndentWidth": 8}))
+        self.assertEqual(self.output("get", "format.indentation")["layer"], "project")
+        self.assertEqual(
+            [item["layer"] for item in self.output("explain", "format.indentation")["chain"]],
+            ["user", "organization", "project"],
+        )
+
+    def test_organization_proposal_writes_cache_and_project_reference(self):
+        self.initialize_empty_layers()
+        incoming = {
+            "schemaVersion": 1,
+            "organization": self.organization_identity(),
+            "rules": [rule(options={"IndentWidth": 4})],
+        }
+        proposal, plan = self.propose(incoming, "organization")
+        self.assertEqual(plan["impact"], "Projects that bind this organization identity")
+        result = self.output("apply", "--proposal", proposal, "--confirm", plan["digest"])
+        self.assertEqual(result["layer"], "organization")
+        stored = yaml.safe_load((self.organization_data / "rules.yaml").read_text(encoding="utf-8"))
+        self.assertEqual(stored["organization"]["id"], "jsmodel")
+        ref = yaml.safe_load((self.project_data / "organization.yaml").read_text(encoding="utf-8"))
+        self.assertEqual(ref, {"schemaVersion": 1, "id": "jsmodel", "revision": "2026.09.1"})
+        self.assertEqual(self.output("get", "format.indentation")["layer"], "organization")
+
+    def test_organization_rejects_profile_and_base_style(self):
+        self.initialize_empty_layers()
+        incoming = self.incoming_path({
+            "schemaVersion": 1,
+            "organization": self.organization_identity(),
+            "baseStyle": "Google",
+            "rules": [],
+        })
+        result = self.invoke("propose", "--layer", "organization", "--input", incoming, ok=False)
+        self.assertEqual(result.returncode, 2)
+        self.layer(
+            self.organization_data,
+            organization=self.organization_identity(),
+            profile=profile(),
+        )
+        self.write_organization_ref()
+        self.assertEqual(self.output("status")["layers"]["organization"]["state"], "invalid")
 
 
 if __name__ == "__main__":

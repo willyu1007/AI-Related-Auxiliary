@@ -8,7 +8,7 @@ import sys
 import tempfile
 
 from core import (LAYERS, RuleError, Store, detail_path, digest, dump, file_hash,
-                  parse, validate_index, validate_config)
+                  organization_ref_path, parse, validate_index, validate_config)
 from handlers import export_format
 
 
@@ -37,6 +37,8 @@ def propose(store, layer, incoming=None, unset=(), base_style=None, with_format=
         validate_index(data, layer)
         if layer == "system":
             document["profile"] = deepcopy(data["profile"])
+        if layer == "organization":
+            document["organization"] = deepcopy(data["organization"])
         for item in data["rules"]:
             full = deepcopy(item)
             if "detail" in item:
@@ -67,6 +69,15 @@ def propose(store, layer, incoming=None, unset=(), base_style=None, with_format=
     for item in store.documents[layer]["rules"]:
         if item.get("detail") and detail_path(root, item["detail"]) not in retained:
             proposed[str(detail_path(root, item["detail"]))] = None
+    if layer == "organization":
+        if "organization" not in document:
+            raise RuleError("Organization rules require organization identity")
+        identity = document["organization"]
+        proposed[str(organization_ref_path(store.project))] = dump({
+            "schemaVersion": 1,
+            "id": identity["id"],
+            "revision": identity["revision"],
+        })
     future = Store(store.project, store.user_home, proposed)
     future.validate()
     if with_format:
@@ -86,6 +97,7 @@ def propose(store, layer, incoming=None, unset=(), base_style=None, with_format=
     impact = {
         "system": "All projects using this user's active system baseline",
         "user": "All projects without a project override",
+        "organization": "Projects that bind this organization identity",
         "project": "Current project only",
     }
     plan = {"schemaVersion": 1, "layer": layer, "project": str(store.project),
@@ -165,6 +177,7 @@ def apply(store, proposal_path, confirmation=None, verbose=False):
     root = store.roots[plan["layer"]].resolve()
     allowed_index = store.index_path(plan["layer"])
     allowed_format = (store.project / ".clang-format").resolve()
+    allowed_ref = organization_ref_path(store.project)
     format_snapshot = plan.get("formatSnapshot")
     if format_snapshot is not None:
         actual_format_snapshot = {"path": str(allowed_format), "hash": file_hash(allowed_format)}
@@ -177,7 +190,7 @@ def apply(store, proposal_path, confirmation=None, verbose=False):
     files = {}
     for write in plan["writes"]:
         path = Path(write["path"]).resolve()
-        if path not in (allowed_index, allowed_format):
+        if path not in (allowed_index, allowed_format, allowed_ref):
             if not path.is_relative_to(root):
                 raise RuleError("Write outside selected rule layer")
             detail_path(root, path.relative_to(root).as_posix())

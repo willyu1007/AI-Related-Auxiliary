@@ -1,0 +1,46 @@
+id: naming.abbreviations
+config:
+  requirement:
+  - 缩写以可读性为前提；公共 API 或足够短的名称可使用完整单词
+  - 未列出的普通词语使用完整单词，不通过删除中间字母临时造缩写
+  - 行业通用 API、ABI、CPU、GPU、IO、JSON、Proto 等遵循既有接口
+  - 项目自己的首字母缩写只能放项目层，不能从代码使用频次自动提升为通用缩写
+  parameters:
+    abbreviations:
+      Execution: Exec
+      Request: Req
+      Action: Act
+      Configuration: Config
+      Context: Ctx
+      Information: Info
+      Initialization: Init
+      Implementation: Impl
+      Definition: Def
+      Function: Func
+      Identifier: Id
+      Number: Num
+      Index: Idx
+      Count: Cnt
+      Maximum: Max
+      Minimum: Min
+      Parameter: Param
+      Result: Res
+      Response: Resp
+      Record: Rec
+      Specification: Spec
+      Package: Pkg
+      Message: Msg
+      Error: Err
+      Environment: Env
+      Library: Lib
+      Memory: Mem
+      Pointer: Ptr
+      Buffer: Buf
+      String: Str
+      Value: Val
+      Version: Ver
+      Standard: Std
+      Utility: Util
+      Temporary: Tmp
+      Synchronization: Sync
+      Asynchronous: Async

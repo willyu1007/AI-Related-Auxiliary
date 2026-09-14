@@ -1,0 +1,6 @@
+id: cpp.initialization
+config:
+  requirement:
+  - 普通构造优先 ()
+  - 类成员默认值使用 = value 或 = Type(...)；避免无必要的 {} 初始化
+  - 改变初始化形式前检查重载选择和实际语义

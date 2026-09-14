@@ -3,6 +3,7 @@ from copy import deepcopy
 import hashlib
 import json
 from pathlib import Path
+import re
 
 import jsonschema
 import yaml
@@ -10,7 +11,9 @@ import yaml
 SKILL = Path(__file__).resolve().parents[1]
 DATA_PATH = Path(".agents/skill-data/cpp-code-style")
 SCHEMA = json.loads((SKILL / "references/rules.schema.json").read_text(encoding="utf-8"))
-LAYERS = ("system", "user", "project")
+LAYERS = ("system", "user", "organization", "project")
+REQUIRED_LAYERS = ("system", "user", "project")
+ORGANIZATION_ID = re.compile(r"^[a-z][a-z0-9-]*$")
 MODES = {"automated", "semantic", "hybrid", "unavailable"}
 REGISTRY = {
     "clang-format": {"check": "automated", "fix": "automated"},
@@ -74,8 +77,55 @@ def layer_roots(project, user_home):
     return {
         "system": user_root / "system",
         "user": user_root,
+        "organization": user_root / "organization",
         "project": project / DATA_PATH,
     }
+
+
+def organization_ref_path(project):
+    return (Path(project).resolve() / DATA_PATH / "organization.yaml").resolve()
+
+
+def parse_organization_ref(text):
+    data = parse(text)
+    if not isinstance(data, dict) or set(data) != {"schemaVersion", "id", "revision"}:
+        raise RuleError("Organization reference requires exactly schemaVersion, id, and revision")
+    if data["schemaVersion"] != 1:
+        raise RuleError("Organization reference schemaVersion must be 1")
+    if not isinstance(data["id"], str) or not ORGANIZATION_ID.fullmatch(data["id"]):
+        raise RuleError(f"Invalid organization id: {data['id']}")
+    if not isinstance(data["revision"], str) or not data["revision"]:
+        raise RuleError("Organization reference requires a nonempty revision")
+    return {"id": data["id"], "revision": data["revision"]}
+
+
+def read_organization_binding(project, files=None):
+    path = organization_ref_path(project)
+    key = str(path)
+    if files and key in files:
+        text = files[key]
+        if text is None:
+            return None, path
+    elif path.is_file():
+        text = path.read_text(encoding="utf-8")
+    else:
+        return None, path
+    return parse_organization_ref(text), path
+
+
+def organization_identity_mismatch(binding, data):
+    identity = data.get("organization") if isinstance(data, dict) else None
+    if not isinstance(identity, dict):
+        return (
+            f"Organization cache identity mismatch: reference {binding['id']}@{binding['revision']}, "
+            "cache missing identity"
+        )
+    if identity.get("id") != binding["id"] or identity.get("revision") != binding["revision"]:
+        return (
+            f"Organization identity mismatch: reference revision {binding['revision']}, "
+            f"cache revision {identity.get('revision')}"
+        )
+    return None
 
 
 def validate_index(data, layer):
@@ -91,6 +141,12 @@ def validate_index(data, layer):
         raise RuleError("System rules require baseStyle")
     if layer != "system" and "profile" in data:
         raise RuleError(f"{layer} rules cannot declare a system profile")
+    if layer == "organization" and "organization" not in data:
+        raise RuleError("Organization rules require organization identity")
+    if layer == "organization" and "baseStyle" in data:
+        raise RuleError("organization rules cannot declare baseStyle")
+    if layer != "organization" and "organization" in data:
+        raise RuleError(f"{layer} rules cannot declare organization identity")
     ids = [item["id"] for item in data["rules"]]
     if len(ids) != len(set(ids)):
         raise RuleError("Duplicate rule IDs in the same layer")
@@ -131,19 +187,32 @@ class Store:
         self.user_home = Path(user_home).resolve()
         self.roots = layer_roots(self.project, self.user_home)
         self.files = files or {}
+        self.binding, self.binding_path = read_organization_binding(self.project, self.files)
+        self.bound = self.binding is not None
         self.documents = {}
         self.present = {}
         for layer, root in self.roots.items():
+            if layer == "organization" and not self.bound:
+                self.present[layer] = False
+                self.documents[layer] = {"schemaVersion": 1, "rules": []}
+                continue
             path = self.index_path(layer)
             text = self.read_text(path)
             self.present[layer] = text is not None
             data = parse(text) if text is not None else {"schemaVersion": 1, "rules": []}
             if self.present[layer]:
                 validate_index(data, layer)
+                if layer == "organization":
+                    mismatch = organization_identity_mismatch(self.binding, data)
+                    if mismatch:
+                        raise RuleError(mismatch)
             for item in data["rules"]:
                 if "detail" in item:
                     detail_path(root, item["detail"])
             self.documents[layer] = data
+
+    def required_layers(self):
+        return LAYERS if self.bound else REQUIRED_LAYERS
 
     def index_path(self, layer):
         return (self.roots[layer] / "rules.yaml").resolve()
@@ -196,10 +265,10 @@ class Store:
         return merged, source
 
     def validate(self):
-        for layer in LAYERS:
+        for layer in self.required_layers():
             for rule_id in self.metadata(layer):
                 self.get(rule_id, layer)
-        if not all(self.present.values()):
+        if not all(self.present[layer] for layer in self.required_layers()):
             return {"valid": True, "ruleCount": len(self.metadata())}
         effective = self.metadata()
         active = {key: item for key, item in effective.items() if item["enabled"]}
@@ -258,14 +327,17 @@ class Store:
         return options, owners, rule_ids
 
     def require_ready(self):
-        if not all(self.present.values()):
+        if not all(self.present[layer] for layer in self.required_layers()):
             raise RuleError("C++ rules are not initialized")
         self.validate()
 
     def snapshot(self):
-        paths = {self.index_path(layer) for layer in LAYERS}
+        layers = self.required_layers()
+        paths = {self.index_path(layer) for layer in layers}
         paths.add(SKILL / "references/rules.schema.json")
-        for layer in LAYERS:
+        if self.bound or str(self.binding_path) in self.files or self.binding_path.is_file():
+            paths.add(self.binding_path)
+        for layer in layers:
             for item in self.documents[layer]["rules"]:
                 if "detail" in item:
                     paths.add(detail_path(self.roots[layer], item["detail"]))
@@ -287,28 +359,75 @@ def _validate_layer_details(root, data):
         validate_config(full)
 
 
+def _layer_status(root, layer):
+    path = (root / "rules.yaml").resolve()
+    row = {"path": str(path)}
+    if not path.is_file():
+        row["state"] = "missing"
+        return row
+    data = parse(path.read_text(encoding="utf-8"))
+    validate_index(data, layer)
+    _validate_layer_details(root, data)
+    row["state"] = "empty" if not data["rules"] else "valid"
+    row["ruleCount"] = len(data["rules"])
+    row["data"] = data
+    return row
+
+
 def status(project, user_home):
     roots = layer_roots(project, user_home)
     result = {"ready": False, "layers": {}}
+    ref_path = organization_ref_path(project)
+    binding = None
+    binding_error = None
+    try:
+        binding, ref_path = read_organization_binding(project)
+    except (OSError, UnicodeError, RuleError, yaml.YAMLError, TypeError, ValueError) as exc:
+        binding_error = str(exc)
     for layer in LAYERS:
-        path = (roots[layer] / "rules.yaml").resolve()
-        row = {"path": str(path)}
+        if layer == "organization":
+            row = {
+                "path": str((roots[layer] / "rules.yaml").resolve()),
+                "referencePath": str(ref_path),
+            }
+            try:
+                if binding_error:
+                    row["state"] = "invalid"
+                    row["error"] = binding_error
+                elif binding is None:
+                    row["state"] = "unbound"
+                else:
+                    inspected = _layer_status(roots[layer], layer)
+                    data = inspected.pop("data", None)
+                    row.update(inspected)
+                    if row["state"] in {"empty", "valid"}:
+                        mismatch = organization_identity_mismatch(binding, data)
+                        if mismatch:
+                            row["state"] = "invalid"
+                            row["error"] = mismatch
+                        else:
+                            row["id"] = data["organization"]["id"]
+                            row["revision"] = data["organization"]["revision"]
+            except (OSError, UnicodeError, RuleError, yaml.YAMLError, TypeError, ValueError) as exc:
+                row["state"] = "invalid"
+                row["error"] = str(exc)
+            result["layers"][layer] = row
+            continue
+        row = {"path": str((roots[layer] / "rules.yaml").resolve())}
         try:
-            if not path.is_file():
-                row["state"] = "missing"
-            else:
-                data = parse(path.read_text(encoding="utf-8"))
-                validate_index(data, layer)
-                _validate_layer_details(roots[layer], data)
-                row["state"] = "empty" if not data["rules"] else "valid"
-                row["ruleCount"] = len(data["rules"])
+            inspected = _layer_status(roots[layer], layer)
+            inspected.pop("data", None)
+            row.update(inspected)
         except (OSError, UnicodeError, RuleError, yaml.YAMLError, TypeError, ValueError) as exc:
             row["state"] = "invalid"
             row["error"] = str(exc)
         result["layers"][layer] = row
-    result["ready"] = all(
-        row["state"] in {"empty", "valid"} for row in result["layers"].values()
+    required_ready = all(
+        result["layers"][name]["state"] in {"empty", "valid"} for name in REQUIRED_LAYERS
     )
+    result["ready"] = required_ready and result["layers"]["organization"]["state"] in {
+        "unbound", "empty", "valid",
+    }
     return result
 
 def list_rules(store, layer):

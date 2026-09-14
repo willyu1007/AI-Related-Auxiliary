@@ -1,0 +1,354 @@
+schemaVersion: 1
+organization:
+  id: jsmodel
+  name: JSModel C++ Style
+  revision: 2026.09.1
+rules:
+  - id: format.indentation
+    summary: 使用 Tab 缩进
+    appliesTo: C++ 源文件和头文件
+    enabled: true
+    severity: required
+    execution:
+      check: automated
+      fix: automated
+    config:
+      handler: clang-format
+      options:
+        IndentWidth: 4
+        TabWidth: 4
+        UseTab: Always
+        ContinuationIndentWidth: 4
+    source: PV2 cpp-code-style/SKILL.md 与 .clang-format；提升为 jsmodel 组织包初版
+  - id: format.layout
+    summary: 160 列、按定义类别布局大括号和命名空间
+    appliesTo: C++ 源文件和头文件
+    enabled: true
+    severity: required
+    execution:
+      check: automated
+      fix: automated
+    config:
+      handler: clang-format
+      options:
+        ColumnLimit: 160
+        AccessModifierOffset: -4
+        AlignAfterOpenBracket: Align
+        AlignConsecutiveAssignments: false
+        AlignConsecutiveDeclarations: false
+        AlignEscapedNewlines: Left
+        AlignOperands: true
+        AlignTrailingComments: true
+        AllowAllParametersOfDeclarationOnNextLine: false
+        AllowShortBlocksOnASingleLine: false
+        AllowShortCaseLabelsOnASingleLine: false
+        AllowShortFunctionsOnASingleLine: None
+        AllowShortIfStatementsOnASingleLine: false
+        AllowShortLoopsOnASingleLine: false
+        InsertBraces: true
+        AlwaysBreakAfterReturnType: None
+        AlwaysBreakBeforeMultilineStrings: false
+        AlwaysBreakTemplateDeclarations: true
+        BinPackArguments: true
+        BinPackParameters: true
+        BreakBeforeBinaryOperators: None
+        BreakBeforeBraces: Custom
+        BraceWrapping:
+          AfterClass: true
+          AfterControlStatement: Never
+          AfterEnum: true
+          AfterFunction: true
+          AfterStruct: true
+          BeforeCatch: true
+          BeforeElse: true
+          SplitEmptyFunction: true
+        BreakBeforeTernaryOperators: true
+        BreakConstructorInitializers: BeforeColon
+        BreakStringLiterals: true
+        CompactNamespaces: false
+        ConstructorInitializerAllOnOneLineOrOnePerLine: true
+        ConstructorInitializerIndentWidth: 4
+        Cpp11BracedListStyle: true
+        DerivePointerAlignment: false
+        FixNamespaceComments: false
+        IncludeBlocks: Preserve
+        IndentCaseLabels: true
+        IndentPPDirectives: None
+        IndentWrappedFunctionNames: false
+        KeepEmptyLinesAtTheStartOfBlocks: false
+        MaxEmptyLinesToKeep: 1
+        NamespaceIndentation: None
+        PointerAlignment: Left
+        ReflowComments: true
+        SortIncludes: true
+        SortUsingDeclarations: true
+        SpaceAfterCStyleCast: false
+        SpaceAfterTemplateKeyword: true
+        SpaceBeforeAssignmentOperators: true
+        SpaceBeforeParens: ControlStatements
+        SpaceInEmptyParentheses: false
+        SpacesBeforeTrailingComments: 2
+        SpacesInAngles: false
+        SpacesInContainerLiterals: false
+        SpacesInCStyleCastParentheses: false
+        SpacesInParentheses: false
+        SpacesInSquareBrackets: false
+    source: PV2 cpp-code-style/SKILL.md 与 .clang-format；提升为 jsmodel 组织包初版
+  - id: files.line-ending
+    summary: C/C++ 文件使用 CRLF
+    appliesTo: C++ 源文件和头文件
+    enabled: true
+    severity: required
+    execution:
+      check: automated
+      fix: automated
+    config:
+      handler: clang-format
+      options:
+        LineEnding: CRLF
+    source: PV2 cpp-code-style/SKILL.md 与 .clang-format；提升为 jsmodel 组织包初版
+  - id: files.encoding
+    summary: UTF-8 无 BOM
+    appliesTo: C++ 源文件和头文件
+    enabled: true
+    severity: required
+    execution:
+      check: automated
+      fix: unavailable
+    config:
+      handler: utf8-no-bom
+    source: PV2 cpp-code-style/SKILL.md 与 .clang-format；提升为 jsmodel 组织包初版
+  - id: naming.struct-field
+    summary: 普通结构体字段使用 camelCase
+    appliesTo: 普通结构体字段，服从更具体的项目字段规则
+    enabled: true
+    severity: required
+    execution:
+      check: semantic
+      fix: semantic
+    config:
+      parameters:
+        case: camelCase
+      requirement: 普通结构体字段采用首字母小写驼峰命名
+    source: PV2 cpp-code-style/SKILL.md 与 .clang-format；提升为 jsmodel 组织包初版
+  - id: naming.files
+    summary: 新目录和 C++ 文件采用 PascalCase
+    appliesTo: 新目录、C++ 源文件与头文件
+    enabled: true
+    severity: required
+    execution:
+      check: semantic
+      fix: semantic
+    detail: details/naming.files.yaml
+    source: PV2 cpp-code-style/SKILL.md 与 .clang-format；提升为 jsmodel 组织包初版（原用户层对系统规则的同 ID 覆盖）
+  - id: naming.abbreviations
+    summary: 优先常见英文缩写，避免项目私有缩写
+    appliesTo: 拟定的新类型、函数、变量和成员名称
+    enabled: true
+    severity: required
+    execution:
+      check: semantic
+      fix: semantic
+    detail: details/naming.abbreviations.yaml
+    source: PV2 cpp-code-style/SKILL.md 与 .clang-format；提升为 jsmodel 组织包初版
+  - id: cpp.initialization
+    summary: 普通构造优先括号，成员默认值优先类内声明
+    appliesTo: 对象构造和类成员默认值
+    enabled: true
+    severity: required
+    execution:
+      check: semantic
+      fix: semantic
+    detail: details/cpp.initialization.yaml
+    source: PV2 cpp-code-style/SKILL.md 与 .clang-format；提升为 jsmodel 组织包初版
+  - id: cpp.auto
+    summary: 冗长标准库类型可用 auto，领域类型优先显式类型
+    appliesTo: 变量声明和算法结果
+    enabled: true
+    severity: required
+    execution:
+      check: semantic
+      fix: semantic
+    detail: details/cpp.auto.yaml
+    source: PV2 cpp-code-style/SKILL.md 与 .clang-format；提升为 jsmodel 组织包初版
+  - id: cpp.iteration
+    summary: 两层迭代器使用 it/iter，避免更深嵌套
+    appliesTo: 嵌套遍历
+    enabled: true
+    severity: required
+    execution:
+      check: semantic
+      fix: semantic
+    detail: details/cpp.iteration.yaml
+    source: PV2 cpp-code-style/SKILL.md 与 .clang-format；提升为 jsmodel 组织包初版
+  - id: cpp.braces
+    summary: 控制语句必须带大括号
+    appliesTo: if、else、for、while、do、switch、catch
+    enabled: true
+    severity: required
+    execution:
+      check: semantic
+      fix: semantic
+    detail: details/cpp.braces.yaml
+    source: PV2 cpp-code-style/SKILL.md 与 .clang-format；提升为 jsmodel 组织包初版
+  - id: cpp.namespace
+    summary: 命名空间嵌套尽量不超过三层
+    appliesTo: 命名空间
+    enabled: true
+    severity: required
+    execution:
+      check: semantic
+      fix: semantic
+    detail: details/cpp.namespace.yaml
+    source: PV2 cpp-code-style/SKILL.md 与 .clang-format；提升为 jsmodel 组织包初版
+  - id: cpp.type-aliases
+    summary: 实际需要的容器与指针别名就近声明
+    appliesTo: 作为容器元素的自定义类型
+    enabled: true
+    severity: required
+    execution:
+      check: semantic
+      fix: semantic
+    detail: details/cpp.type-aliases.yaml
+    source: PV2 cpp-code-style/SKILL.md 与 .clang-format；提升为 jsmodel 组织包初版
+  - id: comments.declaration
+    summary: 中文 Doxygen，覆盖文件、类型、函数和成员
+    appliesTo: 受管理 C/C++ 头文件、类型、函数、模板、字段与枚举值
+    enabled: true
+    severity: required
+    execution:
+      check: semantic
+      fix: semantic
+    detail: details/comments.declaration.yaml
+    source: PV2 cpp-code-style/SKILL.md 与 .clang-format；提升为 jsmodel 组织包初版
+  - id: git.commit-style
+    summary: Conventional Commits 配中文标题
+    appliesTo: 用户授权的 Git 提交
+    enabled: true
+    severity: required
+    execution:
+      check: semantic
+      fix: semantic
+    detail: details/git.commit-style.yaml
+    source: PV2 cpp-code-style/SKILL.md 与 .clang-format；提升为 jsmodel 组织包初版
+  - id: cpp.ternary
+    summary: 禁止三层及以上嵌套三元运算符
+    appliesTo: C++ 三元条件表达式
+    enabled: true
+    severity: required
+    execution:
+      check: semantic
+      fix: semantic
+    config:
+      requirement: 不得使用三层及以上嵌套的三元运算符；应改用明确的条件语句或独立函数表达决策逻辑
+    source: 已确认的 C++ 代码规则；提升为 jsmodel 组织包初版
+  - id: naming.variables
+    summary: 局部变量和参数使用 camelCase，类成员使用 _camelCase
+    appliesTo: C++ 局部变量、函数参数与类数据成员
+    enabled: true
+    severity: required
+    execution:
+      check: semantic
+      fix: semantic
+    config:
+      requirement:
+        - 局部变量和函数参数采用首字母小写驼峰命名
+        - 类成员变量采用下划线开头的首字母小写驼峰命名
+        - 已有公共 API 和外部 SDK 约定不得只为风格擅自改名
+    source: 项目代码规范.md 与已确认命名约定；提升为 jsmodel 组织包初版（原用户层对系统规则的同 ID 覆盖）
+  - id: naming.namespaces
+    summary: 命名空间使用 PascalCase
+    appliesTo: C++ 命名空间名称
+    enabled: true
+    severity: required
+    execution:
+      check: semantic
+      fix: semantic
+    config:
+      requirement:
+        - 命名空间名称采用首字母大写驼峰命名
+        - 命名空间嵌套尽量不超过三层
+        - 已有公共 API 和外部 SDK 约定不得只为风格擅自改名
+    source: 项目代码规范.md 与已确认命名约定；提升为 jsmodel 组织包初版（原用户层对系统规则的同 ID 覆盖）
+  - id: naming.enumerators
+    summary: 枚举值使用类型缩写加 PascalCase
+    appliesTo: C++ 枚举值名称
+    enabled: true
+    severity: required
+    execution:
+      check: semantic
+      fix: semantic
+    config:
+      requirement:
+        - 枚举值使用枚举类型名称首字母缩写、下划线和 PascalCase 组合命名
+        - 示例：ModelExecutionRequestKind::MERK_Tick
+        - 外部 SDK、ABI 或已有公共接口的枚举值名称不得只为风格擅自改名
+    source: 已确认的枚举值命名约定；提升为 jsmodel 组织包初版（原用户层对系统规则的同 ID 覆盖）
+  - id: naming.functions
+    summary: 普通函数和成员函数使用 PascalCase
+    appliesTo: C++ 函数声明与定义
+    enabled: true
+    severity: required
+    execution:
+      check: semantic
+      fix: semantic
+    config:
+      requirement:
+        - 普通函数和成员函数采用首字母大写驼峰命名
+        - 函数参数遵循 naming.variables 规则
+        - 已有公共 API、外部 SDK 以及操作系统或编程语言底层函数名称不得只为风格擅自改名
+    source: 项目代码规范.md 与已确认函数命名约定；提升为 jsmodel 组织包初版（原用户层对系统规则的同 ID 覆盖）
+  - id: classes.member-layout
+    summary: 类成员按固定顺序分组且函数变量不得共用访问区段
+    appliesTo: C++ 类成员声明及访问说明符
+    enabled: true
+    severity: required
+    execution:
+      check: semantic
+      fix: semantic
+    config:
+      requirement:
+        - 静态成员先于非静态成员声明
+        - 成员函数先于成员变量声明
+        - 访问权限按 public、protected、private 顺序排列
+        - 类成员函数和类成员变量不得共用同一个访问说明符号
+    source: 项目代码规范.md；提升为 jsmodel 组织包初版
+  - id: preprocessor.nominmax-before-windows-h
+    summary: 包含 Windows.h 或 WinDef.h 之前必须定义 NOMINMAX
+    appliesTo: 引入 Windows.h、WinDef.h 或等价 Windows 头的 C++ 源文件和头文件
+    enabled: true
+    severity: required
+    execution:
+      check: semantic
+      fix: semantic
+    config:
+      requirement:
+        - 在包含 Windows.h、WinDef.h 或由其间接引入 min/max 宏的 Windows 头之前定义 NOMINMAX
+        - 优先在包含这些头的汇合点定义，避免每个翻译单元各自补定义
+        - '不得依赖事后 #undef min 或 #undef max 作为常规做法'
+        - 已由上游头定义 NOMINMAX 后再包含 Windows.h 视为满足
+      examples:
+        - '#ifndef NOMINMAX'
+        - '#define NOMINMAX'
+        - '#endif'
+        - '#include <Windows.h>'
+    source: 已确认的 NOMINMAX 与调用处括号防护；提升为 jsmodel 组织包初版
+  - id: cpp.std-min-max-paren
+    summary: 调用 std::min 和 std::max 时使用括号挡住函数宏
+    appliesTo: C++ 中对 std::min、std::max 以及 numeric_limits::min/max 的调用
+    enabled: true
+    severity: required
+    execution:
+      check: semantic
+      fix: semantic
+    config:
+      requirement:
+        - 写成 (std::min)(a, b) 和 (std::max)(a, b)
+        - numeric_limits 的 min/max 同样写成 (std::numeric_limits<T>::max)()
+        - 禁止写裸 max(a, b)/min(a, b)，也禁止写未加括号的 std::max( 或 std::min(
+        - 即使已定义 NOMINMAX，调用处仍保持括号写法，防止其他头再次引入宏
+      examples:
+        - (std::max)(0.0, value)
+        - (std::min)(upper, value)
+        - (std::numeric_limits<int>::max)()
+    source: 已确认的 NOMINMAX 与调用处括号防护；提升为 jsmodel 组织包初版
