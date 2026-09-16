@@ -44,7 +44,7 @@
 - `clang-format`：自动检查和修复；原生 options 由实际安装版本验证。
 - `utf8-no-bom`：自动检查，无自动修复；不猜测其他原编码。
 
-未知 handler 可以登记，但运行报告 `not-executed`。semantic 规则不需要 handler；hybrid 需要具名自动部分且仍需要语义审查。`list` 不加载详情或探测外部工具，readiness 为 `not-probed`；`explain` 按需探测。
+未知 handler 可以登记，但运行报告 `not-executed`。semantic 规则不需要 handler；hybrid 需要具名自动部分且仍需要语义审查。`list` 只展示启用规则的 `id`、`summary` 和 `appliesTo`，不加载详情或探测外部工具；`get` 和 `explain` 按需读取完整信息。
 
 ## 手工维护与提案
 

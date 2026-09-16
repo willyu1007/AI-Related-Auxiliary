@@ -7,7 +7,7 @@
 ## 命令
 
 - `status [--catalog <index.yaml>]`：只读报告 system/user/organization/project 的 `missing`、`empty`、`valid`、`invalid` 状态和初始化路径；组织层无项目引用时为 `unbound`。带 catalog 时额外报告 bundled 系统 profile 升级提示。
-- `list [--layer effective|system|user|organization|project]`：只返回规则元数据，不读取详情。
+- `list [--layer effective|system|user|organization|project]`：只返回启用规则的 `id`、`summary` 和 `appliesTo`，不读取详情；使用 `get` 或 `explain` 查看完整信息。
 - `get <id> [--layer ...]`：返回完整规则，按需读取详情。
 - `explain <id>`：返回覆盖链、当前来源和 handler 就绪情况。
 - `validate`：校验所有启用层、详情、规则配置和 scoped override/格式冲突；不是 C++ 代码检查。

@@ -59,7 +59,7 @@ description: Use when writing, reviewing, formatting, or checking C++ code again
 
 ## 渐进式披露
 
-`list` 只返回元数据，不读取 detail。复杂规则必须通过 `get` 加载详情后才能执行语义判断；不能凭摘要改写代码。语义检查由审查者阅读源码和规则详情完成，不得把 `needs-review` 或 `not-executed` 当作通过。
+`list` 默认只返回启用规则的 `id`、`summary` 和 `appliesTo`，不读取 detail。复杂规则必须通过 `get` 加载详情后才能执行语义判断；不能凭摘要改写代码。语义检查由审查者阅读源码和规则详情完成，不得把 `needs-review` 或 `not-executed` 当作通过。
 
 ## 检查能力
 

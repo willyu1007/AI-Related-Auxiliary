@@ -433,9 +433,7 @@ def status(project, user_home):
 def list_rules(store, layer):
     rows = []
     for item in store.metadata(layer).values():
-        row = {key: value for key, value in item.items() if key != "config"}
-        # Do not inspect detail files to infer capabilities during listing.
-        row["readiness"] = "not-probed"
-        rows.append(row)
-    settings, sources = store.settings()
-    return {"settings": settings, "settingSources": sources, "rules": rows}
+        if not item["enabled"]:
+            continue
+        rows.append({key: item[key] for key in ("id", "summary", "appliesTo")})
+    return {"rules": rows}

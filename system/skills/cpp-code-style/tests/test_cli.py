@@ -473,10 +473,32 @@ class CLITest(unittest.TestCase):
         self.layer(self.user_data, rule(options={"IndentWidth": 2}))
         self.layer(self.project_data, rule(options={"IndentWidth": 8}))
         result = self.output("list")
-        self.assertEqual(result["rules"][0]["layer"], "project")
-        self.assertNotIn("config", result["rules"][0])
+        self.assertEqual(
+            result["rules"][0],
+            {
+                "id": "format.indentation",
+                "summary": "Indentation",
+                "appliesTo": "C++ files",
+            },
+        )
         self.assertEqual(self.output("get", "format.indentation")["rule"]["config"]["options"]["IndentWidth"], 8)
         self.assertEqual([r["layer"] for r in self.output("explain", "format.indentation")["chain"]], ["user", "project"])
+
+    def test_list_returns_only_enabled_rule_display_metadata(self):
+        disabled = rule("format.disabled")
+        disabled["enabled"] = False
+        self.layer(self.user_data, rule(), disabled, baseStyle="Google")
+
+        self.assertEqual(
+            self.output("list"),
+            {
+                "rules": [{
+                    "id": "format.indentation",
+                    "summary": "Indentation",
+                    "appliesTo": "C++ files",
+                }],
+            },
+        )
 
     def test_list_does_not_open_detail_but_get_requires_it(self):
         item = rule()
@@ -620,7 +642,7 @@ class CLITest(unittest.TestCase):
         self.output("apply", "--proposal", path, "--confirm", plan["digest"])
         rules = self.output("list")["rules"]
         self.assertEqual(len(rules), 2)
-        self.assertTrue(all(r["layer"] == "project" for r in rules))
+        self.assertTrue(all(set(r) == {"id", "summary", "appliesTo"} for r in rules))
 
     @unittest.skipUnless(shutil.which("clang-format"), "clang-format not installed")
     def test_real_formatter_export_check_and_fix(self):
@@ -727,7 +749,7 @@ class CLITest(unittest.TestCase):
 
     def test_empty_base_query_does_not_create_data_directories(self):
         data = self.output("list")
-        self.assertNotIn("baseStyle", data["settings"])
+        self.assertEqual(data, {"rules": []})
         self.assertFalse(self.user_data.exists())
         self.assertFalse(self.project_data.exists())
 
@@ -791,7 +813,7 @@ class CLITest(unittest.TestCase):
         )
         self.layer(self.user_data, rule(options={"IndentWidth": 8}))
         result = self.output("list")
-        self.assertEqual(result["rules"][0]["layer"], "user")
+        self.assertEqual(result["rules"][0]["id"], "format.indentation")
         self.assertEqual(self.output("status")["layers"]["organization"]["state"], "unbound")
 
     def test_bound_missing_organization_cache_is_not_ready(self):
