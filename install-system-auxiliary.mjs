@@ -75,13 +75,14 @@ export const SKILL_TIER = {
   'sensitive-ops': 'all',
   'sync-db-from-prisma': 'all',
   'manage-llm-config': 'all',
+  'aliyun-ops': 'will',
 };
 
 /** A profile may replace or omit skills from the ranks it otherwise includes. */
 export const PROFILE_EXCLUSIONS = {
   minimal: new Set(),
   general: new Set(),
-  all: new Set(['wizard']),
+  all: new Set(['wizard', 'aliyun-ops']),
   will: new Set(['wizard', 'cpp-code-style', 'cpp-code-style-manager', 'using-powershell']),
 };
 
@@ -116,7 +117,7 @@ Profiles:
   general   minimal plus everyday debug, UI, HTML, cleanup, Codex, and wizard
   all       general with wizard replaced by sensitive-ops, plus write-prompt,
             Prisma, and .ai/llm
-  will      personal: same as all, without C++ or PowerShell
+  will      personal: same as all, without C++ or PowerShell, plus Aliyun ops
 
 ~/.codex never receives the three codex-* skills.
 Library skills outside the selected profile are removed from the target.

@@ -47,7 +47,7 @@ checks/          # 本仓库自己的校验，不是分发物
 
 技能发现只扫 `system/skills/` 的第一层，所以那一层保持平铺，不要建分组子目录。
 
-## system/ —— 27 个技能
+## system/ —— 28 个技能
 
 任务治理的八个技能按实际操作划分；其中 `goal-mode` 串联同一 Goal 运行内的长任务主线，其余每个对应工作流程里的一个时刻。主线是 `start → plan → implementation`；新证据推翻路线时回到 plan，实施检查点通过 `sync → resume` 走仓库跨越时间，`handoff → 新会话` 则通过对话完成普通任务的零间隔交接。
 
@@ -62,7 +62,7 @@ checks/          # 本仓库自己的校验，不是分发物
 | [project-status](system/skills/project-status/SKILL.md) | 一项或多项任务及项目 hub 的只读状态、归档就绪度与一致性审查 | 仓库 |
 | [goal-mode](system/skills/goal-mode/SKILL.md) | 在同一 Goal 运行内串联 start、planning、分阶段执行、checkpoint、恢复与完成契约 | 仓库 + 对话 |
 
-另有 19 个与任务治理无关的技能：
+另有 20 个与任务治理无关的技能：
 
 | Skill | 用途 |
 |---|---|
@@ -85,6 +85,7 @@ checks/          # 本仓库自己的校验，不是分发物
 | [using-powershell](system/skills/using-powershell/SKILL.md) | 在 Windows PowerShell 5.1/PowerShell 7 中编写命令与 `.ps1`，避免 Bash/CMD 语法混入，并对 `.ps1` 跑无依赖 lint |
 | [wizard](system/skills/wizard/SKILL.md) | `general` 档的通用交互向导；为必须由用户持有私密访问、MFA 或实体设备才能完成的步骤生成临时脚本，在 `all` 档由 sensitive-ops 替代 |
 | [write-prompt](system/skills/write-prompt/SKILL.md) | 为另一个 LLM、subagent、CLI agent 或运行时模型编写独立执行边界的 Prompt |
+| [aliyun-ops](system/skills/aliyun-ops/SKILL.md) | 排查或实施阿里云 ECS、RDS、RAM、OSS、ACR 及其部署链路，区分控制台提交、实际生效和业务验收；含自托管 Logto、密钥注入和联合 staging 的避坑规则 |
 
 ## 触发方式
 
@@ -99,7 +100,7 @@ checks/          # 本仓库自己的校验，不是分发物
 | `minimal` | 基础档 | 治理主线以及 C++、PowerShell（仅 Windows）、review、research、tdd |
 | `general` | 包含 `minimal` | 增加日常调试、UI、HTML、清理、Codex 和 script-first 的 wizard |
 | `all` | 包含 `general`，但以 sensitive-ops 替换 wizard | 覆盖相同的用户绑定步骤，并增加 write-prompt、Prisma 和 `.ai/llm` |
-| `will` | 个人档：与 `all` 相同，但不装 C++ 与 PowerShell | 不安装 `cpp-code-style`、`cpp-code-style-manager`、`using-powershell` |
+| `will` | 个人档：与 `all` 相同，但不装 C++ 与 PowerShell，并增加阿里云避坑 | 不安装 `cpp-code-style`、`cpp-code-style-manager`、`using-powershell`；安装 `aliyun-ops` |
 
 `wizard` 与 `sensitive-ops` 不会同时安装；`.codex` 在 `general`、`all` 和 `will` 下仍不安装三个 `codex-*` 技能。`using-powershell` 只在 Windows（`win32`）安装，且从不进入 `will`；macOS / Linux 会跳过，并删掉目标里已有的副本。
 

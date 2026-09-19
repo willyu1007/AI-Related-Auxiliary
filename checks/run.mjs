@@ -160,13 +160,16 @@ function runStatic() {
   if (fullSkills.has('wizard') || !fullSkills.has('sensitive-ops')) {
     fail('skill-profile', 'all must replace wizard with sensitive-ops');
   }
+  if (fullSkills.has('aliyun-ops')) {
+    fail('skill-profile', 'all must not install aliyun-ops');
+  }
   if (willSkills.has('wizard') || !willSkills.has('sensitive-ops')) {
     fail('skill-profile', 'will must replace wizard with sensitive-ops');
   }
   for (const name of ['cpp-code-style', 'cpp-code-style-manager', 'using-powershell']) {
     if (willSkills.has(name)) fail('skill-profile', `will must not install ${name}`);
   }
-  for (const name of ['write-prompt', 'sync-db-from-prisma', 'manage-llm-config']) {
+  for (const name of ['write-prompt', 'sync-db-from-prisma', 'manage-llm-config', 'aliyun-ops']) {
     if (!willSkills.has(name)) fail('skill-profile', `will must install ${name}`);
   }
 
@@ -183,8 +186,14 @@ function runStatic() {
   if (!fullRemovals.has('wizard') || fullRemovals.has('sensitive-ops')) {
     fail('skill-profile', 'all must remove wizard and retain sensitive-ops');
   }
+  if (!fullRemovals.has('aliyun-ops')) {
+    fail('skill-profile', 'all must remove aliyun-ops');
+  }
   if (!willRemovals.has('wizard') || willRemovals.has('sensitive-ops')) {
     fail('skill-profile', 'will must remove wizard and retain sensitive-ops');
+  }
+  if (willRemovals.has('aliyun-ops')) {
+    fail('skill-profile', 'will must retain aliyun-ops');
   }
   for (const name of ['cpp-code-style', 'cpp-code-style-manager', 'using-powershell']) {
     if (!willRemovals.has(name)) fail('skill-profile', `will must remove ${name}`);
