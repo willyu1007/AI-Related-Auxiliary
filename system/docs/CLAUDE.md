@@ -79,27 +79,27 @@ Rankings, higher = better. Economy is how economical the model is at what I actu
 
 | model         | economy | intelligence | taste | breadth |
 | ------------- | ------- | ------------ | ----- | ------- |
-| gpt-6-astra   | 6    | 9            | 7     | 8       |
-| gpt-5.6-sol   | 9    | 8            | 5     | 6       |
-| gpt-5.6-luna  | 9    | 5            | 4     | 2       |
-| opus-5        | 4    | 8            | 8     | 6       |
-| fable-5.1     | 2    | 9            | 9     | 9       |
+| gpt-6-astra   | 3       | 10           | 7     | 9       |
+| gpt-6-sol     | 9       | 7            | 5     | 6       |
+| gpt-6-luna    | 10      | 4            | 4     | 1       |
+| opus-5.5      | 6       | 8            | 9     | 7       |
+| fable-5.1     | 2       | 10           | 9     | 9       |
 
 How to apply:
 
-- These are defaults, not limits. You have standing permission to override them: if a more economical model's output doesn't meet the bar, rerun or redo the work with a stronger model without asking. Judge the output, not the economy score. A less economical model still beats shipping mediocre work.
-- Codex routing is by job type. Pass `--model` every time — `~/.codex/config.toml` still pins `gpt-6-astra`, so omitting the flag misroutes review and implementation onto the planner.
+- These rankings are a starting point, not a limit. You have standing permission to override them: if a more economical model's output doesn't meet the bar, rerun or redo the work with a stronger model without asking. Judge the output, not the economy score. A less economical model still beats shipping mediocre work.
+- Codex routing is by job type. Pick the model for the task and pass `--model`. `~/.codex/config.toml` pins `gpt-6-sol`, so omitting the flag sends the run to sol.
   - gpt-6-astra — architecture, planning, and computer use; anything that needs a full-system view.
-  - gpt-5.6-sol — code review and hard unsupervised directed tasks.
-  - gpt-5.6-luna — mechanical, high-volume, clear-spec grind.
-- Every Codex model uses `high` reasoning effort by default (`~/.codex/config.toml`, decided 2026-09-05) — effort costs latency, not money. Do not drop to `medium`/`low` as a routing choice. Raise per-invocation only for unusually hard unsupervised work (`-c model_reasoning_effort=xhigh`; `max` sparingly, output-token bloat).
+  - gpt-6-sol — code review and hard unsupervised directed tasks.
+  - gpt-6-luna — mechanical, high-volume, clear-spec grind.
+- Every Codex model uses `high` reasoning effort (`~/.codex/config.toml`, decided 2026-09-05) — effort costs latency, not money. Do not drop to `medium`/`low` as a routing choice. Raise per-invocation only for unusually hard unsupervised work (`-c model_reasoning_effort=xhigh`; `max` sparingly, output-token bloat).
 - gpt-5.6-terra is not in the active rotation.
 - Anything user-facing (UI, copy, API design) needs taste ≥ 7.
-- Cross-model review: when Claude produced the work, use gpt-6-astra as the primary Codex reviewer for plans and architecture, and gpt-5.6-sol as the primary Codex reviewer for code. Claude is the primary reviewer when Codex produced the work; Codex may still run deterministic checks and add a supplemental self-review (astra for plans, sol for code). Purely mechanical changes fully covered by deterministic checks do not require cross-model review.
+- Cross-model review: when Claude produced the work, use gpt-6-astra as the Codex reviewer for plans and architecture, and gpt-6-sol as the Codex reviewer for code. Claude is the primary reviewer when Codex produced the work; Codex may still run deterministic checks and add a supplemental self-review (astra for plans, sol for code). Purely mechanical changes fully covered by deterministic checks do not require cross-model review.
 - Never use Haiku.
 - If computer use is helpful for completing or verifying work, shell out to Codex on gpt-6-astra.
-- Mechanics: you reach Codex models only by shelling out to the Codex CLI — `codex exec` / `codex review`, always with `--model gpt-6-astra`, `--model gpt-5.6-sol`, or `--model gpt-5.6-luna`. Use the codex-implementation, codex-review, and codex-computer-use skills; for work they don't cover (investigation, data analysis), run `codex exec -s read-only` directly with a self-contained prompt.
-- Claude models (opus-5, fable-5.1) run via the Agent/Workflow model parameter.
+- Mechanics: you reach Codex models only by shelling out to the Codex CLI — `codex exec` / `codex review`, with `--model gpt-6-astra`, `--model gpt-6-sol`, or `--model gpt-6-luna`. Use the codex-implementation, codex-review, and codex-computer-use skills; for work they don't cover (investigation, data analysis), run `codex exec -s read-only` directly with a self-contained prompt.
+- Claude models (opus-5.5, fable-5.1) run via the Agent/Workflow model parameter.
 
 Using Codex inside workflows and subagents (the model parameter only takes Claude models, so use a wrapper):
 

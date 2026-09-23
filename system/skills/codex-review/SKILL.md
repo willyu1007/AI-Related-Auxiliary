@@ -14,7 +14,7 @@ description: >-
    - For Codex-authored work, Claude is the primary reviewer of requirements, behavior, architecture, security, and failure modes. Treat Codex's review as supplemental; deterministic verification may still be delegated to Codex through the relevant workflow.
 3. Choose exactly one review input: a built-in target (`--uncommitted`, `--base`, or `--commit`) or custom instructions that identify the target.
 4. Create a temporary artifact directory for the Codex report.
-5. Run `codex review` with the selected input. Default `--model gpt-5.6-sol` for code. Use `--model gpt-6-astra` only when the target is a plan or architecture document that needs a full-system view. Leave reasoning effort at the pinned `high` default.
+5. Run `codex review` with the selected input. Pick `--model` for the target: `gpt-6-sol` for code, `gpt-6-astra` for a plan or architecture document that needs a full-system view. Leave reasoning effort at the pinned `high`.
 6. Read Codex's report and verify important claims against the code before presenting them.
 
 Use one of these command shapes:
@@ -23,7 +23,7 @@ Use one of these command shapes:
 ARTIFACT_DIR="$(mktemp -d "${TMPDIR:-/tmp}/codex-review.XXXXXX")"
 REPORT="$ARTIFACT_DIR/report.md"
 PROMPT="$ARTIFACT_DIR/prompt.md"
-MODEL="gpt-5.6-sol"
+MODEL="gpt-6-sol"
 SHA="<commit-sha>"
 
 # Built-in targets: choose one and do not also pass a custom prompt.

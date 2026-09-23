@@ -36,7 +36,7 @@ codex -C "$PWD" --model "$MODEL" exec \
   - < "$PROMPT"
 ```
 
-Always pass `--model gpt-6-astra`. Do not substitute sol or luna for computer use.
+Always pass `--model gpt-6-astra`. Do not substitute sol or luna for computer use. `~/.codex/config.toml` pins `gpt-6-sol`, so the flag is required.
 
 Use `-s danger-full-access` only when GUI automation, simulators, desktop app launching, screenshots, or other host access requires it and the environment is controlled. Otherwise prefer `-s workspace-write`. Add `--skip-git-repo-check` when the working directory is not a git repository.
 
