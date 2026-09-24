@@ -47,7 +47,7 @@ checks/          # 本仓库自己的校验，不是分发物
 
 技能发现只扫 `system/skills/` 的第一层，所以那一层保持平铺，不要建分组子目录。
 
-## system/ —— 28 个技能
+## system/ —— 29 个技能
 
 任务治理的八个技能按实际操作划分；其中 `goal-mode` 串联同一 Goal 运行内的长任务主线，其余每个对应工作流程里的一个时刻。主线是 `start → plan → implementation`；新证据推翻路线时回到 plan，实施检查点通过 `sync → resume` 走仓库跨越时间，`handoff → 新会话` 则通过对话完成普通任务的零间隔交接。
 
@@ -62,12 +62,12 @@ checks/          # 本仓库自己的校验，不是分发物
 | [project-status](system/skills/project-status/SKILL.md) | 一项或多项任务及项目 hub 的只读状态、归档就绪度与一致性审查 | 仓库 |
 | [goal-mode](system/skills/goal-mode/SKILL.md) | 在同一 Goal 运行内串联 start、planning、分阶段执行、checkpoint、恢复与完成契约 | 仓库 + 对话 |
 
-另有 20 个与任务治理无关的技能：
+另有 21 个与任务治理无关的技能：
 
 | Skill | 用途 |
 |---|---|
-| [cpp-code-style](system/skills/cpp-code-style/SKILL.md) | 按系统、用户和项目分层规则编写、审查、格式化和检查 C++ |
-| [cpp-code-style-manager](system/skills/cpp-code-style-manager/SKILL.md) | 初始化、发现、升级和维护分层 C++ 规则，所有写入均需确认 |
+| [cpp-code-style](system/skills/cpp-code-style/SKILL.md) | 按已确认规则编写、审查、格式化和检查 C++；不负责规则初始化与写入 |
+| [cpp-code-style-manager](system/skills/cpp-code-style-manager/SKILL.md) | 初始化并维护系统、用户、组织和项目四层 C++ 规则，写入须经确认 |
 | [codex-computer-use](system/skills/codex-computer-use/SKILL.md) | 当代码和 shell 不足时，通过 GUI、截图、模拟器或实时应用状态完成或验证工作 |
 | [codex-implementation](system/skills/codex-implementation/SKILL.md) | 把已明确的行为或设计交给 Codex CLI 实施，并保留调用方的范围、审查和交付责任 |
 | [codex-review](system/skills/codex-review/SKILL.md) | 使用 Codex CLI 审查实施计划或代码改动，并按产出模型确定主审或补充审查角色 |
@@ -86,6 +86,7 @@ checks/          # 本仓库自己的校验，不是分发物
 | [wizard](system/skills/wizard/SKILL.md) | `general` 档的通用交互向导；为必须由用户持有私密访问、MFA 或实体设备才能完成的步骤生成临时脚本，在 `all` 档由 sensitive-ops 替代 |
 | [write-prompt](system/skills/write-prompt/SKILL.md) | 为另一个 LLM、subagent、CLI agent 或运行时模型编写独立执行边界的 Prompt |
 | [aliyun-ops](system/skills/aliyun-ops/SKILL.md) | 排查或实施阿里云 ECS、RDS、RAM、OSS、ACR 及其部署链路，区分控制台提交、实际生效和业务验收；含自托管 Logto、密钥注入和联合 staging 的避坑规则 |
+| [uml-diagrams](system/skills/uml-diagrams/SKILL.md) | 以内容 JSON 生成 draw.io 通用图、类图、时序图、流程图和状态机图，并做统一视觉质检 |
 
 ## 触发方式
 
