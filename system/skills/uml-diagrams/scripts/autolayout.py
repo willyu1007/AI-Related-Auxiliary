@@ -298,20 +298,7 @@ def page_cells(graph, height, pos, edge_pts, color=True):
             cells.append(
                 f'        <mxCell id="{attr(nid)}" value="{attr(node.get("label", nid))}" '
                 + body)
-    direction = str(graph.get("direction", "TB")).upper()
-    source_slots: dict[str, int] = {}
-    source_counts: dict[str, int] = {}
-    for edge in graph.get("edges", []):
-        source_counts[edge["source"]] = source_counts.get(edge["source"], 0) + 1
     for i, edge in enumerate(graph.get("edges", [])):
-        slot = source_slots.get(edge["source"], 0)
-        source_slots[edge["source"]] = slot + 1
-        total = source_counts.get(edge["source"], 1)
-        fraction = (slot + 1) / (total + 1)
-        if direction == "LR":
-            ports = f"exitX=1;exitY={fraction:.3f};entryX=0;entryY=0.5;"
-        else:
-            ports = f"exitX={fraction:.3f};exitY=1;entryX=0.5;entryY=0;"
         # Drop the first/last points (they sit on the node borders, where
         # draw.io attaches anyway) and replay the interior bends as waypoints.
         interior = edge_pts.get((edge["source"], edge["target"]), [])[1:-1]
@@ -326,7 +313,7 @@ def page_cells(graph, height, pos, edge_pts, color=True):
             geom = '<mxGeometry relative="1" as="geometry"/>'
         cells.append(
             f'        <mxCell id="e{i}" value="{attr(edge.get("label", ""))}" '
-            f'style="{attr(edge.get("style", EDGE_STYLE) + ports)}" edge="1" parent="1" '
+            f'style="{attr(edge.get("style", EDGE_STYLE))}" edge="1" parent="1" '
             f'source="{attr(edge["source"])}" target="{attr(edge["target"])}">\n'
             f"          {geom}\n"
             f"        </mxCell>"

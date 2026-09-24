@@ -86,8 +86,8 @@ checks/          # 本仓库自己的校验，不是分发物
 | [wizard](system/skills/wizard/SKILL.md) | `general` 档的通用交互向导；为必须由用户持有私密访问、MFA 或实体设备才能完成的步骤生成临时脚本，在 `all` 档由 sensitive-ops 替代 |
 | [write-prompt](system/skills/write-prompt/SKILL.md) | 为另一个 LLM、subagent、CLI agent 或运行时模型编写独立执行边界的 Prompt |
 | [aliyun-ops](system/skills/aliyun-ops/SKILL.md) | 排查或实施阿里云 ECS、RDS、RAM、OSS、ACR 及其部署链路，区分控制台提交、实际生效和业务验收；含自托管 Logto、密钥注入和联合 staging 的避坑规则 |
-| [uml-diagrams-new](system/skills/uml-diagrams-new/SKILL.md) | Mermaid + 官方 draw.io CLI/ELK 生成 UML/流程图；layout 预设；贴 Word 时可选 doc-export（将取代 uml-diagrams） |
-| [uml-diagrams](system/skills/uml-diagrams/SKILL.md) | **（旧，保留参考）** 以内容 JSON + Python 布局脚本生成 draw.io 图 |
+| [uml-diagrams-new](system/skills/uml-diagrams-new/SKILL.md) | Mermaid + 官方 draw.io CLI/ELK 生成 UML/流程图；layout 预设；贴 Word 时读对应类型文档 |
+| [uml-diagrams](system/skills/uml-diagrams/SKILL.md) | 以内容 JSON 生成 draw.io 通用图、类图、时序图、流程图和状态机图，并做统一视觉质检 |
 
 ## 触发方式
 
