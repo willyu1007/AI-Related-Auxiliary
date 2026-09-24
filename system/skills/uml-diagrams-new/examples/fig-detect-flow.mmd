@@ -1,0 +1,16 @@
+flowchart TD
+  start([开始]) --> state{是否为搜索或跟踪}
+  state -->|是| host{宿主是否有效}
+  state -->|否| empty[组装空结果]
+  host -->|是| mode{是否为跟踪}
+  host -->|否| empty
+  mode -->|是| track[调度跟踪波束]
+  mode -->|否| search[推进搜索波束]
+  track --> wave[组装发波信息]
+  search --> wave
+  wave --> resolve[解析候选与干扰]
+  resolve --> detect[几何、检测与识别]
+  detect --> save[组装观测与探测]
+  save --> end([结束])
+  empty --> clear[清空发波]
+  clear --> end
