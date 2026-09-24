@@ -55,8 +55,15 @@
 - Step B：按图类型选择布局脚本生成 `media/<basename>.drawio`。
   - sequence：`.agents/skills/uml-diagrams/scripts/seqlayout.py`
   - class：`.agents/skills/uml-diagrams/scripts/classlayout.py`
+  - ipo：`.agents/skills/uml-diagrams/scripts/ipolayout.py`
   - workflow：`.agents/skills/uml-diagrams/scripts/workflowlayout.py`
   - state-machine：`.agents/skills/uml-diagrams/scripts/statemachinelayout.py`
+  - object：`.agents/skills/uml-diagrams/scripts/objectlayout.py`
+  - usecase：`.agents/skills/uml-diagrams/scripts/usecaselayout.py`
+  - activity：`.agents/skills/uml-diagrams/scripts/activitylayout.py`
+  - architecture：`.agents/skills/uml-diagrams/scripts/architecturelayout.py`
+  - communication：`.agents/skills/uml-diagrams/scripts/communicationlayout.py`
+  - timing：`.agents/skills/uml-diagrams/scripts/timinglayout.py`
   - 其他 UML：优先 `.agents/skills/uml-diagrams/scripts/autolayout.py`，复杂图或自动布局失效时手工微调。
 - Step C：draw.io CLI 导出预览 PNG（非 `-e`，`--width 2000`）。
 - Step D：独立 AI 审查（优先独立子 Agent）给出分级问题清单。

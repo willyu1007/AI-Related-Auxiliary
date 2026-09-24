@@ -60,11 +60,7 @@ SEPARATOR_STYLE = (
     "spacingTop=-1;spacingLeft=3;spacingRight=3;rotatable=0;"
     "labelPosition=right;points=[];portConstraint=eastwest;strokeColor=inherit;"
 )
-EDGE_STYLE = (
-    "edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;"
-    "jettySize=auto;html=1;strokeColor=#34495e;strokeWidth=2;"
-    "endArrow=block;endFill=1;labelBackgroundColor=#ffffff;"
-)
+VISIBILITY = {"public": "+", "private": "-", "protected": "#", "package": "~", "+": "+", "-": "-", "#": "#", "~": "~"}
 
 
 def xml_attr(value: object) -> str:
@@ -78,6 +74,66 @@ def visual_length(text: str) -> int:
     """Estimate display width, counting CJK characters as two columns."""
 
     return sum(2 if ord(char) > 0x7F else 1 for char in text)
+
+
+def member_line(item: object, kind: str) -> str:
+    """Render one attribute or operation, including visibility and types."""
+
+    if not isinstance(item, dict):
+        return str(item)
+    visibility = VISIBILITY.get(str(item.get("visibility", "public")), "+")
+    name = str(item.get("name", ""))
+    if kind == "attribute":
+        type_name = str(item.get("type", ""))
+        return f"{visibility} {name}: {type_name}" if type_name else f"{visibility} {name}"
+    parameters = []
+    for param in item.get("parameters", []):
+        if isinstance(param, dict):
+            text = str(param.get("name", ""))
+            if param.get("type"):
+                text = f"{text}: {param['type']}"
+            parameters.append(text)
+        else:
+            parameters.append(str(param))
+    rendered = f"{visibility} {name}({', '.join(parameters)})"
+    return_type = item.get("returnType") or item.get("returns") or ""
+    return f"{rendered}: {return_type}" if return_type else rendered
+
+
+def relation_style(edge: dict, exit_y: float, entry_y: float) -> str:
+    """Pick the UML arrow and a distinct attachment point for one relationship."""
+
+    key = str(edge.get("kind") or edge.get("label") or "")
+    if key in {"inheritance", "generalization", "继承"}:
+        arrow = "endArrow=block;endFill=0;"
+    elif key in {"realization", "实现"}:
+        arrow = "endArrow=block;endFill=0;dashed=1;"
+    elif key in {"composition", "组合"}:
+        arrow = "startArrow=diamondThin;startFill=1;endArrow=none;"
+    elif key in {"aggregation", "聚合"}:
+        arrow = "startArrow=diamondThin;startFill=0;endArrow=none;"
+    elif key in {"dependency", "依赖", "读取"}:
+        arrow = "endArrow=open;endFill=0;dashed=1;"
+    else:
+        arrow = "endArrow=block;endFill=1;"
+    return (
+        "edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;"
+        "strokeColor=#34495e;strokeWidth=2;labelBackgroundColor=#ffffff;fontSize=13;"
+        f"{arrow}exitX=1;exitY={exit_y:.3f};entryX=0;entryY={entry_y:.3f};"
+    )
+
+
+def anchor_fractions(edges: list[dict], endpoint: str) -> dict[int, float]:
+    """Spread edges that share a box across that box's side."""
+
+    groups: dict[str, list[int]] = {}
+    for index, edge in enumerate(edges):
+        groups.setdefault(str(edge.get(endpoint, "")), []).append(index)
+    fractions = {}
+    for indexes in groups.values():
+        for slot, index in enumerate(indexes):
+            fractions[index] = (slot + 1) / (len(indexes) + 1)
+    return fractions
 
 
 def split_members(node: dict) -> tuple[str, list[str], list[str]]:
@@ -103,9 +159,9 @@ def split_members(node: dict) -> tuple[str, list[str], list[str]]:
         operations = [str(item) for item in node.get("operations", [])]
 
     if "attributes" in node:
-        attributes = [str(item) for item in node["attributes"]]
+        attributes = [member_line(item, "attribute") for item in node["attributes"]]
     if "operations" in node:
-        operations = [str(item) for item in node["operations"]]
+        operations = [member_line(item, "operation") for item in node["operations"]]
     return name, attributes, operations
 
 
@@ -168,7 +224,7 @@ def layout(graph: dict) -> tuple[dict[str, dict], dict[str, tuple[str, list[str]
     return boxes, parsed
 
 
-def edge_geometry(edge: dict, boxes: dict[str, dict], edge_index: int) -> str:
+def edge_geometry(edge: dict, boxes: dict[str, dict], edge_index: int, exit_y: float, entry_y: float) -> str:
     """Create a small explicit orthogonal route for a relationship edge."""
 
     source = boxes[edge["source"]]
@@ -177,8 +233,8 @@ def edge_geometry(edge: dict, boxes: dict[str, dict], edge_index: int) -> str:
     target_right = target["x"] + target["width"]
     source_left = source["x"]
     target_left = target["x"]
-    source_mid = source["y"] + source["height"] / 2
-    target_mid = target["y"] + target["height"] / 2
+    source_mid = source["y"] + source["height"] * exit_y
+    target_mid = target["y"] + target["height"] * entry_y
 
     if source_right <= target_left:
         bus_x = source_right + 70 + edge_index * 24
@@ -242,16 +298,19 @@ def page_xml(graph: dict, page_id: str) -> str:
                 "</mxCell>"
             )
 
-    for index, edge in enumerate(graph.get("edges", [])):
+    class_edges = graph.get("edges", [])
+    exit_at = anchor_fractions(class_edges, "source")
+    entry_at = anchor_fractions(class_edges, "target")
+    for index, edge in enumerate(class_edges):
         source = edge.get("source")
         target = edge.get("target")
         if source not in boxes or target not in boxes:
             raise ValueError(f"edge references unknown class: {source!r} -> {target!r}")
         cells.append(
             f'<mxCell id="edge_{index}" value="{xml_attr(edge.get("label", ""))}" '
-            f'style="{xml_attr(EDGE_STYLE)}" edge="1" parent="1" '
+            f'style="{xml_attr(relation_style(edge, exit_at[index], entry_at[index]))}" edge="1" parent="1" '
             f'source="{xml_attr(source)}" target="{xml_attr(target)}">'
-            f"{edge_geometry(edge, boxes, index)}</mxCell>"
+            f"{edge_geometry(edge, boxes, index, exit_at[index], entry_at[index])}</mxCell>"
         )
 
     title = graph.get("title", page_id)
