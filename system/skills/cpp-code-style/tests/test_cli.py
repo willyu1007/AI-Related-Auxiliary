@@ -10,6 +10,7 @@ import unittest
 import yaml
 
 CLI = Path(__file__).resolve().parents[1] / "scripts" / "style.py"
+MANAGER_CLI = CLI.parents[2] / "cpp-code-style-manager" / "scripts" / "manage.py"
 sys.path.insert(0, str(CLI.parent))
 from core import digest
 
@@ -17,6 +18,7 @@ MANAGER = CLI.parents[2] / "cpp-code-style-manager"
 CATALOG = MANAGER / "assets" / "system-profiles" / "index.yaml"
 GOOGLE = MANAGER / "assets" / "system-profiles" / "google" / "rules.yaml"
 JSMODEL = MANAGER / "assets" / "organization-profiles" / "jsmodel" / "rules.yaml"
+MANAGEMENT_COMMANDS = {"status", "validate", "explain", "export", "propose", "apply"}
 
 
 def rule(rule_id="format.indentation", options=None):
@@ -59,9 +61,9 @@ class CLITest(unittest.TestCase):
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(yaml.safe_dump(data, allow_unicode=True), encoding="utf-8")
 
-    def invoke(self, *args, ok=True):
+    def invoke_script(self, script, *args, ok=True):
         result = subprocess.run(
-            [sys.executable, "-B", str(CLI), "--project", str(self.project),
+            [sys.executable, "-B", str(script), "--project", str(self.project),
              "--user-home", str(self.home), *map(str, args)],
             capture_output=True, encoding="utf-8",
         )
@@ -69,8 +71,25 @@ class CLITest(unittest.TestCase):
             self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
         return result
 
+    def invoke(self, *args, ok=True):
+        command = str(args[0]) if args else ""
+        script = MANAGER_CLI if command in MANAGEMENT_COMMANDS or "--layer" in args else CLI
+        return self.invoke_script(script, *args, ok=ok)
+
+    def invoke_style(self, *args, ok=True):
+        return self.invoke_script(CLI, *args, ok=ok)
+
+    def invoke_manager(self, *args, ok=True):
+        return self.invoke_script(MANAGER_CLI, *args, ok=ok)
+
     def output(self, *args):
         return json.loads(self.invoke(*args).stdout)
+
+    def output_style(self, *args):
+        return json.loads(self.invoke_style(*args).stdout)
+
+    def output_manager(self, *args):
+        return json.loads(self.invoke_manager(*args).stdout)
 
     def layer(self, path, *rules, **extra):
         self.write(path / "rules.yaml", {"schemaVersion": 1, "rules": list(rules), **extra})
@@ -114,6 +133,24 @@ class CLITest(unittest.TestCase):
         self.write(path, data)
         return path
 
+    def rule_files_snapshot(self):
+        roots = (self.home, self.project)
+        return {
+            str(path.relative_to(self.root)): path.read_bytes()
+            for root in roots
+            for path in root.rglob("*")
+            if path.is_file()
+        }
+
+    def rule_data_snapshot(self):
+        roots = (self.user_data, self.project_data)
+        return {
+            str(path.relative_to(self.root)): path.read_bytes()
+            for root in roots
+            for path in root.rglob("*")
+            if path.is_file()
+        }
+
     def test_proposal_file_alias_writes_full_plan_and_stdout_is_summary(self):
         self.initialize_empty_layers()
         source = self.incoming_path({"schemaVersion": 1, "rules": [rule()]})
@@ -129,6 +166,30 @@ class CLITest(unittest.TestCase):
         self.assertEqual(summary["digest"], full["digest"])
         self.assertNotIn("before", summary["writes"][0])
         self.assertIn("before", full["writes"][0])
+
+    def test_style_rejects_management_commands(self):
+        result = self.invoke_style("propose", ok=False)
+        self.assertIn("invalid choice", result.stderr)
+
+    def test_style_rejects_layer_selection(self):
+        result = self.invoke_style("list", "--layer", "system", ok=False)
+        self.assertIn("unrecognized arguments", result.stderr)
+
+    def test_style_queries_do_not_modify_rule_data(self):
+        self.initialize_empty_layers()
+        self.layer(self.user_data, rule())
+        before = self.rule_files_snapshot()
+        self.output_style("list")
+        self.output_style("get", "format.indentation")
+        self.assertEqual(before, self.rule_files_snapshot())
+
+    def test_manager_accepts_status_command(self):
+        result = self.invoke_manager("status")
+        self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
+
+    def test_manager_rejects_daily_check_command(self):
+        result = self.invoke_manager("check", "fixture.cpp", ok=False)
+        self.assertIn("invalid choice", result.stderr)
 
     def test_proposal_diff_and_quiet_modes(self):
         self.initialize_empty_layers()
@@ -445,9 +506,52 @@ class CLITest(unittest.TestCase):
         detail = self.output("get", "language.type-deduction", "--layer", "system")
         self.assertIn("requirement", detail["rule"]["config"])
 
-    def test_manager_has_no_duplicate_cli_implementation(self):
+    def test_manager_has_separate_cli_entrypoint(self):
         self.assertTrue(CLI.is_file())
-        self.assertFalse((MANAGER / "scripts").exists())
+        self.assertTrue(MANAGER_CLI.is_file())
+
+    def test_manager_list_exposes_management_metadata(self):
+        self.layer(self.user_data, rule(), baseStyle="Google")
+        listed = self.output_manager("list", "--layer", "user")
+        item = listed["rules"][0]
+        self.assertEqual(item["layer"], "user")
+        self.assertTrue(item["enabled"])
+        self.assertIn("execution", item)
+        self.assertIn("settings", listed)
+        self.assertIn("settingSources", listed)
+
+    def test_skill_documents_separate_daily_and_management_ownership(self):
+        style_doc = (CLI.parents[1] / "SKILL.md").read_text(encoding="utf-8")
+        manager_doc = (MANAGER / "SKILL.md").read_text(encoding="utf-8")
+        self.assertIn("scripts/style.py", style_doc)
+        self.assertNotIn("--layer", style_doc)
+        self.assertNotIn("propose", style_doc)
+        self.assertNotIn("overrides", style_doc)
+        self.assertIn("scripts/manage.py", manager_doc)
+        self.assertIn("propose", manager_doc)
+        self.assertIn("overrides", manager_doc)
+
+    def test_existing_layered_data_is_consumed_by_both_entries(self):
+        self.initialize_system()
+        fixture_root = CLI.parents[1] / "tests" / "fixtures" / "layers"
+        shutil.copytree(fixture_root / "user", self.user_data, dirs_exist_ok=True)
+        shutil.copytree(fixture_root / "project", self.project_data, dirs_exist_ok=True)
+
+        before = self.rule_data_snapshot()
+        listed = self.output_style("list")
+        self.assertEqual(
+            {item["id"] for item in listed["rules"]},
+            {"naming.struct-field", "naming.model-private-field"},
+        )
+        detail = self.output_style("get", "naming.model-private-field")
+        self.assertIn("requirement", detail["rule"]["config"])
+        source = self.project / "fixture.cpp"
+        source.write_text("struct Model {};\n", encoding="utf-8")
+        result = self.invoke_style("check", source, ok=False)
+        semantic = json.loads(result.stdout)["semantic"]
+        self.assertTrue(semantic["needsReview"])
+        self.assertEqual(semantic["pending"], 2)
+        self.assertEqual(before, self.rule_data_snapshot())
 
     def test_complete_initialization_then_query_and_check(self):
         proposal = self.root / "system.json"
