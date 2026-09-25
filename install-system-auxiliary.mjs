@@ -65,6 +65,8 @@ export const SKILL_TIER = {
   'resolve-vcs-conflicts': 'general',
   'cleanup-project-residue': 'general',
   'html-communication': 'general',
+  'uml-diagrams': 'general',
+  'uml-diagrams-new': 'general',
   'manage-ui-style': 'general',
   'goal-mode': 'general',
   'codex-implementation': 'general',
