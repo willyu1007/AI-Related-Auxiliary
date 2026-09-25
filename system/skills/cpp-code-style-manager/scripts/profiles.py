@@ -94,3 +94,5 @@ def catalog_upgrade(active_system, index_path):
             "package": candidate["package"],
         },
     }
+
+

@@ -1,6 +1,6 @@
 # 初始化与维护
 
-管理技能负责流程编排；共享 CLI 保持非交互且具确定性。
+管理技能负责流程编排；manager CLI 保持非交互且具确定性。
 
 ## 状态机
 
@@ -20,7 +20,7 @@
 1. 检查系统、用户、组织和项目路径，以及项目是否存在组织引用。
 2. 系统层缺失时，默认推荐 Google，也可以使用用户选择的自定义来源。展示 profile 元数据、覆盖范围、基础样式、规则、来源、目标路径和影响范围。只有审查后确认，才能应用。
 3. 用户层缺失时，围绕长期个人偏好进行沟通。只保存用户明确表达的偏好，不复制系统默认规则或组织政策。确认空文件表示没有用户覆盖规则。用户层不能用来覆盖组织层已规定的 ID。
-4. 组织层是选填政策层。仅当当前项目需要服从组织规范时才绑定。绑定方式是项目 `organization.yaml` 中的 `id` 与 `revision`，运行时读取 `<用户主目录>/.agents/skill-data/cpp-code-style/organization/`。缓存可用 `assets/organization-profiles/` 中的 bundled 包（默认 `jsmodel`）生成提案，也可用用户提供的已校验规则目录；不要求 Git，不在 `status`/`list`/`get` 时访问网络。组织层必须含 `organization.id` 和 `organization.revision`，不得含 `profile` 或 `baseStyle`。
+4. 组织层是选填政策层。仅当当前项目需要服从组织规范时才绑定。绑定方式是项目 `organization.yaml` 中的 `id` 与 `revision`，运行时读取 `<用户主目录>/.agents/skill-data/cpp-code-style/organization/`。缓存可用 `assets/organization-profiles/` 中的 bundled 包（默认 `jsmodel`）生成提案，也可用用户提供的已校验规则目录；不要求 Git，不在管理 CLI 的 `status`/`list`/`get` 时访问网络。组织层必须含 `organization.id` 和 `organization.revision`，不得含 `profile` 或 `baseStyle`。
 5. 项目层缺失时，按以下顺序检查证据：用户当前决定、仓库明确的文档/配置、项目自有 C++ 代码中的重复模式。排除第三方、生成物、缓存和外部引擎代码。展示代表性证据和未决决定。确认空文件表示没有项目覆盖规则。项目层是偏离组织政策的唯一常规出口。
 6. 校验已启用层并报告最终生效来源和覆盖链。优先级为项目 > 组织 > 用户 > 系统。
 

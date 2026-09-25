@@ -244,3 +244,5 @@ def apply(store, proposal_path, confirmation=None, verbose=False):
     return {"written": [{"path": w["path"], "content": w["after"], "diff": w["diff"]}
                         for w in plan["writes"]],
             "layer": plan["layer"], "effective": effective, "digest": confirmation}
+
+

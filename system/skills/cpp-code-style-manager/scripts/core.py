@@ -8,7 +8,7 @@ import re
 import jsonschema
 import yaml
 
-SKILL = Path(__file__).resolve().parents[1]
+SKILL = Path(__file__).resolve().parents[2] / "cpp-code-style"
 DATA_PATH = Path(".agents/skill-data/cpp-code-style")
 SCHEMA = json.loads((SKILL / "references/rules.schema.json").read_text(encoding="utf-8"))
 LAYERS = ("system", "user", "organization", "project")
@@ -359,10 +359,80 @@ def _validate_layer_details(root, data):
         validate_config(full)
 
 
+def _layer_status(root, layer):
+    path = (root / "rules.yaml").resolve()
+    row = {"path": str(path)}
+    if not path.is_file():
+        row["state"] = "missing"
+        return row
+    data = parse(path.read_text(encoding="utf-8"))
+    validate_index(data, layer)
+    _validate_layer_details(root, data)
+    row["state"] = "empty" if not data["rules"] else "valid"
+    row["ruleCount"] = len(data["rules"])
+    row["data"] = data
+    return row
+
+
+def status(project, user_home):
+    roots = layer_roots(project, user_home)
+    result = {"ready": False, "layers": {}}
+    ref_path = organization_ref_path(project)
+    binding = None
+    binding_error = None
+    try:
+        binding, ref_path = read_organization_binding(project)
+    except (OSError, UnicodeError, RuleError, yaml.YAMLError, TypeError, ValueError) as exc:
+        binding_error = str(exc)
+    for layer in LAYERS:
+        if layer == "organization":
+            row = {
+                "path": str((roots[layer] / "rules.yaml").resolve()),
+                "referencePath": str(ref_path),
+            }
+            try:
+                if binding_error:
+                    row["state"] = "invalid"
+                    row["error"] = binding_error
+                elif binding is None:
+                    row["state"] = "unbound"
+                else:
+                    inspected = _layer_status(roots[layer], layer)
+                    data = inspected.pop("data", None)
+                    row.update(inspected)
+                    if row["state"] in {"empty", "valid"}:
+                        mismatch = organization_identity_mismatch(binding, data)
+                        if mismatch:
+                            row["state"] = "invalid"
+                            row["error"] = mismatch
+                        else:
+                            row["id"] = data["organization"]["id"]
+                            row["revision"] = data["organization"]["revision"]
+            except (OSError, UnicodeError, RuleError, yaml.YAMLError, TypeError, ValueError) as exc:
+                row["state"] = "invalid"
+                row["error"] = str(exc)
+            result["layers"][layer] = row
+            continue
+        row = {"path": str((roots[layer] / "rules.yaml").resolve())}
+        try:
+            inspected = _layer_status(roots[layer], layer)
+            inspected.pop("data", None)
+            row.update(inspected)
+        except (OSError, UnicodeError, RuleError, yaml.YAMLError, TypeError, ValueError) as exc:
+            row["state"] = "invalid"
+            row["error"] = str(exc)
+        result["layers"][layer] = row
+    required_ready = all(
+        result["layers"][name]["state"] in {"empty", "valid"} for name in REQUIRED_LAYERS
+    )
+    result["ready"] = required_ready and result["layers"]["organization"]["state"] in {
+        "unbound", "empty", "valid",
+    }
+    return result
+
 def list_rules(store, layer):
     rows = []
     for item in store.metadata(layer).values():
-        if not item["enabled"]:
-            continue
-        rows.append({key: item[key] for key in ("id", "summary", "appliesTo")})
-    return {"rules": rows}
+        rows.append({key: value for key, value in item.items() if key != "config"})
+    settings, sources = store.settings()
+    return {"settings": settings, "settingSources": sources, "rules": rows}

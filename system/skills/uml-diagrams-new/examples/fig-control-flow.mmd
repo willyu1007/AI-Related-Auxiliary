@@ -1,0 +1,14 @@
+flowchart TD
+  start([开始]) --> recv[接收控制命令]
+  recv --> mine{是否指向本雷达}
+  mine -->|是| apply[装订工作参数]
+  mine -->|否| end([结束])
+  apply --> has{是否更新跟踪集合}
+  has -->|是| allow{是否允许调整跟踪}
+  has -->|否| end
+  allow -->|是| edit[按操作调整跟踪集合]
+  allow -->|否| end
+  edit --> full{跟踪容量是否已满}
+  full -->|是| drop[淘汰最早指定目标]
+  full -->|否| end
+  drop --> end

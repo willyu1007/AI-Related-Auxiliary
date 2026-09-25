@@ -1,0 +1,14 @@
+This directory vendors the draw.io Skill from jgraph/drawio-mcp.
+
+Upstream: https://github.com/jgraph/drawio-mcp
+Path: plugins/claude-code/skills/drawio/SKILL.md
+Synced: 2026-09-24 (main branch snapshot)
+
+Licensed under the Apache License, Version 2.0.
+Copyright 2025 JGraph Ltd
+
+Local modifications: none in upstream/SKILL.md — extensions live in the parent
+uml-diagrams-new/SKILL.md and references/.
+
+When updating, replace upstream/SKILL.md from the official repo and bump the
+Synced date above.

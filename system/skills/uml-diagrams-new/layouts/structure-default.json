@@ -1,0 +1,13 @@
+[
+  {
+    "layout": "elkLayered",
+    "config": {
+      "elk.direction": "DOWN",
+      "elk.spacing.nodeNode": "40",
+      "elk.layered.spacing.nodeNodeBetweenLayers": "100",
+      "elk.edgeRouting": "ORTHOGONAL",
+      "edgeStyle": "orthogonal",
+      "corners": "straight"
+    }
+  }
+]
