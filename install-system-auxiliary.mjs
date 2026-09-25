@@ -85,7 +85,14 @@ export const PROFILE_EXCLUSIONS = {
   minimal: new Set(),
   general: new Set(),
   all: new Set(['wizard', 'aliyun-ops']),
-  will: new Set(['wizard', 'cpp-code-style', 'cpp-code-style-manager', 'using-powershell']),
+  will: new Set([
+    'wizard',
+    'cpp-code-style',
+    'cpp-code-style-manager',
+    'using-powershell',
+    'uml-diagrams',
+    'uml-diagrams-new',
+  ]),
 };
 
 /** Host platforms that may install the skill. A missing entry means every host. */
@@ -119,7 +126,7 @@ Profiles:
   general   minimal plus everyday debug, UI, HTML, cleanup, Codex, and wizard
   all       general with wizard replaced by sensitive-ops, plus write-prompt,
             Prisma, and .ai/llm
-  will      personal: same as all, without C++ or PowerShell, plus Aliyun ops
+  will      personal: same as all, without C++, PowerShell, or the UML skills, plus Aliyun ops
 
 ~/.codex never receives the three codex-* skills.
 Library skills outside the selected profile are removed from the target.

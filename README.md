@@ -102,7 +102,7 @@ checks/          # 本仓库自己的校验，不是分发物
 | `minimal` | 基础档 | 治理主线以及 C++、PowerShell（仅 Windows）、review、research、tdd |
 | `general` | 包含 `minimal` | 增加日常调试、UI、HTML、清理、Codex 和 script-first 的 wizard |
 | `all` | 包含 `general`，但以 sensitive-ops 替换 wizard | 覆盖相同的用户绑定步骤，并增加 write-prompt、Prisma 和 `.ai/llm` |
-| `will` | 个人档：与 `all` 相同，但不装 C++ 与 PowerShell，并增加阿里云避坑 | 不安装 `cpp-code-style`、`cpp-code-style-manager`、`using-powershell`；安装 `aliyun-ops` |
+| `will` | 个人档：与 `all` 相同，但不装 C++、PowerShell 与两套 UML 图技能，并增加阿里云避坑 | 不安装 `cpp-code-style`、`cpp-code-style-manager`、`using-powershell`、`uml-diagrams`、`uml-diagrams-new`；安装 `aliyun-ops` |
 
 `wizard` 与 `sensitive-ops` 不会同时安装；`.codex` 在 `general`、`all` 和 `will` 下仍不安装三个 `codex-*` 技能。`using-powershell` 只在 Windows（`win32`）安装，且从不进入 `will`；macOS / Linux 会跳过，并删掉目标里已有的副本。
 
