@@ -1,11 +1,22 @@
 ---
 name: codex-implementation
 description: >-
-  Use when the user asks for a repository change to be implemented by Codex
-  CLI, or when the intended behavior or design is already defined and the
-  main work is coding or mechanical execution rather than unresolved product,
-  UI, copy, or API design decisions.
+  Use when a repository change involves a substantial amount of code editing,
+  finding or fixing a bug, or checking work against a known specification.
 ---
+
+DO NOT USE WHEN:
+
+- The work is exploratory: the outcome, approach, or scope is still being found.
+- The work is routine implementation that moves an already chosen task forward, and it is not a specified change, a bounded bug, or a check against an existing specification.
+- The work is visual, or it runs from planning through a first prototype.
+
+Otherwise hand the writing to the Codex model that fits:
+
+- A clear specification applied across many sites: `gpt-6-luna`
+- A specified implementation whose instructions and goal are already explicit: `gpt-6-sol`
+- Finding or fixing a bug within a bounded problem: `gpt-6-sol`
+- Checking work against an existing specification: `gpt-6-sol`
 
 ## Boundaries
 
@@ -30,14 +41,14 @@ PROMPT="$ARTIFACT_DIR/prompt.md"
 MODEL="gpt-6-sol"
 
 # Write a self-contained prompt to $PROMPT, then run:
-codex -C "$PWD" --model "$MODEL" exec \
+codex -C "$PWD" --model "$MODEL" -c model_reasoning_effort=xhigh exec \
   --add-dir "$ARTIFACT_DIR" \
   -s workspace-write \
   -o "$REPORT" \
   - < "$PROMPT"
 ```
 
-Pick the model for the task. Pass `--model gpt-6-sol` for hard or unsupervised directed tasks; pass `--model gpt-6-luna` for mechanical, high-volume, clear-spec work; pass `--model gpt-6-astra` for architecture, planning, or computer use that needs a full-system view. `~/.codex/config.toml` pins `gpt-6-sol`, so pass `--model` when the task should use luna or astra. Leave reasoning effort at the pinned `high`.
+Set `MODEL` from the situation at the top, then pass `--model "$MODEL"` as in the command above. Every implementation run uses `xhigh` reasoning effort.
 
 Use `-s workspace-write` by default. Use `-s danger-full-access` only when the implementation truly needs access outside the repo, app launch automation, simulator work, package manager global state, or other machine-level operations.
 
