@@ -9,7 +9,7 @@
 
 - 参与者：`participant Alias as 显示名`
 - **默认禁用 activation**：不用 `activate`/`deactivate`；消息用 `->>` / `-->>`，不用 `->>+` / `-->>-`
-- 目标：**仅顶部参与者名框** + 虚线生命线；转换后设 `lifelineMirror=0`、`lifelineDashed=1`
+- 目标：**仅顶部参与者名框** + 虚线生命线
 - 自调用：`A->>A: 短标签`；长说明用 `Note right of A: …`
 - 可选：`autonumber`；`alt`/`opt`/`loop`/`par`
 

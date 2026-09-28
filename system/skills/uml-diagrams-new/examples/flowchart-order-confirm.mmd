@@ -1,6 +1,0 @@
-flowchart LR
-  start([开始]) --> request[提交订单]
-  request --> valid{订单有效}
-  valid -->|是| confirm[确认订单]
-  valid -->|否| end([结束])
-  confirm --> end([结束])

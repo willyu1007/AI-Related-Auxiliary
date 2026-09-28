@@ -1,6 +1,6 @@
 # 流程图
 
-- Mermaid 默认：`flowchart TD`（主链竖排）。若目标文档下 TD 超高且流程简单、边仍清楚，可用 `flowchart LR`；复杂长主链用折返双列或拆图。
+- Mermaid：`flowchart TD`（主链竖排）
 - 示例：`examples/fig-control-flow.mmd`
 - 布局 preset：[flowchart-default.json](../layouts/flowchart-default.json)
 
@@ -132,8 +132,6 @@ Mermaid 无法声明菱形端口；**Ungroup 后**用 draw.io 或 MCP：
 
 **仅当用户明确图将嵌入 Word/PDF 等时执行本节。**
 
-高度验收适用于**所有**需要贴文档的流程图，与步骤数无关。`>8` 步只是必须提前评估布局的预警线，不是启动尺寸检查的门槛。
-
 ### 导出
 
 ```powershell
@@ -156,7 +154,7 @@ $drawio = & powershell -NoProfile -File scripts/find-drawio.ps1
 | 3 | **合并步骤** / 子流程节点压缩主链 | 语义节 |
 | 4 | **略减间距** | `flowchart-default.json` |
 
-主链 **>8** 步：在生成前先估算 `H/W`，在折返双列与拆图之间二选一（或组合：折返仍超高再拆）。任何图在实际贴入宽度下超出可用页高，都必须回布局层处理后再导出。
+主链 **>8** 步：必须先估算 `H/W`，在折返双列与拆图之间二选一（或组合：折返仍超高再拆）。
 
 **不推荐**：删 ELK 但不改拓扑；Word 只设最小宽度不算高度。
 
