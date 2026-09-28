@@ -1,0 +1,11 @@
+flowchart LR
+  subgraph client[客户端]
+    web[Web 应用]
+  end
+  subgraph service[服务层]
+    api[订单 API]
+  end
+  subgraph data[数据层]
+    orders[(订单库)]
+  end
+  web --> api --> orders

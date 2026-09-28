@@ -1,0 +1,12 @@
+classDiagram
+  direction LR
+  class Order {
+    +String id
+    -List~OrderItem~ items
+    +addItem()
+  }
+  class OrderItem {
+    +String productId
+    +int quantity
+  }
+  Order "1" *-- "1..*" OrderItem : contains

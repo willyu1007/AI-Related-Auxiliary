@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mxfile host="Electron">
+  <diagram id="qsvD7jy8ISIN5OJMDCSX" name="pageWithNumber">
+    <mxGraphModel dx="-307" dy="-75" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="0" page="0" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" style="fontFamily=Microsoft YaHei;fontSize=14;fontColor=#000000;" />
+        <mxCell id="1" parent="0" style="fontFamily=Microsoft YaHei;fontSize=14;fontColor=#000000;" />
+        <UserObject label="开始" mermaidId="n:root_start" mermaidBaseStyle="ellipse;html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#333333;strokeWidth=2;fontFamily=Microsoft YaHei;fontSize=14;fontColor=#000000;align=center;verticalAlign=middle;" mermaidBaseValue="开始" id="2">
+          <mxCell parent="1" style="ellipse;html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#333333;strokeWidth=2;fontFamily=Microsoft YaHei;fontSize=14;fontColor=#000000;align=center;verticalAlign=middle;" vertex="1">
+            <mxGeometry height="36" width="90" x="-30" y="111" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="待处理" mermaidId="n:待处理" mermaidBaseStyle="rounded=1;absoluteArcSize=1;arcSize=10;html=1;whiteSpace=wrap;strokeWidth=2;fillColor=#ffffff;strokeColor=#333333;fontColor=#000000;fontFamily=Microsoft YaHei;fontSize=16;" mermaidBaseValue="待处理" id="3">
+          <mxCell parent="1" style="rounded=1;absoluteArcSize=1;arcSize=10;html=1;whiteSpace=wrap;strokeWidth=2;fillColor=#ffffff;strokeColor=#333333;fontColor=#000000;fontFamily=Microsoft YaHei;fontSize=16;" vertex="1">
+            <mxGeometry height="40" width="64" x="72" y="98" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="处理中" mermaidId="n:处理中" mermaidBaseStyle="rounded=1;absoluteArcSize=1;arcSize=10;html=1;whiteSpace=wrap;strokeWidth=2;fillColor=#ffffff;strokeColor=#333333;fontColor=#000000;fontFamily=Microsoft YaHei;fontSize=16;" mermaidBaseValue="处理中" id="4">
+          <mxCell parent="1" style="rounded=1;absoluteArcSize=1;arcSize=10;html=1;whiteSpace=wrap;strokeWidth=2;fillColor=#ffffff;strokeColor=#333333;fontColor=#000000;fontFamily=Microsoft YaHei;fontSize=16;" vertex="1">
+            <mxGeometry height="40" width="64" x="250" y="53" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="已完成" mermaidId="n:已完成" mermaidBaseStyle="rounded=1;absoluteArcSize=1;arcSize=10;html=1;whiteSpace=wrap;strokeWidth=2;fillColor=#ffffff;strokeColor=#333333;fontColor=#000000;fontFamily=Microsoft YaHei;fontSize=16;" mermaidBaseValue="已完成" id="5">
+          <mxCell parent="1" style="rounded=1;absoluteArcSize=1;arcSize=10;html=1;whiteSpace=wrap;strokeWidth=2;fillColor=#ffffff;strokeColor=#333333;fontColor=#000000;fontFamily=Microsoft YaHei;fontSize=16;" vertex="1">
+            <mxGeometry height="40" width="64" x="428" y="8" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="已失败" mermaidId="n:已失败" mermaidBaseStyle="rounded=1;absoluteArcSize=1;arcSize=10;html=1;whiteSpace=wrap;strokeWidth=2;fillColor=#ffffff;strokeColor=#333333;fontColor=#000000;fontFamily=Microsoft YaHei;fontSize=16;" mermaidBaseValue="已失败" id="6">
+          <mxCell parent="1" style="rounded=1;absoluteArcSize=1;arcSize=10;html=1;whiteSpace=wrap;strokeWidth=2;fillColor=#ffffff;strokeColor=#333333;fontColor=#000000;fontFamily=Microsoft YaHei;fontSize=16;" vertex="1">
+            <mxGeometry height="40" width="64" x="428" y="98" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="已取消" mermaidId="n:已取消" mermaidBaseStyle="rounded=1;absoluteArcSize=1;arcSize=10;html=1;whiteSpace=wrap;strokeWidth=2;fillColor=#ffffff;strokeColor=#333333;fontColor=#000000;fontFamily=Microsoft YaHei;fontSize=16;" mermaidBaseValue="已取消" id="7">
+          <mxCell parent="1" style="rounded=1;absoluteArcSize=1;arcSize=10;html=1;whiteSpace=wrap;strokeWidth=2;fillColor=#ffffff;strokeColor=#333333;fontColor=#000000;fontFamily=Microsoft YaHei;fontSize=16;" vertex="1">
+            <mxGeometry height="40" width="64" x="428" y="188" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="结束" mermaidId="n:root_end" mermaidBaseStyle="ellipse;html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#333333;strokeWidth=2;fontFamily=Microsoft YaHei;fontSize=14;fontColor=#000000;align=center;verticalAlign=middle;" mermaidBaseValue="结束" id="8">
+          <mxCell parent="1" style="ellipse;html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#333333;strokeWidth=2;fontFamily=Microsoft YaHei;fontSize=14;fontColor=#000000;align=center;verticalAlign=middle;" vertex="1">
+            <mxGeometry height="36" width="90" x="504" y="111" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="" mermaidId="e:root_start-&gt;待处理#0" mermaidBaseStyle="curved=0;startArrow=none;endArrow=classic;endSize=9;fillColor=none;strokeColor=#333333;exitX=1;exitY=0.5;entryX=0;entryY=0.5;fontFamily=Microsoft YaHei;fontSize=14;fontColor=#000000;strokeWidth=2;labelBackgroundColor=#ffffff;edgeStyle=orthogonalEdgeStyle;rounded=0;" mermaidBaseValue="" id="9">
+          <mxCell edge="1" parent="1" source="2" style="curved=0;startArrow=none;endArrow=classic;endSize=9;fillColor=none;strokeColor=#333333;exitX=1;exitY=0.5;entryX=0;entryY=0.5;fontFamily=Microsoft YaHei;fontSize=14;fontColor=#000000;strokeWidth=2;labelBackgroundColor=#ffffff;edgeStyle=orthogonalEdgeStyle;rounded=0;" target="3">
+            <mxGeometry relative="1" as="geometry">
+              <Array as="points" />
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="开始执行" mermaidId="e:待处理-&gt;处理中#0" mermaidBaseStyle="curved=0;startArrow=none;endArrow=classic;endSize=9;fillColor=none;strokeColor=#333333;html=1;fontSize=16;labelBackgroundColor=#ffffff;fontFamily=Microsoft YaHei;fontColor=#000000;exitX=1;exitY=0.1;entryX=0;entryY=0.5;strokeWidth=2;edgeStyle=orthogonalEdgeStyle;rounded=0;" mermaidBaseValue="开始执行" id="10">
+          <mxCell edge="1" parent="1" source="3" style="curved=0;startArrow=none;endArrow=classic;endSize=9;fillColor=none;strokeColor=#333333;html=1;fontSize=16;labelBackgroundColor=#ffffff;fontFamily=Microsoft YaHei;fontColor=#000000;exitX=1;exitY=0.1;entryX=0;entryY=0.5;strokeWidth=2;edgeStyle=orthogonalEdgeStyle;rounded=0;" target="4">
+            <mxGeometry relative="1" as="geometry">
+              <Array as="points">
+                <mxPoint x="193" y="73" />
+              </Array>
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="执行成功" mermaidId="e:处理中-&gt;已完成#0" mermaidBaseStyle="curved=0;startArrow=none;endArrow=classic;endSize=9;fillColor=none;strokeColor=#333333;html=1;fontSize=16;labelBackgroundColor=#ffffff;fontFamily=Microsoft YaHei;fontColor=#000000;exitX=1;exitY=0.1;entryX=0;entryY=0.5;strokeWidth=2;edgeStyle=orthogonalEdgeStyle;rounded=0;" mermaidBaseValue="执行成功" id="11">
+          <mxCell edge="1" parent="1" source="4" style="curved=0;startArrow=none;endArrow=classic;endSize=9;fillColor=none;strokeColor=#333333;html=1;fontSize=16;labelBackgroundColor=#ffffff;fontFamily=Microsoft YaHei;fontColor=#000000;exitX=1;exitY=0.1;entryX=0;entryY=0.5;strokeWidth=2;edgeStyle=orthogonalEdgeStyle;rounded=0;" target="5">
+            <mxGeometry relative="1" as="geometry">
+              <Array as="points">
+                <mxPoint x="371" y="28" />
+              </Array>
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="执行失败" mermaidId="e:处理中-&gt;已失败#0" mermaidBaseStyle="curved=0;startArrow=none;endArrow=classic;endSize=9;fillColor=none;strokeColor=#333333;html=1;fontSize=16;labelBackgroundColor=#ffffff;fontFamily=Microsoft YaHei;fontColor=#000000;exitX=1;exitY=0.9;entryX=0;entryY=0.5;strokeWidth=2;edgeStyle=orthogonalEdgeStyle;rounded=0;" mermaidBaseValue="执行失败" id="12">
+          <mxCell edge="1" parent="1" source="4" style="curved=0;startArrow=none;endArrow=classic;endSize=9;fillColor=none;strokeColor=#333333;html=1;fontSize=16;labelBackgroundColor=#ffffff;fontFamily=Microsoft YaHei;fontColor=#000000;exitX=1;exitY=0.9;entryX=0;entryY=0.5;strokeWidth=2;edgeStyle=orthogonalEdgeStyle;rounded=0;" target="6">
+            <mxGeometry relative="1" as="geometry">
+              <Array as="points">
+                <mxPoint x="371" y="118" />
+              </Array>
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="用户取消" mermaidId="e:待处理-&gt;已取消#0" mermaidBaseStyle="curved=0;startArrow=none;endArrow=classic;endSize=9;fillColor=none;strokeColor=#333333;html=1;fontSize=16;labelBackgroundColor=#ffffff;fontFamily=Microsoft YaHei;fontColor=#000000;exitX=0.81;exitY=1;entryX=0;entryY=0.5;strokeWidth=2;edgeStyle=orthogonalEdgeStyle;rounded=0;" mermaidBaseValue="用户取消" id="13">
+          <mxCell edge="1" parent="1" source="3" style="curved=0;startArrow=none;endArrow=classic;endSize=9;fillColor=none;strokeColor=#333333;html=1;fontSize=16;labelBackgroundColor=#ffffff;fontFamily=Microsoft YaHei;fontColor=#000000;exitX=0.81;exitY=1;entryX=0;entryY=0.5;strokeWidth=2;edgeStyle=orthogonalEdgeStyle;rounded=0;" target="7">
+            <mxGeometry relative="1" as="geometry">
+              <Array as="points">
+                <mxPoint x="193" y="208" />
+                <mxPoint x="282" y="208" />
+                <mxPoint x="371" y="208" />
+              </Array>
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="" mermaidId="e:已完成-&gt;root_end#0" mermaidBaseStyle="curved=0;startArrow=none;endArrow=classic;endSize=9;fillColor=none;strokeColor=#333333;exitX=1;exitY=0.5;entryX=0.36;entryY=0;fontFamily=Microsoft YaHei;fontSize=14;fontColor=#000000;strokeWidth=2;labelBackgroundColor=#ffffff;edgeStyle=orthogonalEdgeStyle;rounded=0;" mermaidBaseValue="" id="14">
+          <mxCell edge="1" parent="1" source="5" style="curved=0;startArrow=none;endArrow=classic;endSize=9;fillColor=none;strokeColor=#333333;exitX=1;exitY=0.5;entryX=0.36;entryY=0;fontFamily=Microsoft YaHei;fontSize=14;fontColor=#000000;strokeWidth=2;labelBackgroundColor=#ffffff;edgeStyle=orthogonalEdgeStyle;rounded=0;" target="8">
+            <mxGeometry relative="1" as="geometry">
+              <Array as="points">
+                <mxPoint x="517" y="28" />
+              </Array>
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="" mermaidId="e:已失败-&gt;root_end#0" mermaidBaseStyle="curved=0;startArrow=none;endArrow=classic;endSize=9;fillColor=none;strokeColor=#333333;exitX=1;exitY=0.5;entryX=0;entryY=0.5;fontFamily=Microsoft YaHei;fontSize=14;fontColor=#000000;strokeWidth=2;labelBackgroundColor=#ffffff;edgeStyle=orthogonalEdgeStyle;rounded=0;" mermaidBaseValue="" id="15">
+          <mxCell edge="1" parent="1" source="6" style="curved=0;startArrow=none;endArrow=classic;endSize=9;fillColor=none;strokeColor=#333333;exitX=1;exitY=0.5;entryX=0;entryY=0.5;fontFamily=Microsoft YaHei;fontSize=14;fontColor=#000000;strokeWidth=2;labelBackgroundColor=#ffffff;edgeStyle=orthogonalEdgeStyle;rounded=0;" target="8">
+            <mxGeometry relative="1" as="geometry">
+              <Array as="points" />
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="" mermaidId="e:已取消-&gt;root_end#0" mermaidBaseStyle="curved=0;startArrow=none;endArrow=classic;endSize=9;fillColor=none;strokeColor=#333333;exitX=1;exitY=0.5;entryX=0.36;entryY=1;fontFamily=Microsoft YaHei;fontSize=14;fontColor=#000000;strokeWidth=2;labelBackgroundColor=#ffffff;edgeStyle=orthogonalEdgeStyle;rounded=0;" mermaidBaseValue="" id="16">
+          <mxCell edge="1" parent="1" source="7" style="curved=0;startArrow=none;endArrow=classic;endSize=9;fillColor=none;strokeColor=#333333;exitX=1;exitY=0.5;entryX=0.36;entryY=1;fontFamily=Microsoft YaHei;fontSize=14;fontColor=#000000;strokeWidth=2;labelBackgroundColor=#ffffff;edgeStyle=orthogonalEdgeStyle;rounded=0;" target="8">
+            <mxGeometry relative="1" as="geometry">
+              <Array as="points">
+                <mxPoint x="517" y="208" />
+              </Array>
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

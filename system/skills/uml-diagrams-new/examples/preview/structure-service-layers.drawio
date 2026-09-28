@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mxfile host="Electron">
+  <diagram id="gpvEgNhGo_tfD13Gc-wz" name="pageWithNumber">
+    <mxGraphModel dx="-314" dy="-46" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="0" page="0" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" style="fontFamily=Microsoft YaHei;fontSize=14;fontColor=#000000;" />
+        <mxCell id="1" parent="0" style="fontFamily=Microsoft YaHei;fontSize=14;fontColor=#000000;" />
+        <UserObject label="客户端" mermaidId="n:client" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=2;verticalAlign=top;fillColor=#ffffff;strokeColor=#333333;fontColor=#000000;fontFamily=Microsoft YaHei;fontSize=16;" mermaidBaseValue="客户端" id="2">
+          <mxCell parent="1" style="html=1;whiteSpace=wrap;strokeWidth=2;verticalAlign=top;fillColor=#ffffff;strokeColor=#333333;fontColor=#000000;fontFamily=Microsoft YaHei;fontSize=16;" vertex="1">
+            <mxGeometry height="124" width="197" y="7" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="Web 应用" mermaidId="n:web" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=2;fillColor=#ffffff;strokeColor=#333333;fontColor=#000000;fontFamily=Microsoft YaHei;fontSize=16;" mermaidBaseValue="Web 应用" id="3">
+          <mxCell parent="2" style="html=1;whiteSpace=wrap;strokeWidth=2;fillColor=#ffffff;strokeColor=#333333;fontColor=#000000;fontFamily=Microsoft YaHei;fontSize=16;" vertex="1">
+            <mxGeometry height="54" width="127" x="35" y="45" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="服务层" mermaidId="n:service" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=2;verticalAlign=top;fillColor=#ffffff;strokeColor=#333333;fontColor=#000000;fontFamily=Microsoft YaHei;fontSize=16;" mermaidBaseValue="服务层" id="4">
+          <mxCell parent="1" style="html=1;whiteSpace=wrap;strokeWidth=2;verticalAlign=top;fillColor=#ffffff;strokeColor=#333333;fontColor=#000000;fontFamily=Microsoft YaHei;fontSize=16;" vertex="1">
+            <mxGeometry height="124" width="190" x="227" y="7" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="订单 API" mermaidId="n:api" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=2;fillColor=#ffffff;strokeColor=#333333;fontColor=#000000;fontFamily=Microsoft YaHei;fontSize=16;" mermaidBaseValue="订单 API" id="5">
+          <mxCell parent="4" style="html=1;whiteSpace=wrap;strokeWidth=2;fillColor=#ffffff;strokeColor=#333333;fontColor=#000000;fontFamily=Microsoft YaHei;fontSize=16;" vertex="1">
+            <mxGeometry height="54" width="120" x="35" y="45" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="数据层" mermaidId="n:data" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=2;verticalAlign=top;fillColor=#ffffff;strokeColor=#333333;fontColor=#000000;fontFamily=Microsoft YaHei;fontSize=16;" mermaidBaseValue="数据层" id="6">
+          <mxCell parent="1" style="html=1;whiteSpace=wrap;strokeWidth=2;verticalAlign=top;fillColor=#ffffff;strokeColor=#333333;fontColor=#000000;fontFamily=Microsoft YaHei;fontSize=16;" vertex="1">
+            <mxGeometry height="137" width="133" x="447" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="订单库" mermaidId="n:orders" mermaidBaseStyle="html=1;shape=cylinder3;boundedLbl=1;backgroundOutline=1;size=10;strokeWidth=2;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#333333;fontColor=#000000;fontFamily=Microsoft YaHei;fontSize=16;" mermaidBaseValue="订单库" id="7">
+          <mxCell parent="6" style="html=1;shape=cylinder3;boundedLbl=1;backgroundOutline=1;size=10;strokeWidth=2;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#333333;fontColor=#000000;fontFamily=Microsoft YaHei;fontSize=16;" vertex="1">
+            <mxGeometry height="67" width="63" x="35" y="45" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="" mermaidId="e:web-&gt;api#0" mermaidBaseStyle="curved=0;startArrow=none;endArrow=block;endSize=7;strokeColor=#333333;exitX=1;exitY=0.5;entryX=0;entryY=0.5;fontFamily=Microsoft YaHei;fontSize=14;fontColor=#000000;strokeWidth=2;labelBackgroundColor=#ffffff;edgeStyle=orthogonalEdgeStyle;rounded=0;" mermaidBaseValue="" id="8">
+          <mxCell edge="1" parent="1" source="3" style="curved=0;startArrow=none;endArrow=block;endSize=7;strokeColor=#333333;exitX=1;exitY=0.5;entryX=0;entryY=0.5;fontFamily=Microsoft YaHei;fontSize=14;fontColor=#000000;strokeWidth=2;labelBackgroundColor=#ffffff;edgeStyle=orthogonalEdgeStyle;rounded=0;" target="5">
+            <mxGeometry relative="1" as="geometry">
+              <Array as="points" />
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="" mermaidId="e:api-&gt;orders#0" mermaidBaseStyle="curved=0;startArrow=none;endArrow=block;endSize=7;strokeColor=#333333;exitX=1;exitY=0.5;entryX=0;entryY=0.51;fontFamily=Microsoft YaHei;fontSize=14;fontColor=#000000;strokeWidth=2;labelBackgroundColor=#ffffff;edgeStyle=orthogonalEdgeStyle;rounded=0;" mermaidBaseValue="" id="9">
+          <mxCell edge="1" parent="1" source="5" style="curved=0;startArrow=none;endArrow=block;endSize=7;strokeColor=#333333;exitX=1;exitY=0.5;entryX=0;entryY=0.51;fontFamily=Microsoft YaHei;fontSize=14;fontColor=#000000;strokeWidth=2;labelBackgroundColor=#ffffff;edgeStyle=orthogonalEdgeStyle;rounded=0;" target="7">
+            <mxGeometry relative="1" as="geometry">
+              <Array as="points" />
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

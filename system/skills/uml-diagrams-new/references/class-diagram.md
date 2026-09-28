@@ -27,6 +27,7 @@
 
 ## 布局
 
+- 目标是纵向技术文档页且类较少：在 `.mmd` 中设 `direction LR`，让类横向排列
 - 关联线偏短、类框过密：Ungroup 后 `class-default.json`
 - 仍不够：手移类框或增大 preset 中 `elk.spacing.nodeNode`
 

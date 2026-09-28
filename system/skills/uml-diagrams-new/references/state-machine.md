@@ -16,6 +16,7 @@
 ## 布局
 
 - Mermaid 转换后一般不需 `--layout`
+- 纵向布局在目标版心宽度下超高时，可在 `.mmd` 中设 `direction LR`；检查转换后状态顺序和边标签仍清楚
 - 状态多、交叉多：Ungroup 后手移或**拆图**
 
 ## 样式
@@ -26,7 +27,7 @@
 | 文字 | `#000000`，Microsoft YaHei，`fontSize≥14` |
 | 边 | `rounded=0;endArrow=block;endFill=1` |
 | 边标签 | `labelBackgroundColor=#ffffff` |
-| 起止 | 文字扁圆（与流程图一致）；不用实心黑点 |
+| 起止 | 文字扁圆“开始”“结束”（与流程图一致）；不用实心黑点。样式脚本会替换 Mermaid 默认黑点 |
 
 ## 转换后
 

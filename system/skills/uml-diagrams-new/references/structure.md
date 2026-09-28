@@ -1,6 +1,6 @@
 # 结构 / 组件图
 
-- Mermaid：`flowchart TD` + `subgraph`（分层）；横向关系用 `flowchart LR`
+- Mermaid 默认：`flowchart TD` + `subgraph`（分层）；横向关系用 `flowchart LR`
 - 布局 preset：[structure-default.json](../layouts/structure-default.json)、[graph-horizontal.json](../layouts/graph-horizontal.json)
 
 ## 语义
@@ -19,6 +19,7 @@
 
 - 竖向分层：Ungroup 后 `structure-default.json`
 - 横向：`graph-horizontal.json`
+- 贴入纵向文档且竖向分层超出可用页高时，可在 `.mmd` 中改用 `flowchart LR` 横排层级；简单层级图不再叠加 `graph-horizontal.json`，多组件时先检查 ELK 是否引入跨层长线
 - 画布过宽（>1200 px）且需贴文档时：**优先改图**（减列、拆层、合并模块）
 
 ## 样式
@@ -32,6 +33,7 @@
 
 ## 转换后
 
+- 连线穿过 `subgraph` 标题：重路由到标题下方或侧边，标题必须无遮挡
 - 跨层长横线穿框：加 waypoint 或 MCP 绕行
 - 双向边分通道（上/下或实/虚）
 
