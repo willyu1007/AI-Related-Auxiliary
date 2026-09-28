@@ -1,0 +1,20 @@
+[
+  {
+    "layout": "elkLayered",
+    "config": {
+      "elk.direction": "DOWN",
+      "elk.spacing.nodeNode": "40",
+      "elk.layered.spacing.nodeNodeBetweenLayers": "64",
+      "elk.edgeRouting": "ORTHOGONAL",
+      "edgeStyle": "orthogonal",
+      "corners": "straight"
+    }
+  },
+  {
+    "layout": "mxParallelEdgeLayout",
+    "config": {
+      "spacing": 18,
+      "checkOverlap": true
+    }
+  }
+]

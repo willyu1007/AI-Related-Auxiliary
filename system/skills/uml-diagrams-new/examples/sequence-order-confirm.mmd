@@ -1,0 +1,8 @@
+sequenceDiagram
+  participant U as 用户
+  participant A as 订单服务
+  participant I as 库存服务
+  U->>A: 提交订单
+  A->>I: 检查库存
+  I-->>A: 返回库存结果
+  A-->>U: 返回确认结果

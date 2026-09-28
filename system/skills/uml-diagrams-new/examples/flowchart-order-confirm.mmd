@@ -1,0 +1,8 @@
+flowchart LR
+  start([开始]) --> submit[提交订单]
+  submit --> stock{库存充足？}
+  stock -->|是| pay[完成支付]
+  pay --> confirm[确认订单]
+  confirm --> finish([结束])
+  stock -->|否| reject[提示库存不足]
+  reject --> finish

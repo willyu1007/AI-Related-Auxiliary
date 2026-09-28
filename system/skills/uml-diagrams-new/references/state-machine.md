@@ -1,7 +1,7 @@
 # 状态机图
 
 - Mermaid：`stateDiagram-v2`
-- 布局 preset：通常不需二次 layout
+- 布局 preset：`layouts/state-machine-default.json`
 
 ## 语义
 
@@ -15,8 +15,8 @@
 
 ## 布局
 
-- Mermaid 转换后一般不需 `--layout`
-- 状态多、交叉多：Ungroup 后手移或**拆图**
+- 默认使用自上而下的布局；Ungroup 后状态间距或平行边仍不合适时，使用 `state-machine-default.json`
+- 贴文档时若图过高，先调整 Mermaid 方向或拆图，再重新转换；不要把多条长连线挤到同一终点
 
 ## 样式
 
@@ -30,8 +30,10 @@
 
 ## 转换后
 
+- 检查每条箭头从源状态指向目标状态，箭头头部位于目标端；不能只凭 Mermaid 源码判断转换结果正确
+- 多条结束边汇入同一终点时，检查箭头头部没有相互遮挡、落在状态框边缘或指向错误状态
 - 起止符未呈扁圆时在 draw.io 中改 shape
-- 标签避免压在状态框上：offset 或略移状态
+- 标签避免压在状态框上：调整标签或节点位置
 
 ## 贴进文档（可选）
 
@@ -44,7 +46,7 @@ $drawio = & powershell -NoProfile -File scripts/find-drawio.ps1
 & $drawio -x -f png -e -b 10 -s 3 --crop -o name.drawio.png name.drawio
 ```
 
-画布 **700–1200 px** 宽。状态 **>10** 时优先拆图或合并状态。
+画布 **700–1200 px** 宽。按文档版心宽度估算放置高度：`H_doc = W_doc × 图的高度 / 图的宽度`。若超出可用页面高度，先将方向调整为 `TB` 或拆图，再检查箭头。状态 **>10** 时优先拆图或合并状态。
 
 ### 贴文档前 QA
 

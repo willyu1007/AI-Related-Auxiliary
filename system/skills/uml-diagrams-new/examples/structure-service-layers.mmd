@@ -1,0 +1,11 @@
+flowchart LR
+  subgraph presentation[表现层]
+    ui[订单页面]
+  end
+  subgraph application[应用层]
+    api[订单服务]
+  end
+  subgraph data[数据层]
+    db[(订单数据库)]
+  end
+  ui --> api --> db

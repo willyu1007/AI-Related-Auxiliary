@@ -59,7 +59,7 @@ $drawio = & powershell -NoProfile -File scripts/find-drawio.ps1
 & $drawio -x -f png -e -b 10 -s 3 --crop -o name.drawio.png name.drawio
 ```
 
-画布宽度 **700–1200 px**；Fit Page to Content。类图通常宽高比适中；类过多时**优先拆图**或减类数。
+画布宽度 **700–1200 px**；Fit Page to Content。按版心宽度估算放置高度：`H_doc = W_doc × 图的高度 / 图的宽度`。类过多时**优先拆图**或减类数。
 
 ### 贴文档前 QA
 

@@ -1,7 +1,7 @@
 # 时序图
 
 - Mermaid：`sequenceDiagram`
-- 布局 preset：无专用 preset
+- 布局 preset：`layouts/sequence-default.json`；仅用于分开重叠的平行消息边，不得重排参与者或生命线
 
 ## 语义
 
@@ -15,7 +15,8 @@
 
 ## 布局
 
-- 间距由 Mermaid 转换器决定；参与者过密时 Ungroup 后手移顶栏或缩短显示名
+- 参与者次序和生命线位置由 Mermaid 源码决定；JSON preset 只分开重叠的平行消息边，不得重排参与者或生命线
+- 参与者过密时，先缩短显示名或拆图，再重新转换
 - 参与者 **>6** 且需贴文档时，考虑拆成两个时序图
 
 ## 样式
@@ -49,7 +50,7 @@ $drawio = & powershell -NoProfile -File scripts/find-drawio.ps1
 & $drawio -x -f png -e -b 10 -s 3 --crop -o name.drawio.png name.drawio
 ```
 
-画布宽度 **700–1200 px**。消息过多时**优先拆图**，勿靠缩小 Word 宽度。
+画布宽度 **700–1200 px**。按文档版心宽度估算放置高度：`H_doc = W_doc × 图的高度 / 图的宽度`。消息过多时**优先拆图**，勿靠缩小 Word 宽度。
 
 ### 贴文档前 QA
 

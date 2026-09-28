@@ -1,7 +1,7 @@
-# 布局预设（ELK）
+# 布局预设（draw.io）
 
-JSON 格式与 [draw.io 规范](https://www.drawio.com/docs/reference/json-layout-specification/) 一致。  
-**前提**：已对 Mermaid 容器 **Ungroup**，且仅需调间距/平行边，而非改菱形端口或生命线。
+JSON 格式与 [draw.io 规范](https://www.drawio.com/docs/reference/json-layout-specification/) 一致。已有 preset 是当前约定的布局偏好，应直接选用，不要改写来适配单张图。
+ELK 分层布局应在 Mermaid 容器 Ungroup 后使用；时序图 preset 仅处理平行消息边，不改变参与者顺序或生命线。
 
 | 文件 | 图类 | 说明 |
 |------|------|------|
@@ -9,6 +9,8 @@ JSON 格式与 [draw.io 规范](https://www.drawio.com/docs/reference/json-layou
 | [class-default.json](class-default.json) | 类图 | 加大 nodeNode / 层间距，缓解关联线过短 |
 | [structure-default.json](structure-default.json) | 结构/组件 | 竖向分层；层间距 100、同层 40 |
 | [graph-horizontal.json](graph-horizontal.json) | 横向关系 | `elk.direction: RIGHT` |
+| [sequence-default.json](sequence-default.json) | 时序图 | 只分开重叠的平行消息边；不重排参与者与生命线 |
+| [state-machine-default.json](state-machine-default.json) | 状态机 | 自上而下分层，正交连线，并分开平行边 |
 
 ## 用法
 
@@ -21,4 +23,4 @@ $drawio = & powershell -NoProfile -File ../scripts/find-drawio.ps1
 
 ## 与各类型文档的关系
 
-每种图的全部规则（含语义、样式、贴进文档）在 `references/<类型>.md` 单文件内；本目录仅放 ELK preset JSON。
+每种图的全部规则（含语义、样式、贴进文档）在 `references/<类型>.md` 单文件内；本目录放 draw.io 布局 preset JSON。

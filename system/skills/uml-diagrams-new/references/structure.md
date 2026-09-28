@@ -46,7 +46,7 @@ $drawio = & powershell -NoProfile -File scripts/find-drawio.ps1
 & $drawio -x -f png -e -b 10 -s 3 --crop -o name.drawio.png name.drawio
 ```
 
-画布宽度 **700–1200 px**（结构图勿无谓撑到 2000+）。过宽时**改图**收列/拆层，勿仅依赖 Word 缩放。
+画布宽度 **700–1200 px**（结构图勿无谓撑到 2000+）。按版心宽度估算放置高度：`H_doc = W_doc × 图的高度 / 图的宽度`。过宽或超高时**改图**收列/拆层，勿仅依赖 Word 缩放。
 
 ### 贴文档前 QA
 

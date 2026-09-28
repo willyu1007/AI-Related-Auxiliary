@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mxfile host="Electron">
+  <diagram id="g8MAaUdwK5oEdSOhzjcH" name="pageWithNumber">
+    <mxGraphModel dx="-299" dy="-93" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="0" page="0" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" style="fontFamily=Microsoft YaHei;fontSize=14;fontColor=#000000;" />
+        <mxCell id="1" parent="0" style="fontFamily=Microsoft YaHei;fontSize=14;fontColor=#000000;" />
+        <UserObject label="用户" mermaidId="n:U" mermaidBaseStyle="html=1;shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;container=1;dropTarget=0;collapsible=0;recursiveResize=0;outlineConnect=0;portConstraint=eastwest;newEdgeStyle={&quot;edgeStyle&quot;:&quot;elbowEdgeStyle&quot;,&quot;elbow&quot;:&quot;vertical&quot;,&quot;curved&quot;:0,&quot;rounded&quot;:0};lifelineDashed=1;strokeWidth=2;rounded=1;absoluteArcSize=1;arcSize=6;lifelineColor=#333333;size=65;lifelineMirror=0;fillColor=#ffffff;strokeColor=#333333;fontColor=#000000;fontFamily=Microsoft YaHei;fontSize=16;" mermaidBaseValue="用户" id="2">
+          <mxCell parent="1" style="html=1;shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;container=1;dropTarget=0;collapsible=0;recursiveResize=0;outlineConnect=0;portConstraint=eastwest;newEdgeStyle={&quot;edgeStyle&quot;:&quot;elbowEdgeStyle&quot;,&quot;elbow&quot;:&quot;vertical&quot;,&quot;curved&quot;:0,&quot;rounded&quot;:0};lifelineDashed=1;strokeWidth=2;rounded=1;absoluteArcSize=1;arcSize=6;lifelineColor=#333333;size=65;lifelineMirror=0;fillColor=#ffffff;strokeColor=#333333;fontColor=#000000;fontFamily=Microsoft YaHei;fontSize=16;" vertex="1">
+            <mxGeometry height="326" width="150" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="订单服务" mermaidId="n:A" mermaidBaseStyle="html=1;shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;container=1;dropTarget=0;collapsible=0;recursiveResize=0;outlineConnect=0;portConstraint=eastwest;newEdgeStyle={&quot;edgeStyle&quot;:&quot;elbowEdgeStyle&quot;,&quot;elbow&quot;:&quot;vertical&quot;,&quot;curved&quot;:0,&quot;rounded&quot;:0};lifelineDashed=1;strokeWidth=2;rounded=1;absoluteArcSize=1;arcSize=6;lifelineColor=#333333;size=65;lifelineMirror=0;fillColor=#ffffff;strokeColor=#333333;fontColor=#000000;fontFamily=Microsoft YaHei;fontSize=16;" mermaidBaseValue="订单服务" id="3">
+          <mxCell parent="1" style="html=1;shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;container=1;dropTarget=0;collapsible=0;recursiveResize=0;outlineConnect=0;portConstraint=eastwest;newEdgeStyle={&quot;edgeStyle&quot;:&quot;elbowEdgeStyle&quot;,&quot;elbow&quot;:&quot;vertical&quot;,&quot;curved&quot;:0,&quot;rounded&quot;:0};lifelineDashed=1;strokeWidth=2;rounded=1;absoluteArcSize=1;arcSize=6;lifelineColor=#333333;size=65;lifelineMirror=0;fillColor=#ffffff;strokeColor=#333333;fontColor=#000000;fontFamily=Microsoft YaHei;fontSize=16;" vertex="1">
+            <mxGeometry height="326" width="150" x="200" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="库存服务" mermaidId="n:I" mermaidBaseStyle="html=1;shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;container=1;dropTarget=0;collapsible=0;recursiveResize=0;outlineConnect=0;portConstraint=eastwest;newEdgeStyle={&quot;edgeStyle&quot;:&quot;elbowEdgeStyle&quot;,&quot;elbow&quot;:&quot;vertical&quot;,&quot;curved&quot;:0,&quot;rounded&quot;:0};lifelineDashed=1;strokeWidth=2;rounded=1;absoluteArcSize=1;arcSize=6;lifelineColor=#333333;size=65;lifelineMirror=0;fillColor=#ffffff;strokeColor=#333333;fontColor=#000000;fontFamily=Microsoft YaHei;fontSize=16;" mermaidBaseValue="库存服务" id="4">
+          <mxCell parent="1" style="html=1;shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;container=1;dropTarget=0;collapsible=0;recursiveResize=0;outlineConnect=0;portConstraint=eastwest;newEdgeStyle={&quot;edgeStyle&quot;:&quot;elbowEdgeStyle&quot;,&quot;elbow&quot;:&quot;vertical&quot;,&quot;curved&quot;:0,&quot;rounded&quot;:0};lifelineDashed=1;strokeWidth=2;rounded=1;absoluteArcSize=1;arcSize=6;lifelineColor=#333333;size=65;lifelineMirror=0;fillColor=#ffffff;strokeColor=#333333;fontColor=#000000;fontFamily=Microsoft YaHei;fontSize=16;" vertex="1">
+            <mxGeometry height="326" width="150" x="400" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="提交订单" mermaidId="e:U-&gt;A#0" mermaidBaseStyle="endArrow=block;endSize=9;verticalAlign=bottom;edgeStyle=elbowEdgeStyle;elbow=vertical;curved=0;rounded=0;fontSize=16;labelBackgroundColor=#ffffff;strokeWidth=2;strokeColor=#333333;fontColor=#000000;fontFamily=Microsoft YaHei;" mermaidBaseValue="提交订单" id="5">
+          <mxCell edge="1" parent="1" source="2" style="endArrow=block;endSize=9;verticalAlign=bottom;edgeStyle=elbowEdgeStyle;elbow=vertical;curved=0;rounded=0;fontSize=16;labelBackgroundColor=#ffffff;strokeWidth=2;strokeColor=#333333;fontColor=#000000;fontFamily=Microsoft YaHei;" target="3">
+            <mxGeometry relative="1" as="geometry">
+              <Array as="points">
+                <mxPoint x="175" y="109" />
+              </Array>
+              <mxPoint x="75" y="109" as="sourcePoint" />
+              <mxPoint x="275" y="109" as="targetPoint" />
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="检查库存" mermaidId="e:A-&gt;I#0" mermaidBaseStyle="endArrow=block;endSize=9;verticalAlign=bottom;edgeStyle=elbowEdgeStyle;elbow=vertical;curved=0;rounded=0;fontSize=16;labelBackgroundColor=#ffffff;strokeWidth=2;strokeColor=#333333;fontColor=#000000;fontFamily=Microsoft YaHei;" mermaidBaseValue="检查库存" id="6">
+          <mxCell edge="1" parent="1" source="3" style="endArrow=block;endSize=9;verticalAlign=bottom;edgeStyle=elbowEdgeStyle;elbow=vertical;curved=0;rounded=0;fontSize=16;labelBackgroundColor=#ffffff;strokeWidth=2;strokeColor=#333333;fontColor=#000000;fontFamily=Microsoft YaHei;" target="4">
+            <mxGeometry relative="1" as="geometry">
+              <Array as="points">
+                <mxPoint x="375" y="153" />
+              </Array>
+              <mxPoint x="275" y="153" as="sourcePoint" />
+              <mxPoint x="475" y="153" as="targetPoint" />
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="返回库存结果" mermaidId="e:I-&gt;A#0" mermaidBaseStyle="dashed=1;fixDash=1;dashPattern=3 3;endArrow=block;endSize=9;verticalAlign=bottom;edgeStyle=elbowEdgeStyle;elbow=vertical;curved=0;rounded=0;fontSize=16;labelBackgroundColor=#ffffff;strokeWidth=2;strokeColor=#333333;fontColor=#000000;fontFamily=Microsoft YaHei;" mermaidBaseValue="返回库存结果" id="7">
+          <mxCell edge="1" parent="1" source="4" style="dashed=1;fixDash=1;dashPattern=3 3;endArrow=block;endSize=9;verticalAlign=bottom;edgeStyle=elbowEdgeStyle;elbow=vertical;curved=0;rounded=0;fontSize=16;labelBackgroundColor=#ffffff;strokeWidth=2;strokeColor=#333333;fontColor=#000000;fontFamily=Microsoft YaHei;" target="3">
+            <mxGeometry relative="1" as="geometry">
+              <Array as="points">
+                <mxPoint x="375" y="197" />
+              </Array>
+              <mxPoint x="475" y="197" as="sourcePoint" />
+              <mxPoint x="275" y="197" as="targetPoint" />
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="返回确认结果" mermaidId="e:A-&gt;U#0" mermaidBaseStyle="dashed=1;fixDash=1;dashPattern=3 3;endArrow=block;endSize=9;verticalAlign=bottom;edgeStyle=elbowEdgeStyle;elbow=vertical;curved=0;rounded=0;fontSize=16;labelBackgroundColor=#ffffff;strokeWidth=2;strokeColor=#333333;fontColor=#000000;fontFamily=Microsoft YaHei;" mermaidBaseValue="返回确认结果" id="8">
+          <mxCell edge="1" parent="1" source="3" style="dashed=1;fixDash=1;dashPattern=3 3;endArrow=block;endSize=9;verticalAlign=bottom;edgeStyle=elbowEdgeStyle;elbow=vertical;curved=0;rounded=0;fontSize=16;labelBackgroundColor=#ffffff;strokeWidth=2;strokeColor=#333333;fontColor=#000000;fontFamily=Microsoft YaHei;" target="2">
+            <mxGeometry relative="1" as="geometry">
+              <Array as="points">
+                <mxPoint x="175" y="241" />
+              </Array>
+              <mxPoint x="275" y="241" as="sourcePoint" />
+              <mxPoint x="75" y="241" as="targetPoint" />
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
