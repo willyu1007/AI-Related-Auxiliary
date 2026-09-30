@@ -62,6 +62,7 @@ export const SKILL_TIER = {
   'project-status': 'minimal',
   'project-hub-maintain': 'minimal',
   'debug-mode': 'general',
+  'test-campaign': 'general',
   'resolve-vcs-conflicts': 'general',
   'cleanup-project-residue': 'general',
   'html-communication': 'general',
@@ -123,7 +124,7 @@ Options:
 
 Profiles:
   minimal   task-* / project-* plus C++, PowerShell (Windows), review, research, and tdd
-  general   minimal plus everyday debug, UI, HTML, cleanup, Codex, and wizard
+  general   minimal plus everyday debug, UI, HTML, cleanup, test campaigns, Codex, and wizard
   all       general with wizard replaced by sensitive-ops, plus write-prompt,
             Prisma, and .ai/llm
   will      personal: same as all, without C++, PowerShell, or the UML skills, plus Aliyun ops

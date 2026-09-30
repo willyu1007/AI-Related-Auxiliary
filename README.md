@@ -47,7 +47,7 @@ checks/          # 本仓库自己的校验，不是分发物
 
 技能发现只扫 `system/skills/` 的第一层，所以那一层保持平铺，不要建分组子目录。
 
-## system/ —— 29 个技能
+## system/ —— 31 个技能
 
 任务治理的八个技能按实际操作划分；其中 `goal-mode` 串联同一 Goal 运行内的长任务主线，其余每个对应工作流程里的一个时刻。主线是 `start → plan → implementation`；新证据推翻路线时回到 plan，实施检查点通过 `sync → resume` 走仓库跨越时间，`handoff → 新会话` 则通过对话完成普通任务的零间隔交接。
 
@@ -62,7 +62,7 @@ checks/          # 本仓库自己的校验，不是分发物
 | [project-status](system/skills/project-status/SKILL.md) | 一项或多项任务及项目 hub 的只读状态、归档就绪度与一致性审查 | 仓库 |
 | [goal-mode](system/skills/goal-mode/SKILL.md) | 在同一 Goal 运行内串联 start、planning、分阶段执行、checkpoint、恢复与完成契约 | 仓库 + 对话 |
 
-另有 21 个与任务治理无关的技能：
+另有 23 个与任务治理无关的技能：
 
 | Skill | 用途 |
 |---|---|
@@ -77,6 +77,7 @@ checks/          # 本仓库自己的校验，不是分发物
 | [sync-db-from-prisma](system/skills/sync-db-from-prisma/SKILL.md) | Prisma repo→DB migration 闸门：预览、单独的 apply 批准、按环境应用、验证 |
 | [manage-llm-config](system/skills/manage-llm-config/SKILL.md) | 集中管理 agent/workflow 的模型、参数、Prompt 与 Provider 配置；通过共享加载器读取 `.ai/llm` |
 | [debug-mode](system/skills/debug-mode/SKILL.md) | 根因不明故障的证据循环：准确症状信号、可证伪假设、授权修复、原始复现验证与自动清理 |
+| [test-campaign](system/skills/test-campaign/SKILL.md) | 以统筹会话和协调会话推进 staging 或发布前的大范围功能测试：规划路径、按独立模块分派、优先处理卡点和需求，并维护环境与协调会话的对应 |
 | [sensitive-ops](system/skills/sensitive-ops/SKILL.md) | 管理项目级敏感运维上下文及 MFA、OAuth、认证 UI、实体设备等用户绑定步骤；默认使用 `~/Documents/LLM/sensitive-ops.md`（可指定其他私密文档）让用户直接补齐，仅在明确要求时生成可恢复 shell helper |
 | [manage-ui-style](system/skills/manage-ui-style/SKILL.md) | 继承、探索并沉淀项目 UI 风格，在需要时审计和修复视觉漂移 |
 | [cleanup-project-residue](system/skills/cleanup-project-residue/SKILL.md) | 清理当前 session、任务、近期工作或全项目中的过时测试、冗余内容、语义漂移、双轨/legacy 残留和技术债；证据+批准后删除，校验门收尾 |
@@ -100,7 +101,7 @@ checks/          # 本仓库自己的校验，不是分发物
 | 档位 | 覆盖关系 | 内容 |
 |---|---|---|
 | `minimal` | 基础档 | 治理主线以及 C++、PowerShell（仅 Windows）、review、research、tdd |
-| `general` | 包含 `minimal` | 增加日常调试、UI、HTML、清理、Codex 和 script-first 的 wizard |
+| `general` | 包含 `minimal` | 增加日常调试、UI、HTML、清理、大范围功能测试、Codex 和 script-first 的 wizard |
 | `all` | 包含 `general`，但以 sensitive-ops 替换 wizard | 覆盖相同的用户绑定步骤，并增加 write-prompt、Prisma 和 `.ai/llm` |
 | `will` | 个人档：与 `all` 相同，但不装 C++、PowerShell 与两套 UML 图技能，并增加阿里云避坑 | 不安装 `cpp-code-style`、`cpp-code-style-manager`、`using-powershell`、`uml-diagrams`、`uml-diagrams-new`；安装 `aliyun-ops` |
 
