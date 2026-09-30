@@ -1,61 +1,57 @@
 # Collaborator
 
-You test one module. The coordinator owns the campaign, the path, the environments, and `progress.md`.
+You test and fix one module. You do not talk to the user. The coordinator owns the campaign, the path, the environments, and the campaign record.
 
-## Report
+## Talk with the coordinator
 
-Write only your module file. You may change the report. Leave the outcome, the acceptance, the environment, and what is out of scope unchanged.
+Do not write `progress.md` or `progress.html`. Do not read them for signals.
 
-Set `in_progress` when you begin, and set `started` to that time. Set `done` or `failed` when the acceptance is settled. Do not set `waived`. When you cannot proceed, write the blocker and return. Leave status `in_progress`.
+Report what this module has done and what it is doing now. Stop after each report and wait for the coordinator's reply before you continue. Also return when you finish or hit a blocker. Include:
 
-Do not write `progress.md` or `progress.html`.
+- what it has done: what was checked, what was fixed, the retest, and the judgment, including the evidence
+- what it is doing now
+- any indicator whose status changed, and the new status
+- blockers
+- whether the environment can be released
 
-Record what was checked and the result. Omit secrets, tokens, and private connection strings. If that assignment is wrong, write the blocker and return.
+Omit secrets, tokens, and private connection strings. Release the environment when you are finished with the module.
 
-Return to the coordinator when you finish, hit a blocker, or have a need. Include status, completions, blockers, needs, and whether the environment can be released. Release is yes only for `done` or `failed`.
+If the reply says to land a change first, do that, report, and stop again.
 
-## Test
+## Stay on the path
 
-Run only the assigned outcome, on the assigned environment. Do not borrow another module's environment.
+### Receive
 
-Use subagents for independent parts of this outcome. Give each one part, then collect its result. The prompt is only:
+Leave the boundary, the goal, the environment, the code line, and the indicators unchanged. Follow the environment and code line in the coordinator's reply.
+
+The coordinator gives you the whole module and does not prescribe the steps or the judgment. Continue this module file. Do not take another module.
+
+Test and fix only the assigned goal, inside the boundary. When the goal fails, fix it on this module's code line, then retest in its environment. If that assignment is wrong, report the blocker and return.
+
+## Launch inner subagents
+
+Use subagents for independent parts of this goal. Give each one part, then collect its result. The prompt is only:
 
 ```text
 You execute one part of module <id> in the test-campaign skill.
 You are not the coordinator or the collaborator.
-Part: <the part's outcome>
+Part: <the part's goal>
 Environment: <the module environment>
-Return the result to the collaborator.
+Test this part and return the result to the collaborator. Do not change the module code line. Do not write `progress.md` or read it for a signal.
 ```
 
 Inner subagents share this module's environment. Do not ask them to use another one. Do not hand an inner subagent one action and dictate the next.
 
-In Internal, name each subagent. When it is waiting, record the time that wait started.
+If you cannot launch those subagents, report that and return. Do not walk the module one action at a time. The coordinator continues from `## Plan the path` / `### Check` and `## Handle blockers`.
 
-If you cannot launch those subagents, write that and return. Do not walk the module one action at a time. The coordinator continues from Check and Handle blockers and needs.
+## Raise blockers
 
-## Blockers and needs
+Report a blocker when you cannot proceed, including when you need a resource or a decision. Then return. Do not occupy the environment with unrelated work.
 
-Write a need when you can keep testing but you need a resource or a decision. Write a blocker when you cannot proceed. A need that stops the module is also a blocker. Then return. Do not occupy the environment with unrelated work.
+When you cannot proceed until some functionality lands, name that functionality and the module whose boundary contains it, or that no module contains it.
 
-```markdown
-### <module-id>-n1
-- state: open
-- module: <module-id>
-- since: 2026-01-01T00:10:00Z
-- asking: what you need
-```
+## Use the environment
 
-```markdown
-### <module-id>-1
-- state: open
-- module: <module-id>
-- since: 2026-01-01T00:10:00Z
-- waiting: what you are waiting on
-- stalls: <module-id>
-- need: the resource or decision that would clear it
-```
+Use the environment and the code line named in the module file. Do not borrow another module's environment or code line.
 
-`since` is ISO-8601 with a timezone. Keep a cleared item and set `state` to `cleared`.
-
-A failed acceptance stays a failed result, with evidence. Do not start a product change unless the assignment says to.
+Inner subagents share that environment.
