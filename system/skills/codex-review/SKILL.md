@@ -11,9 +11,9 @@ The review must have a target: uncommitted changes, a base, a commit, or a named
 
 Set `MODEL` for the situation, then pass `--model "$MODEL"` as in the command below. Every review run uses `xhigh` reasoning effort.
 
-- Code review or cross-checking: `gpt-6-sol`
+- Code review or cross-checking: `gpt-6.1-sol`
 - A plan or architecture document that needs a full-system view: `gpt-6-astra`
-- A deep investigation that reading the code cannot settle, within a bounded problem: `gpt-6-sol`
+- A deep investigation that reading the code cannot settle, within a bounded problem: `gpt-6.1-sol`
 - A deep investigation that has to hold a whole-system view: `gpt-6-astra`
 
 ## Workflow
@@ -33,7 +33,7 @@ Use one of these command shapes:
 ARTIFACT_DIR="$(mktemp -d "${TMPDIR:-/tmp}/codex-review.XXXXXX")"
 REPORT="$ARTIFACT_DIR/report.md"
 PROMPT="$ARTIFACT_DIR/prompt.md"
-MODEL="gpt-6-sol"
+MODEL="gpt-6.1-sol"
 SHA="<commit-sha>"
 
 # Built-in targets: choose one and do not also pass a custom prompt.

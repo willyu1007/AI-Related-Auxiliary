@@ -14,9 +14,9 @@ DO NOT USE WHEN:
 Otherwise hand the writing to the Codex model that fits:
 
 - A clear specification applied across many sites: `gpt-6-luna`
-- A specified implementation whose instructions and goal are already explicit: `gpt-6-sol`
-- Finding or fixing a bug within a bounded problem: `gpt-6-sol`
-- Checking work against an existing specification: `gpt-6-sol`
+- A specified implementation whose instructions and goal are already explicit: `gpt-6.1-sol`
+- Finding or fixing a bug within a bounded problem: `gpt-6.1-sol`
+- Checking work against an existing specification: `gpt-6.1-sol`
 
 ## Boundaries
 
@@ -38,7 +38,7 @@ Use this command shape:
 ARTIFACT_DIR="$(mktemp -d "${TMPDIR:-/tmp}/codex-implementation.XXXXXX")"
 REPORT="$ARTIFACT_DIR/report.md"
 PROMPT="$ARTIFACT_DIR/prompt.md"
-MODEL="gpt-6-sol"
+MODEL="gpt-6.1-sol"
 
 # Write a self-contained prompt to $PROMPT, then run:
 codex -C "$PWD" --model "$MODEL" -c model_reasoning_effort=xhigh exec \
