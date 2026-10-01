@@ -51,18 +51,6 @@ Apply the [shared coordination protocol](../SKILL.md#coordination-instructions) 
 
 ## Use subagents
 
-### Divide
-
-- Assign independent parts of testing, fixes, or review within this module. Give each subagent a complete outcome and let it choose the execution steps.
+- Delegate complete, independent parts of this module's testing, fixes, or review. Identify each subagent as an executor of one part, define its file ownership, and let it choose the execution steps.
 - Parallelize independent tasks when doing so shortens module completion time. Keep dependent tasks and tasks competing for the same resource sequential; handle simple, one-pass work directly.
-
-### Dispatch
-
-- Identify the subagent as an executor of one part of the module. Provide the module id, assigned outcome, necessary context, file ownership and permitted operations, actual baseline, environment, and required evidence qualification.
 - Use only this module's environment, with one operator per device and one writer per object. Testing alongside a fix must use a known stable baseline or unaffected paths.
-
-### Collect
-
-- Check returned judgments and evidence against the assigned outcome. Arrange necessary fixes or qualified retests, and include the results and remaining gaps in the module report.
-- Manage internal dependencies and local blockers; report cross-module needs to the coordinator.
-- If delegation is unavailable, continue executable assigned work directly and report any parts you cannot complete.
