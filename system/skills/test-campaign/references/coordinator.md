@@ -1,174 +1,103 @@
 # Coordinator
 
-You own scope, distribution, dependencies, resource allocation, integration timing, acceptance judgments, and the campaign record. Inspect reports and evidence to judge acceptance; assign testing, source fixes, and environment execution to collaborators. Do not manage a collaborator's inner subagents.
+Own scope, distribution, dependencies, resources, integration timing, acceptance, and records. Delegate tests, source fixes, and runtime operations to collaborators; do not manage their inner subagents. Handle user-only decisions and the final report, and confirm scope or goal changes with the user.
 
-## Talk with the user
+## Initialize and plan
 
-You own the conversation with the user, including decisions only the user can clear and the finished result. Confirm changes to campaign goals or scope. A user's request to pause is already a pause instruction.
+Before first dispatch:
 
-## Initialize
-
-Before the first dispatch:
-
-1. Inventory the features, their ids, acceptance conditions, required evidence qualification, and existing results. Record campaign completion conditions and applicable release gates. Mark unresolved conditions; work independent of them can begin.
-2. Cross-check features against existing repository tasks. Record each feature's module, primary task, related tasks, and the task-document locations that a result or fix may affect. Use explicit scope and ownership, not merely a changed file's directory. Record absent or uncertain mappings rather than creating a new task automatically.
-3. Follow `## Plan execution` to derive the module assignments and integration checkpoints.
-4. Create `progress.md` and generate the initial `progress.html` from it, grouping related features. Complete each module entry before dispatch.
-
-## Plan execution
-
-1. Map prerequisites and cross-module dependencies from the feature inventory and evidence gaps. Identify work executable now and work needing implementation, accounts, or environment preparation.
-2. Group checks and fixes into modules by ownership and dependencies. Identify which modules can run in parallel and allocate their environments and code lines under the distribution constraints. Assign cross-module supply to its owner and cross-module journeys to the integration module, with their required dependency results.
-3. Order checks, fixes, and prerequisite work by release needs and dependencies. Prioritize work that unlocks downstream validation, define entry conditions for later work, and reuse still-valid results. Reflect the planned work in each module's current assignment.
-4. Set observable integration checkpoints: the required module results, changes to adopt, and validation the update enables. Record this path in the module entries and integration plan in `progress.md`.
+1. Inventory feature ids, acceptance conditions, required evidence qualification, and existing results. Record completion conditions, release gates, and unresolved conditions.
+2. Map features to primary and related repository tasks and affected task-document locations using scope and ownership, not file directories alone. Record missing or uncertain mappings rather than automatically creating tasks.
+3. Map prerequisites and cross-module dependencies; distinguish executable work from missing implementation, accounts, or environment preparation. Group checks and fixes into modules with dedicated environments and code lines under `### Distribution`. Assign cross-module supply to its owner and cross-module journeys to the integration module.
+4. Order tasks by release needs and dependencies, prioritizing supply that unlocks downstream validation. Reuse valid results and set later work's entry conditions. Define integration checkpoints by required verified results, changes to adopt, and validation enabled.
+5. Create `progress.md` with the plan, task mappings, and complete module entries, then generate the initial `progress.html` before launch.
 
 ## Manage collaborators
 
 ### Distribution
 
-1. **Allocate resources:** keep the distribution within 6 environments and make the integration environment's allocation explicit. Identify non-duplicable devices or external services as shared dependencies with explicit access windows; modules do not borrow each other's environments.
-2. **Assign the module:** give a collaborator the whole module, not a sequence of individual actions. Include the collaborator identity, module id, and `progress.md` path and section in the launch prompt. Confirm both parties can use the entry's report channel.
-3. **Launch or reconnect:** launch according to the distribution, in the background. Reuse the same collaborator when available; otherwise give a replacement the current assignment and completed results from the record.
+1. **Allocate:** stay within 6 environments, including an explicitly allocated integration environment. Give non-duplicable devices and external services explicit shared access windows; modules do not borrow each other's environments.
+2. **Assign:** give each collaborator a whole module. Include its role, module id, and record path and section; confirm a usable report channel for both parties.
+3. **Launch or reconnect:** launch in the background. Reuse the collaborator when available; give replacements the current assignment and completed results.
 
 ### Follow progress
 
-1. **Monitor:** after dispatch, monitor the assigned report channels while modules are active or dependencies, handbacks, or readiness remain pending. Use available event waits or bounded status queries. Unchanged state needs no repeated receipt.
-2. **Assess:** use substantive output, evidence, and actual module or test-item waits to decide whether dependency coordination, assignment changes, or integration are needed. Ordinary reports do not require replanning.
-3. **Act:** record results and send required decisions or readiness instructions using the [shared coordination protocol](../SKILL.md#coordination-instructions). Before changing an affected assignment, have its collaborator safely finish the current unit and stop. Leave unaffected modules working unless a global integration or pause has been called. Give each integration or environment maintenance assignment its scope, resources, and completion conditions.
+- Monitor assigned channels while work or dependencies, handbacks, or readiness remain pending. Use event waits or bounded queries; do not repeat receipts for unchanged state.
+- Judge substantive results under `## Acceptance` and update records. Ordinary reports do not require replanning.
+- For blockers, use reported missing and unlock conditions, impact, and remaining work to assign supply to its owner. Coordinate account, device, or decision prerequisites with the responsible party; ask the user when only they can clear them. After 30 minutes without an answer, reassess executable work; elapsed time is not approval.
+- Route verified supply needing a common baseline to `### Integration`. Clear affected blockers only after actual environment checks establish their unlock conditions; retain other blockers with their scope.
+- Before reassignment, have the affected collaborator finish the current unit and stop under the [shared protocol](../SKILL.md#coordination-instructions). Unaffected modules continue unless a global stop or pause is called.
 
 ### Integration
 
-Use the planned checkpoints and any earlier-integration triggers:
+Trigger on any of:
 
-- **Planned checkpoint:** all its required results are verified, and the next work needs a common baseline.
-- **Dependency unlock:** verified supply is ready and adopting it into the common baseline will unblock assigned downstream work.
-- **Shared repair:** a verified fix for a problem affecting multiple modules needs uniform adoption.
+- **Planned checkpoint:** all required results are verified and next work needs a common baseline.
+- **Dependency unlock:** verified supply needs adoption into that baseline to unblock assigned downstream work.
+- **Shared repair:** a verified fix affecting multiple modules needs uniform adoption.
 
-Treat the recorded triggers as alternatives. Ready changes can wait for a planned checkpoint when earlier adoption would not help progress. A blocker starts dependency coordination, not a global stop by itself. On a trigger, begin `## Environments` / `### Global update`; actual handback and verification govern execution and release.
+Ready changes may wait for a planned checkpoint when earlier adoption would not advance work. Missing prerequisites alone do not trigger a global stop.
 
-## Handle blockers
+On a trigger, perform the global update in order; do not release individual modules early:
 
-A blocker report names the module, feature, missing condition, unlock condition, impact on the module, and work that can still proceed. Internal executor identities and scheduling remain with the collaborator.
+1. Send **Finish the current unit and stop** to all active collaborators. Collect actual handbacks and account for verified commits, uncommitted work, and pending operations. Defer environment changes that would lose pending-operation recoverability.
+2. Assign integration maintenance to merge verified changes onto the integration line under repository contract, generated-artifact, migration, and commit rules. Preserve unfinished or foreign work; record the target baseline and affected features for `## Acceptance`.
+3. Update the integration environment and verify affected cross-module behavior. A merge or health response alone does not clear a functional blocker.
+4. Bring the verified baseline onto every module code line, update every environment, and check required entry points. Preserve test data, still-needed identities and credentials, and command state; an update is not a reset.
+5. Record every environment's loaded baseline, readiness, and maintenance handback. Update evidence validity, include remaining acceptance rechecks in next assignments, and issue one **global continue** only after all environments are ready.
 
-- **Supply:** assign missing functionality or resources to the responsible collaborator. Local fixes stay with their module; cross-module supply goes to its owner.
-- **Continuing work:** dispatch the supply and keep unrelated, executable work moving. A blocked item does not stop its whole module when other assigned items remain executable.
-- **External conditions:** coordinate account, device, and decision prerequisites with the responsible party; ask the user when only they can clear a condition. After 30 minutes without an answer, reassess other executable work; elapsed time is not approval. These prerequisites require integration only when resolving them needs a common baseline update.
-- **Integration:** when verified supply needs adoption into the common baseline to advance blocked assigned work, trigger unified integration through `## Environments` / `### Global update`. Confirm unlock conditions in the actual environment before clearing affected blockers; keep other blockers recorded with their exact scope.
+On merge or environment failure, keep business work stopped. Assign bounded repair or restoration to a verified baseline and recheck before release.
 
-## Environments
+## Prepare environments
 
-### Prepare
+- Delegate preparation and maintenance to each module's collaborator under repository build, migration, and authorization rules.
+- Record worktree and code line, loaded source and contracts, configuration and migration baseline, endpoints, device ids, health and required read routes, permitted operations, holder, and pending operations.
+- Declare ready after actual checks. Transfer resources only after actual handback.
 
-- Assign preparation and maintenance to the environment's module collaborator, who manages its inner subagents. Follow repository build, migration, and authorization rules.
-- Record the applicable worktree and code line, loaded source and contracts, configuration and migration baseline, service endpoints, device identifiers, health and required read routes, permitted operations, current holder, and pending operations. Never record secrets.
-- Declare ready only after actual checks. Committed code is not proof that it is loaded.
-- Release or reassign resources only after actual handback, not their expected finish time.
+## Maintain records
 
-### Global update
+Update `progress.md` and regenerate its HTML after a judged check, verified fix, module completion, or substantive coordination change. Keep current facts and significant decisions rather than reply transcripts.
 
-For each integration, use this sequence; do not release individual modules early.
+### Progress and timing
 
-1. Tell every active collaborator to finish the current unit and stop, including its subagents. Wait for actual stops and handbacks, with verified commits, uncommitted work, and pending operations accounted for. Preserve unknown commands and their recovery context; do not change an affected environment if that would lose recoverability.
-2. Assign the integration collaborator a maintenance unit to merge verified changes onto the integration line, following repository rules for contracts, generated artifacts, migrations, and commits. Preserve unfinished or foreign work. Record the intended baseline, affected features, and required rechecks under `### Evidence validity`.
-3. Assign the integration environment update and verification of affected cross-module behavior there. A merge or health response alone does not clear a functional blocker.
-4. Explicitly assign maintenance to bring the verified baseline onto every module code line, update every environment, and check each module's required entry points. Preserve test data and still-needed identities, credentials, and command state; an update is not a default reset.
-5. Record actual loaded baselines, readiness and maintenance handbacks for all environments, and current evidence validity. Include outstanding acceptance rechecks in the next assignments, then issue one global continue instruction. If a merge or environment fails, keep business work stopped, assign a bounded repair or restoration to a verified baseline, and recheck before release.
+- **Assignments:** keep current module entries, distribution, dependencies, and integration triggers aligned with the plan.
+- **Results:** record checks, fixes, retests, judgments, evidence qualification and links, actual runtime baseline, current work, item-level blockers and unlock conditions, and pending or handback state.
+- **Integration:** record merged changes, baseline, cleared blockers, actual environment verification, failures or rollback, and schedule or assignment decisions.
+- **Response delay:** record report-to-instruction time only when a response is required. Continued work is not a wait.
+- **Actual waits:** record module or feature, reason, start, and end. Do not count an item's blockage as a module wait while other work continues.
+- **Stops and updates:** record instruction, acknowledgment, actual stop/handback, environment readiness, and global continue times.
 
-## Write the documents
+### Task synchronization
 
-Keep current module facts and significant integrations or decisions in `progress.md` and its derived human view, rather than a transcript of ordinary replies. Raw evidence remains at its reported location.
+- After a fix or decisive result, cross-check actual impact against task mappings and arrange synchronization of the affected task-document locations through the repository workflow.
+- Related-task mappings do not expand campaign scope or require completing the whole related task. Do not copy task bundles into the record or overwrite their goals and completion conditions.
 
-### Plan and assignments
+### HTML
 
-Keep the module distribution, integration triggers, and current module entries aligned with the plan. Update them when the distribution changes.
+Group related features and show id, test item, acceptance condition, current status, evidence qualification, and evidence/runtime links. Keep subitem findings and blockers visible; derive judgments from `## Acceptance`.
 
-### Modules
+## Acceptance
 
-Update module entries on substantive reports:
-
-- what was checked, fixed, and retested, including the judgment, evidence qualification, evidence link, and actual runtime baseline
-- current work, item-level blockers and unlock conditions, actual waits, and handback or pending-operation state
-
-### Task mappings
-
-- Keep the feature-to-module-to-existing-task mapping from initialization.
-- After a fix or decisive result, cross-check its actual impact, then arrange synchronization of the correct task-document locations through the repository's own workflow.
-- Keep campaign scope unchanged by related-task mappings; a related task need not be completed in full.
-- Do not copy whole task bundles into the campaign record or overwrite their goals and completion conditions.
-
-### Merges
-
-After each integration, record:
-
-- what was merged, the integrated baseline, and the blockers it cleared
-- actual environment update and verification results, including failures or rollback
-- schedule judgments and assignment changes
-
-### Human view
-
-- Group related features and show id, test item, acceptance condition, status, evidence qualification, and evidence/runtime links.
-- Update on a judged check, verified fix, module completion, or substantive coordination change.
-- Use not tested, testing, partially passed, passed, failed, and blocked as statuses. Keep subitem findings and blockers visible.
-- Mark a feature failed when a required check has a known unresolved failure, even if other parts pass.
-- Use blocked for missing prerequisites and partially passed for passed coverage with remaining unverified qualifications.
-- Distinguish contract/API, simulator platform, physical device, and cross-module qualifications; mark development identities or fixtures where relevant.
-- Pass only the scope established by the evidence and required by that feature. A lower-level result does not automatically qualify the whole feature.
-
-### Evidence validity
-
-When tested behavior changes or a new baseline is adopted:
-
-- Identify affected features and qualifications needing recheck.
-- Preserve their prior evidence as historical; exclude affected passes from current acceptance until qualified retests.
-- Keep known failures unresolved until a retest of the failed qualification clears them.
-- Retain unaffected evidence with the basis for reuse.
-- Assign required rechecks to modules without rerunning unrelated checks.
-- Recalculate statuses and counts for the current baseline.
-
-## Record time
-
-- **Response delay:** report time to instruction time, when a response is required. A delayed reply is not a wait if the collaborator kept working.
-- **Actual wait:** module or feature, reason, start, and end. Do not count one blocked feature as a whole-module wait while other work continues. Internal subagent timing stays with the collaborator.
-- **Stop and integration:** instruction, acknowledgment, actual stop/handback, environment readiness, and global continue times. Expected durations never release resources.
+- Use not tested, testing, partially passed, passed, failed, and blocked as statuses. A known unresolved required-check failure makes the feature failed even if other parts pass. Use blocked for missing prerequisites and partially passed for passed coverage with required qualifications still unverified.
+- Pass only the required scope and qualification actually established. Mark development identities and fixtures; lower-level evidence does not qualify the whole feature.
+- When behavior changes or a baseline is adopted, identify affected features and qualifications. Preserve prior evidence as historical and exclude affected passes until qualified retests.
+- Keep known failures unresolved until a retest of the failed qualification clears them. Reuse unaffected evidence with a recorded basis.
+- Assign rechecks only to affected work, and recalculate statuses and counts for the current baseline.
 
 ## Pause and resume
 
 On a user pause:
 
-- Stop new dispatches and tell collaborators to finish the current unit and stop. Immediately stop an operation that cannot safely continue.
-- Save actual outcomes, stopped versus still-running modules, pending operations, resource ownership, and recovery instructions. Do not call a requested stop complete before handback.
-- After closure, suspend the coordination loop and preserve pending follow-ups for explicit resume.
-- Keep the campaign and its environments recoverable; a pause is not campaign completion or permission to dismantle them.
+- Stop dispatching and send **Finish the current unit and stop**. Immediately stop operations that cannot safely continue.
+- Record actual outcomes, stopped and running modules, pending operations, resource ownership, and recovery instructions. After actual handbacks, suspend coordination and preserve follow-ups for explicit resume.
+- A pause does not complete the campaign or authorize environment teardown.
 
-On an explicit resume:
-
-- Read the latest record and reports, and check actual worktrees, loaded baselines, services, devices, and pending operations. Do not reuse an old readiness claim without checking.
-- Send resume instructions after these checks.
+On explicit resume, read the latest records and reports; check actual worktrees, loaded baselines, services, devices, and pending operations before sending **Resume**. Old readiness claims require fresh checks.
 
 ## Finish and clean up
 
-Before module completion:
-
-- Obtain proportionate independent review, necessary residue cleanup, decisive verification of affected behavior, and correct task-document synchronization.
-- Do not rerun unrelated checks for every report.
-
-Close campaign execution only when:
-
-- Every in-scope feature has a current judgment with evidence or a stated reason evidence is missing.
-- Remaining failed, blocked, or unverified work has a disposition consistent with the agreed completion conditions.
-- Actual stops, handbacks, pending operations, and task records are accounted for.
-- Required, executable work is complete; any deferral or exclusion follows agreed conditions or a user decision.
-
-In the final report:
-
-- State tested and untested scope, outstanding failures and blockers with their dispositions, the verified baseline, and whether applicable release gates are met.
-- Report execution closure separately from release readiness; keep unmet or unverified release gates explicit.
-
-After campaign completion:
-
-- Arrange cleanup only for campaign-owned resources confirmed unused.
+- Before accepting module completion, obtain proportionate independent review, necessary residue cleanup, decisive verification, and correct task-document synchronization.
+- Close execution only when every in-scope feature has a current judgment with evidence or a reason it is missing; remaining failed, blocked, or unverified work has a disposition consistent with completion conditions; and actual stops, handbacks, pending operations, and task records are accounted for. Required executable work remains unfinished until completed or deferred or excluded under agreed conditions or a user decision.
+- Report tested and untested scope, outstanding failures and blockers with dispositions, verified baseline, and release gates. Distinguish execution closure from release readiness; keep unmet or unverified gates explicit.
+- After closure, clean up only unused campaign-owned resources, checking ownership, active users, and dependencies. Keep shared, active, or unknown-owned resources and prefer recoverable worktree archival. Apply the [shared preservation requirements](../SKILL.md#documents) before removing worktrees, branches, or temporary files.
 - Follow existing authorization and repository rules for merging into the user's main line.
-- Preserve uncommitted and unpushed work, final records, necessary evidence, and recovery information at a durable location before cleanup.
-- Prefer recoverable worktree archival.
-- Stop environments or remove branches and temporary files only after checking ownership, active users, and dependencies. Keep shared, active, or unknown-owned resources.
-- Remove the temporary campaign directory only after required contents are preserved.
