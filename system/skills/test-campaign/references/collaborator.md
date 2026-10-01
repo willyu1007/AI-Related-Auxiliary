@@ -27,19 +27,27 @@ Apply the [shared coordination protocol](../SKILL.md#coordination-instructions) 
 
 ## Plan and carry out
 
-Plan the whole module and manage its internal execution. Leave the goal and boundary unchanged unless the coordinator changes them. Do not take another module or borrow its environment or code line. Report an incorrect assignment before dependent work.
+### Prepare
 
-When preparing test data, choose effective and expiry times that let the current validation chain finish within the assigned test window and business rules. Prefer the current business date and nearby practical times for ordinary flows; use separate samples for future-time or long-wait cases. Allow time for operations, asynchronous processing, and evidence capture, and recheck the business date and validity window before starting. Do not change clocks or bypass business date constraints to shorten waiting. Report unavoidable waits with the affected items and their unlock condition or time.
+- Sequence module checks and fixes by dependencies within the assigned goal, boundary, code ownership, and environment. Report an incorrect assignment before dependent work.
+- For the current unit, state the behavior and required evidence qualification; verify the actual loaded baseline and prerequisites.
+- Within business rules, prefer the current business date and nearby practical effective and expiry times for ordinary flows. Allow time for operations, asynchronous processing, and evidence capture.
+- Use separate samples for future-time and long-wait cases. Before execution, recheck the business date and validity window. Do not change clocks or bypass business date constraints.
+- Report unavoidable waits with the affected items and their unlock condition or time.
 
-For each current unit:
+### Execute
 
-1. State the behavior and evidence needed, then check the actual environment and prerequisites.
-2. Test, judge the result, and fix within this module's code ownership. Route cross-module supply needs through the coordinator.
-3. Retest affected behavior and report the qualification actually obtained. Missing prerequisites block that item; continue other executable assigned items.
+- Test the defined behavior, judge the outcome, and fix within the module's code ownership. Route cross-module supply needs through the coordinator.
+- Retest affected behavior; report the qualification obtained and any required checks still pending.
+- When prerequisites are missing, block that item and continue other executable assigned work.
+- When a write result is unknown, keep it pending under its original command identity and recovery context and check the original operation. Do not resend with a new identity or discard it for handback.
+- Report business writes, authentication changes, and device-state changes separately from read-only checks.
 
-An unknown write result stays pending under its original command identity and recovery context. Do not resend with a new identity or discard it for handback. Report writes and relevant state changes separately from read-only business checks, including authentication or device-local changes when applicable.
+### Finish
 
-Before completion, arrange proportionate independent review, necessary cleanup, decisive verification, and report the task-document locations affected by the result. The coordinator cross-checks task mappings and acceptance. Release resources by actual safe handback, not by wiping data or dismantling the environment.
+- Arrange proportionate independent review, necessary residue cleanup, and decisive verification of affected behavior.
+- Report final module results and the task-document locations affected by them.
+- Return resources through actual safe handback; preserve still-needed data, environments, and pending-operation state.
 
 ## Use subagents
 
