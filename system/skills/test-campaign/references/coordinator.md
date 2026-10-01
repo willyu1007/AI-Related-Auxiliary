@@ -26,19 +26,15 @@ Before the first dispatch:
 
 ### Distribution
 
-Keep the distribution within 6 environments and make the integration environment's allocation explicit. Identify non-duplicable devices or external services as shared dependencies with explicit access windows; modules do not borrow each other's environments.
-
-Give a collaborator the whole module, not a sequence of individual actions. The launch prompt includes the collaborator identity, module id, and `progress.md` path and section. Confirm both parties can use the entry's report channel.
-
-Launch according to the distribution, in the background. Resume the same collaborator when available; otherwise give a replacement the current assignment and completed results from the record.
+1. **Allocate resources:** keep the distribution within 6 environments and make the integration environment's allocation explicit. Identify non-duplicable devices or external services as shared dependencies with explicit access windows; modules do not borrow each other's environments.
+2. **Assign the module:** give a collaborator the whole module, not a sequence of individual actions. Include the collaborator identity, module id, and `progress.md` path and section in the launch prompt. Confirm both parties can use the entry's report channel.
+3. **Launch or reconnect:** launch according to the distribution, in the background. Reuse the same collaborator when available; otherwise give a replacement the current assignment and completed results from the record.
 
 ### Follow progress
 
-After dispatch, monitor the assigned report channels while modules are active or dependencies, handbacks, or readiness remain pending. Use available event waits or bounded status queries. Assess substantive output and actual module or test-item waits to decide whether assignments or integration timing need to change. Record results and send required decisions or readiness instructions; ordinary reports do not require replanning, and unchanged state needs no repeated receipt.
-
-Before changing an affected assignment, have its collaborator safely finish the current unit and stop. Leave unaffected modules working unless a global integration or pause has been called.
-
-Send instructions using the [shared coordination protocol](../SKILL.md#coordination-instructions). Give each integration or environment maintenance assignment its scope, resources, and completion conditions.
+1. **Monitor:** after dispatch, monitor the assigned report channels while modules are active or dependencies, handbacks, or readiness remain pending. Use available event waits or bounded status queries. Unchanged state needs no repeated receipt.
+2. **Assess:** use substantive output, evidence, and actual module or test-item waits to decide whether dependency coordination, assignment changes, or integration are needed. Ordinary reports do not require replanning.
+3. **Act:** record results and send required decisions or readiness instructions using the [shared coordination protocol](../SKILL.md#coordination-instructions). Before changing an affected assignment, have its collaborator safely finish the current unit and stop. Leave unaffected modules working unless a global integration or pause has been called. Give each integration or environment maintenance assignment its scope, resources, and completion conditions.
 
 ### Integration
 
