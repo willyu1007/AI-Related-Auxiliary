@@ -13,7 +13,7 @@ Before the first dispatch:
 1. Inventory the features, their ids, acceptance conditions, required evidence qualification, and existing results. Record campaign completion conditions and applicable release gates. Mark unresolved conditions; work independent of them can begin.
 2. Cross-check features against existing repository tasks. Record each feature's module, primary task, related tasks, and the task-document locations that a result or fix may affect. Use explicit scope and ownership, not merely a changed file's directory. Record absent or uncertain mappings rather than creating a new task automatically.
 3. Plan the parallel modules, environments, dependencies, and integration triggers below.
-4. Create `progress.md` and its initial human view, grouping related features. Complete each module entry before dispatch.
+4. Create `progress.md` and generate the initial `progress.html` from it, grouping related features. Complete each module entry before dispatch.
 
 ## Plan the path
 
