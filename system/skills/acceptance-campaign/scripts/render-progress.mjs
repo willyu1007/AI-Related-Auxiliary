@@ -4,7 +4,8 @@
  *
  * Render an acceptance campaign's progress.md into a script-free index.html beside it. The format
  * is defined in ../references/progress-format.md; anything outside it is an error, and nothing is
- * written until the file is clean. Counts are always computed from the rows.
+ * written until the file is clean. Counts are always computed from the rows. Page labels are
+ * Chinese when the title contains Chinese, otherwise English.
  *
  * Usage:
  *   node render-progress.mjs <progress.md> [--out <file.html>]
@@ -26,6 +27,26 @@ const COLUMNS = {
   Blockers: ['ID', 'Item', 'Unlock', 'Owner', 'Since'],
 };
 const TEXT_SECTIONS = ['Summary', 'Lane', 'Next'];
+const QUALIFICATION_TAGS = 4;
+const QUALIFICATION_TAG_LENGTH = 16;
+
+const LABELS = {
+  en: {
+    passed: 'passed', partial: 'partial', testing: 'testing', failed: 'failed', blocked: 'blocked',
+    'not-tested': 'not tested', defect: 'defect', design: 'design', gap: 'gap',
+    environment: 'environment', ruling: 'ruling', ungrouped: 'Ungrouped', Content: 'Summary', of: (n, t) => `${n} / ${t} passed`,
+  },
+  zh: {
+    passed: '通过', partial: '部分通过', testing: '测试中', failed: '失败', blocked: '阻塞', 'not-tested': '未测',
+    defect: '缺陷', design: '设计', gap: '产品缺口', environment: '环境', ruling: '待裁定', ungrouped: '未分组',
+    of: (n, t) => `${n} / ${t} 通过`,
+    Summary: '概况', Next: '下一步', Lane: '车道', Rulings: '裁定', Handoff: '交接包', Findings: '发现',
+    Blockers: '阻塞', ID: '编号', Item: '项目', Status: '状态', Qualification: '证据资格', Remaining: '余项',
+    Date: '日期', Decision: '裁定', Rows: '涉及行', Needs: '需要', Gate: '上线门禁', Severity: '级别',
+    Kind: '归属', Disposition: '去向', Unlock: '解锁条件', Owner: '负责方', Since: '起始',
+    Updated: '更新', Baseline: '基线', Content: '内容',
+  },
+};
 
 function usage(message) {
   if (message) console.error(message);
@@ -133,6 +154,8 @@ function parse(source) {
   return { doc, errors };
 }
 
+const qualificationTags = (cell) => (cell === '-' ? [] : cell.split(';').map((t) => t.trim()).filter(Boolean));
+
 function validate(doc, errors) {
   const ids = new Map();
   const claim = (id, line) => {
@@ -150,6 +173,10 @@ function validate(doc, errors) {
       }
       if (row.Status !== 'passed' && (!row.Remaining || row.Remaining === '-')) {
         errors.push(`line ${row.line}: "${row.ID}" is ${row.Status}, so Remaining must say what is left`);
+      }
+      const tags = qualificationTags(row.Qualification);
+      if (tags.length > QUALIFICATION_TAGS || tags.some((t) => [...t].length > QUALIFICATION_TAG_LENGTH)) {
+        errors.push(`line ${row.line}: Qualification takes at most ${QUALIFICATION_TAGS} tags of at most ${QUALIFICATION_TAG_LENGTH} characters, separated by ";"`);
       }
     }
   }
@@ -228,119 +255,130 @@ function renderText(body, inline) {
   return out.join('\n');
 }
 
-const statusChip = (status) => `<span class="chip s-${status}">${status}</span>`;
-const refLinks = (cell) =>
-  cell === '-' ? '—' : cell.split(',').map((id) => `<a href="#${anchor(id.trim())}">${escapeHtml(id.trim())}</a>`).join(', ');
-
 function countStatuses(rows) {
   return Object.fromEntries(STATUSES.map((s) => [s, rows.filter((r) => r.Status === s).length]));
 }
 
-function renderLedgerCard(ledger, index) {
-  const counts = countStatuses(ledger.rows);
-  const total = ledger.rows.length;
-  const bar = STATUSES.filter((s) => counts[s])
-    .map((s) => `<span class="s-${s}" style="width:${((counts[s] / total) * 100).toFixed(2)}%"></span>`)
-    .join('');
-  const legend = STATUSES.filter((s) => counts[s]).map((s) => `${counts[s]} ${s}`).join(' · ');
-  return `<a class="card" href="#ledger-${index}"><strong>${escapeHtml(ledger.name)}</strong>
-<span class="big">${counts.passed}<small> / ${total} passed</small></span>
+/** Build the page for one parsed document; `t` maps a label key to its display text. */
+function render(doc, inline, lang) {
+  const dict = LABELS[lang];
+  const t = (key) => dict[key] ?? key;
+  const chip = (status) => `<span class="chip s-${status}">${t(status)}</span>`;
+  const refLinks = (cell) =>
+    cell === '-' ? '—' : cell.split(',').map((id) => `<a href="#${anchor(id.trim())}">${escapeHtml(id.trim())}</a>`).join(', ');
+
+  const card = (ledger, index) => {
+    const counts = countStatuses(ledger.rows);
+    const total = ledger.rows.length;
+    const bar = STATUSES.filter((s) => counts[s])
+      .map((s) => `<span class="s-${s}" style="width:${((counts[s] / total) * 100).toFixed(2)}%"></span>`)
+      .join('');
+    const legend = STATUSES.filter((s) => counts[s]).map((s) => `${counts[s]} ${t(s)}`).join(' · ');
+    return `<a class="card" href="#ledger-${index}"><strong>${escapeHtml(ledger.name)}</strong>
+<span class="big">${counts.passed}<small> / ${total}</small></span>
 <span class="bar">${bar}</span><span class="muted">${legend}</span></a>`;
-}
+  };
 
-function renderLedger(ledger, index, inline) {
-  const groups = new Map();
-  for (const row of ledger.rows) {
-    if (!groups.has(row.Group)) groups.set(row.Group, []);
-    groups.get(row.Group).push(row);
-  }
-  const body = [...groups].map(([group, rows]) => {
-    const counts = countStatuses(rows);
-    const open = rows.some((r) => r.Status !== 'passed') ? ' open' : '';
-    const trs = rows.map((r) => `<tr id="${anchor(r.ID)}" class="r-${r.Status}">
-<td data-label="ID"><strong>${escapeHtml(r.ID)}</strong></td>
-<td data-label="Item">${inline(r.Item, r.line)}<div class="muted">${inline(r.Acceptance, r.line)}</div></td>
-<td data-label="Status">${statusChip(r.Status)}</td>
-<td data-label="Qualification">${inline(r.Qualification, r.line)}</td>
-<td data-label="Remaining">${r.Remaining === '-' ? '' : inline(r.Remaining, r.line)}</td>
-<td data-label="Evidence">${r.Evidence === '-' ? '' : inline(r.Evidence, r.line)}</td></tr>`).join('\n');
-    return `<details${open}><summary>${escapeHtml(group || 'Ungrouped')} <span class="muted">${counts.passed}/${rows.length} passed</span></summary>
-<table class="rows"><thead><tr><th>ID</th><th>Item</th><th>Status</th><th>Qualification</th><th>Remaining</th><th>Evidence</th></tr></thead>
+  const ledgerSection = (ledger, index) => {
+    const groups = new Map();
+    for (const row of ledger.rows) {
+      if (!groups.has(row.Group)) groups.set(row.Group, []);
+      groups.get(row.Group).push(row);
+    }
+    const body = [...groups].map(([group, rows]) => {
+      const passed = rows.filter((r) => r.Status === 'passed').length;
+      const open = rows.some((r) => r.Status !== 'passed') ? ' open' : '';
+      const trs = rows.map((r) => `<tr id="${anchor(r.ID)}" class="r-${r.Status}">
+<td data-label="${t('ID')}" class="id">${escapeHtml(r.ID)}</td>
+<td data-label="${t('Item')}" class="item">${inline(r.Item, r.line)}${r.Acceptance === '-' ? '' : `<div class="muted">${inline(r.Acceptance, r.line)}</div>`}</td>
+<td data-label="${t('Status')}">${chip(r.Status)}</td>
+<td data-label="${t('Qualification')}">${qualificationTags(r.Qualification).map((q) => `<span class="tag">${escapeHtml(q)}</span>`).join('')}</td>
+<td data-label="${t('Remaining')}" class="remaining">${r.Remaining === '-' ? '' : inline(r.Remaining, r.line)}</td></tr>`).join('\n');
+      return `<details${open}><summary>${escapeHtml(group || t('ungrouped'))} <span class="muted">${t('of')(passed, rows.length)}</span></summary>
+<table class="rows"><thead><tr><th>${t('ID')}</th><th>${t('Item')}</th><th>${t('Status')}</th><th>${t('Qualification')}</th><th>${t('Remaining')}</th></tr></thead>
 <tbody>${trs}</tbody></table></details>`;
-  });
-  return `<section id="ledger-${index}"><h2>${escapeHtml(ledger.name)}</h2>${body.join('\n')}</section>`;
-}
+    });
+    return `<section id="ledger-${index}"><h2>${escapeHtml(ledger.name)}</h2>${body.join('\n')}</section>`;
+  };
 
-function renderRecords(name, records, inline) {
-  const columns = COLUMNS[name];
-  const head = columns.map((c) => `<th>${c}</th>`).join('');
-  const body = records.map((rec) => `<tr>${columns.map((c) => {
-    const value = rec[c];
-    let html;
-    if (c === 'Rows') html = refLinks(value);
-    else if (c === 'Severity' || c === 'Kind') html = `<span class="chip k-${escapeHtml(value)}">${escapeHtml(value)}</span>`;
-    else html = inline(value, rec.line);
-    return `<td data-label="${c}">${html}</td>`;
-  }).join('')}</tr>`).join('\n');
-  return `<section id="${name.toLowerCase()}"><h2>${name} <span class="muted">${records.length}</span></h2>
+  const records = (name) => {
+    const list = doc.tables[name];
+    if (!list) return '';
+    const columns = COLUMNS[name];
+    const label = (c) => (c === 'Summary' ? t('Content') : t(c));
+    const head = columns.map((c) => `<th>${label(c)}</th>`).join('');
+    const body = list.map((rec) => `<tr>${columns.map((c) => {
+      const value = rec[c];
+      let html;
+      if (c === 'Rows') html = refLinks(value);
+      else if (c === 'Severity' || c === 'Kind') html = value === '-' ? '—' : `<span class="chip k-${escapeHtml(value)}">${escapeHtml(t(value))}</span>`;
+      else html = inline(value, rec.line);
+      const cls = c === 'ID' || c === 'Date' || c === 'Since' || c === 'Severity' || c === 'Kind' ? ' class="id"' : '';
+      return `<td data-label="${label(c)}"${cls}>${html}</td>`;
+    }).join('')}</tr>`).join('\n');
+    return `<section id="${name.toLowerCase()}"><h2>${t(name)} <span class="muted">${list.length}</span></h2>
 <table class="rows"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></section>`;
-}
+  };
 
-const CSS = `
-:root{--bg:#fafaf9;--fg:#1c1917;--muted:#78716c;--line:#e7e5e4;--card:#fff;--link:#1d4ed8;
---passed:#15803d;--partial:#b45309;--testing:#2563eb;--failed:#b91c1c;--blocked:#7c3aed;--not-tested:#a8a29e}
-@media (prefers-color-scheme:dark){:root{--bg:#1c1917;--fg:#e7e5e4;--muted:#a8a29e;--line:#44403c;--card:#292524;--link:#93c5fd;
---passed:#4ade80;--partial:#fbbf24;--testing:#60a5fa;--failed:#f87171;--blocked:#c4b5fd;--not-tested:#78716c}}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.5 system-ui,-apple-system,"PingFang SC","Noto Sans CJK SC",sans-serif}
-main{max-width:1180px;margin:0 auto;padding:24px 16px 64px}h1{font-size:22px;margin:0 0 4px}h2{font-size:17px;margin:32px 0 10px}
-a{color:var(--link)}.muted{color:var(--muted);font-size:12px}.meta{display:flex;flex-wrap:wrap;gap:4px 16px;color:var(--muted)}
-.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;margin:16px 0}
-.card{display:flex;flex-direction:column;gap:6px;padding:12px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:inherit;text-decoration:none}
-.big{font-size:24px;font-weight:600}.big small{font-size:13px;font-weight:400;color:var(--muted)}
-.bar{display:flex;height:8px;border-radius:4px;overflow:hidden;background:var(--line)}.bar span{display:block}
-.chips{display:flex;flex-wrap:wrap;gap:8px}.chip{display:inline-block;padding:0 8px;border-radius:10px;font-size:12px;border:1px solid currentColor;white-space:nowrap}
-.s-passed{color:var(--passed);background:var(--passed)}.s-partial{color:var(--partial);background:var(--partial)}.s-testing{color:var(--testing);background:var(--testing)}
-.s-failed{color:var(--failed);background:var(--failed)}.s-blocked{color:var(--blocked);background:var(--blocked)}.s-not-tested{color:var(--not-tested);background:var(--not-tested)}
-.chip.s-passed,.chip.s-partial,.chip.s-testing,.chip.s-failed,.chip.s-blocked,.chip.s-not-tested{background:none}
-.k-P1,.k-defect{color:var(--failed)}.k-P2,.k-gap{color:var(--partial)}.k-P3,.k-design,.k-environment,.k-ruling{color:var(--muted)}
-details{border:1px solid var(--line);border-radius:8px;background:var(--card);margin:8px 0}summary{padding:8px 12px;cursor:pointer;font-weight:600}
-table{width:100%;border-collapse:collapse}th,td{text-align:left;vertical-align:top;padding:6px 10px;border-top:1px solid var(--line);overflow-wrap:anywhere}
-td[data-label=ID]{white-space:nowrap;overflow-wrap:normal}td[data-label=Item]{min-width:180px}td[data-label=Remaining]{min-width:160px}
-th{font-size:12px;color:var(--muted);font-weight:500}tr.r-failed td:first-child{box-shadow:inset 3px 0 var(--failed)}tr.r-blocked td:first-child{box-shadow:inset 3px 0 var(--blocked)}
-section>table{background:var(--card);border:1px solid var(--line);border-radius:8px}code{font-size:12px}
-@media (max-width:640px){table.rows,table.rows tbody{display:block}table.rows thead{display:none}table.rows tr{display:block;border-top:1px solid var(--line);padding:6px 0}
-table.rows td{display:block;border:0;padding:2px 12px;min-width:0}table.rows td::before{content:attr(data-label);display:block;font-size:11px;color:var(--muted)}}
-`;
-
-function render(doc, inline) {
-  const lang = /[㐀-鿿]/.test(doc.title) ? 'zh' : 'en';
-  const meta = doc.meta.map(([k, v]) => `<span>${escapeHtml(k)}: ${inline(v, 0)}</span>`).join('');
-  const tallies = ['Rulings', 'Handoff', 'Findings', 'Blockers']
+  const text = (name) =>
+    doc.text[name] ? `<section id="${name.toLowerCase()}"><h2>${t(name)}</h2>${renderText(doc.text[name], inline)}</section>` : '';
+  const meta = doc.meta.map(([k, v]) => `<span>${escapeHtml(t(k))}: ${inline(v, 0)}</span>`).join('');
+  const tallies = ['Blockers', 'Findings', 'Handoff', 'Rulings']
     .filter((name) => doc.tables[name])
-    .map((name) => `<a class="chip" href="#${name.toLowerCase()}">${name} ${doc.tables[name].length}</a>`)
+    .map((name) => `<a class="chip" href="#${name.toLowerCase()}">${t(name)} ${doc.tables[name].length}</a>`)
     .join('');
-  const text = (name) => doc.text[name] ? `<section id="${name.toLowerCase()}"><h2>${name}</h2>${renderText(doc.text[name], inline)}</section>` : '';
-  const records = (name) => doc.tables[name] ? renderRecords(name, doc.tables[name], inline) : '';
+
   return `<!doctype html>
 <html lang="${lang}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${escapeHtml(doc.title)}</title><style>${CSS}</style></head>
 <body><main>
 <h1>${escapeHtml(doc.title)}</h1><div class="meta">${meta}</div>
-<div class="cards">${doc.ledgers.map(renderLedgerCard).join('\n')}</div>
+<div class="cards">${doc.ledgers.map(card).join('\n')}</div>
 <div class="chips">${tallies}</div>
 ${text('Summary')}${text('Next')}${records('Blockers')}
-${doc.ledgers.map((l, i) => renderLedger(l, i, inline)).join('\n')}
+${doc.ledgers.map(ledgerSection).join('\n')}
 ${records('Findings')}${records('Handoff')}${records('Rulings')}${text('Lane')}
 </main></body></html>
 `;
 }
+
+const CSS = `
+:root{--bg:#fafaf9;--fg:#1c1917;--muted:#78716c;--line:#e7e5e4;--card:#fff;--tag:#f5f5f4;--link:#1d4ed8;
+--passed:#15803d;--partial:#b45309;--testing:#2563eb;--failed:#b91c1c;--blocked:#7c3aed;--not-tested:#a8a29e}
+@media (prefers-color-scheme:dark){:root{--bg:#1c1917;--fg:#e7e5e4;--muted:#a8a29e;--line:#44403c;--card:#292524;--tag:#3a3532;--link:#93c5fd;
+--passed:#4ade80;--partial:#fbbf24;--testing:#60a5fa;--failed:#f87171;--blocked:#c4b5fd;--not-tested:#78716c}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.55 system-ui,-apple-system,"PingFang SC","Noto Sans CJK SC",sans-serif}
+main{max-width:1180px;margin:0 auto;padding:24px 16px 64px}h1{font-size:22px;margin:0 0 4px}h2{font-size:17px;margin:32px 0 10px}
+a{color:var(--link)}.muted{color:var(--muted);font-size:12px}.meta{display:flex;flex-wrap:wrap;gap:4px 16px;color:var(--muted)}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;margin:16px 0}
+.card{display:flex;flex-direction:column;gap:6px;padding:12px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:inherit;text-decoration:none}
+.big{font-size:24px;font-weight:600}.big small{font-size:14px;font-weight:400;color:var(--muted)}
+.bar{display:flex;height:8px;border-radius:4px;overflow:hidden;background:var(--line)}.bar span{display:block}
+.chips{display:flex;flex-wrap:wrap;gap:8px}.chip{display:inline-block;padding:0 8px;border-radius:10px;font-size:12px;border:1px solid currentColor;white-space:nowrap}
+.tag{display:inline-block;margin:0 4px 4px 0;padding:0 6px;border-radius:4px;background:var(--tag);font-size:12px;white-space:nowrap}
+.s-passed{color:var(--passed);background:var(--passed)}.s-partial{color:var(--partial);background:var(--partial)}.s-testing{color:var(--testing);background:var(--testing)}
+.s-failed{color:var(--failed);background:var(--failed)}.s-blocked{color:var(--blocked);background:var(--blocked)}.s-not-tested{color:var(--not-tested);background:var(--not-tested)}
+.chip.s-passed,.chip.s-partial,.chip.s-testing,.chip.s-failed,.chip.s-blocked,.chip.s-not-tested{background:none}
+.k-P1,.k-defect{color:var(--failed)}.k-P2,.k-gap{color:var(--partial)}.k-P3,.k-design,.k-environment,.k-ruling{color:var(--muted)}
+details{border:1px solid var(--line);border-radius:8px;background:var(--card);margin:8px 0}summary{padding:8px 12px;cursor:pointer;font-weight:600}
+table{width:100%;border-collapse:collapse}th,td{text-align:left;vertical-align:top;padding:6px 10px;border-top:1px solid var(--line);overflow-wrap:break-word}
+th{font-size:12px;color:var(--muted);font-weight:500;white-space:nowrap}td.id{white-space:nowrap;font-weight:600}td.item{min-width:200px;width:30%}td.remaining{width:35%}
+tr.r-failed td:first-child{box-shadow:inset 3px 0 var(--failed)}tr.r-blocked td:first-child{box-shadow:inset 3px 0 var(--blocked)}
+section>table{background:var(--card);border:1px solid var(--line);border-radius:8px}code{font-size:12px}
+@media (max-width:640px){table.rows,table.rows tbody{display:block}table.rows thead{display:none}table.rows tr{display:block;border-top:1px solid var(--line);padding:6px 0}
+table.rows td{display:block;border:0;padding:2px 12px;width:auto;min-width:0;overflow-wrap:anywhere;white-space:normal}
+table.rows td::before{content:attr(data-label);display:block;font-size:11px;font-weight:400;color:var(--muted)}table.rows td:empty{display:none}}
+`;
 
 const args = parseArgs(process.argv.slice(2));
 const input = path.resolve(args.input);
 if (!fs.existsSync(input)) usage(`not found: ${input}`);
 const { doc, errors } = parse(fs.readFileSync(input, 'utf8'));
 validate(doc, errors);
-const html = render(doc, makeInline(path.dirname(input), errors));
+const lang = /[㐀-鿿]/.test(doc.title) ? 'zh' : 'en';
+const inline = makeInline(path.dirname(input), errors);
+for (const ledger of doc.ledgers) for (const row of ledger.rows) if (row.Evidence !== '-') inline(row.Evidence, row.line);
+const html = render(doc, inline, lang);
 if (errors.length) {
   console.error(`${path.basename(input)}: ${errors.length} error(s); nothing written`);
   for (const e of errors) console.error(`  ${e}`);
@@ -349,8 +387,5 @@ if (errors.length) {
 }
 const out = path.resolve(args.out || path.join(path.dirname(input), 'index.html'));
 fs.writeFileSync(out, html);
-const tally = doc.ledgers.map((l) => {
-  const c = countStatuses(l.rows);
-  return `${l.name} ${c.passed}/${l.rows.length} passed`;
-});
+const tally = doc.ledgers.map((l) => `${l.name} ${countStatuses(l.rows).passed}/${l.rows.length} passed`);
 console.log(`rendered ${out}: ${tally.join('; ')}`);

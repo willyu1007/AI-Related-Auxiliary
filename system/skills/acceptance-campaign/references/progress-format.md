@@ -1,7 +1,9 @@
 # progress.md format
 
 `scripts/render-progress.mjs` turns `progress.md` into `index.html` and rejects anything that does
-not follow this format. It computes every count from the rows; never write counts by hand.
+not follow this format. It computes every count from the rows; never write counts by hand. The page
+uses Chinese labels when the title contains Chinese, otherwise English; status and kind values stay
+in English in `progress.md`.
 
 ## Layout
 
@@ -19,8 +21,8 @@ Baseline: app@7037261a, service@239f42e9
 
 | ID | Group | Item | Acceptance | Status | Qualification | Remaining | Evidence |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| B01 | Accounts | Sign-in and sign-out | The gate shows after sign-out and the identity is cleared | passed | Android and iOS emulators, development identity | - | [r16](evidence/b01.png) |
-| D04 | Activities | Activity slots and domains | Custom domain tags persist; retired tags stay readable | partial | Android device, development identity; admin web | iOS rerun | [r18](evidence/android-r18/d04.png) |
+| B01 | Accounts | Sign-in and sign-out | The gate shows after sign-out and the identity is cleared | passed | Android emulator; iOS simulator; dev identity | - | [r16](evidence/b01.png) |
+| D04 | Activities | Activity slots and domains | Custom domain tags persist; retired tags stay readable | partial | Android emulator; admin web; dev identity | iOS rerun | [r18](evidence/android-r18/d04.png) |
 
 ## Rulings
 
@@ -69,7 +71,12 @@ Baseline: app@7037261a, service@239f42e9
 - **IDs**: unique across all tables. Suggested prefixes: `R` for rulings, `HO-` for handoff items,
   `F-` for findings, `B-` for blockers; row ids follow the project's own scheme.
 - **Status**: one of `not-tested`, `testing`, `partial`, `passed`, `failed`, `blocked`.
-  `Remaining` is required unless the status is `passed`.
+  `Remaining` is required unless the status is `passed`; it is what a reader acts on, so state the
+  next check, not the history.
+- **Qualification**: at most 4 short tags separated by `;`, each at most 16 characters: platform,
+  evidence level, identity, or a phase such as `joint check`. Narratives of what was verified belong
+  in the task's verification record, not here.
+- **Evidence**: links for agents re-judging a row; the page does not show them. Use `-` when none.
 - **Kind**: one of `defect`, `design`, `gap`, `environment`, `ruling`. A finding triaged as handoff
   moves to the Handoff table. **Severity**: `P1`, `P2`, `P3`, or `-`.
 - **Rows columns** in Rulings, Handoff, and Findings list row ids separated by commas, or `-`.
