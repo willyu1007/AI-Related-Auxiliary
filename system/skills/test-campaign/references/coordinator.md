@@ -21,17 +21,15 @@ Before the first dispatch:
 
 Keep the distribution within 6 environments and make the integration environment's allocation explicit. Cut modules for useful independent test-and-fix work, with one dedicated environment and code line per module.
 
-Each distribution entry names the wave, module, collaborator, environment, and code line. A cross-module journey belongs to the integration module and runs after its dependencies have results. Identify non-duplicable devices or external services as shared dependencies with explicit access windows; modules do not borrow each other's environments.
+Show which modules run in parallel. A cross-module journey belongs to the integration module and runs after its dependencies have results. Identify non-duplicable devices or external services as shared dependencies with explicit access windows; modules do not borrow each other's environments.
 
 ### Integration
 
-For each wave, name the required results and permitted carry-over before advancing. Reports received alone do not satisfy its exit conditions.
-
-Write the conditions that trigger integration, such as verified supply that clears a dependency or a completed wave ready for cross-module testing. A blocker starts dependency coordination; it does not immediately stop everyone. Once the necessary supply is ready to integrate, use the global update sequence below.
+Write the conditions that trigger integration, such as verified supply that clears a dependency or module results ready for cross-module testing. A blocker starts dependency coordination; it does not immediately stop everyone. Once the necessary supply is ready to integrate, use the global update sequence below.
 
 ### Check
 
-- Check substantive output and actual module or test-item waits when a blocker changes, an integration is ready, or a wave ends. Ordinary reports do not require replanning.
+- Check substantive output and actual module or test-item waits when a blocker changes, an integration is ready, or a module completes. Ordinary reports do not require replanning.
 - Change an affected assignment after its collaborator has safely stopped the current unit. Leave unaffected modules working unless a global integration or pause has been called.
 - Separate response delay from actual waiting as specified in `## Record time`.
 
@@ -50,7 +48,7 @@ Send instructions using the [shared coordination protocol](../SKILL.md#coordinat
 A blocker report names the module, feature, missing condition, unlock condition, impact on the module, and work that can still proceed. Internal executor identities and scheduling remain with the collaborator.
 
 1. Decide which collaborator supplies the missing functionality or resource. Local fixes stay with their module; cross-module supply is assigned to its owner.
-2. Dispatch that supply and keep unrelated, executable work moving in the current wave. A blocked item does not stop its whole module when other assigned items remain executable.
+2. Dispatch that supply and keep unrelated, executable work moving. A blocked item does not stop its whole module when other assigned items remain executable.
 3. Ask the user when only they can clear a condition. After 30 minutes without an answer, reassess other executable work; elapsed time is not approval. An unresolved account, device, or decision does not by itself call a global integration stop.
 4. When the supply needed for an integration is verified and ready, follow `## Environments` / `### Global update`. Other open blockers remain recorded with their exact scope.
 
@@ -80,7 +78,7 @@ Keep current module facts and significant integrations or decisions in `progress
 
 ### Plan and assignments
 
-Keep the wave distribution, integration triggers, and current module entries aligned with the plan. Update them when the distribution changes.
+Keep the module distribution, integration triggers, and current module entries aligned with the plan. Update them when the distribution changes.
 
 ### Modules
 
