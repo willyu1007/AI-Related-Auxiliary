@@ -77,7 +77,7 @@ checks/          # 本仓库自己的校验，不是分发物
 | [sync-db-from-prisma](system/skills/sync-db-from-prisma/SKILL.md) | Prisma repo→DB migration 闸门：预览、单独的 apply 批准、按环境应用、验证 |
 | [manage-llm-config](system/skills/manage-llm-config/SKILL.md) | 集中管理 agent/workflow 的模型、参数、Prompt 与 Provider 配置；通过共享加载器读取 `.ai/llm` |
 | [debug-mode](system/skills/debug-mode/SKILL.md) | 根因不明故障的证据循环：准确症状信号、可证伪假设、授权修复、原始复现验证与自动清理 |
-| [test-campaign](system/skills/test-campaign/SKILL.md) | 以统筹会话和协调会话推进 staging 或发布前的大范围功能测试：规划路径、按独立模块分派、优先处理卡点和需求，并维护环境与协调会话的对应 |
+| [acceptance-campaign](system/skills/acceptance-campaign/SKILL.md) | 在单条车道上推进大范围验收、回归或发布前的测试与修复：统筹派发有界单元（设备批次、修复、车道运维、集成），分流发现，记录用户裁定与交接包，按轮判定，并由 progress.md 生成进度页 |
 | [sensitive-ops](system/skills/sensitive-ops/SKILL.md) | 管理项目级敏感运维上下文及 MFA、OAuth、认证 UI、实体设备等用户绑定步骤；默认使用 `~/Documents/LLM/sensitive-ops.md`（可指定其他私密文档）让用户直接补齐，仅在明确要求时生成可恢复 shell helper |
 | [manage-ui-style](system/skills/manage-ui-style/SKILL.md) | 继承、探索并沉淀项目 UI 风格，在需要时审计和修复视觉漂移 |
 | [cleanup-project-residue](system/skills/cleanup-project-residue/SKILL.md) | 清理当前 session、任务、近期工作或全项目中的过时测试、冗余内容、语义漂移、双轨/legacy 残留和技术债；证据+批准后删除，校验门收尾 |

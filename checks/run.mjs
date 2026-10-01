@@ -199,8 +199,10 @@ function runStatic() {
     if (!willRemovals.has(name)) fail('skill-profile', `will must remove ${name}`);
   }
   for (const removals of [minimalRemovals, generalRemovals, fullRemovals, willRemovals]) {
-    if (!removals.has('get-sensitive-info')) {
-      fail('skill-profile', 'every profile must remove the retired get-sensitive-info skill');
+    for (const retired of ['get-sensitive-info', 'test-campaign']) {
+      if (!removals.has(retired)) {
+        fail('skill-profile', `every profile must remove the retired ${retired} skill`);
+      }
     }
   }
 
