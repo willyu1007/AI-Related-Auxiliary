@@ -5,6 +5,11 @@ not follow this format. It computes every count from the rows; never write count
 uses Chinese labels when the title contains Chinese, otherwise English; status and kind values stay
 in English in `progress.md`.
 
+The page is for people. It shows only `Updated` from the header and leaves out the Lane section and
+the Evidence column, which serve agents. Write every cell the page shows as plain prose: commit
+hashes, ports, paths, and process ids go in the header, Lane, or Evidence. The renderer warns when a
+shown cell looks like a commit hash.
+
 ## Layout
 
 ```markdown
@@ -40,7 +45,7 @@ Baseline: app@7037261a, service@239f42e9
 
 | ID | Severity | Kind | Summary | Disposition | Rows |
 | --- | --- | --- | --- | --- | --- |
-| F-12 | P2 | defect | Draft locks after a rejected save | Fixed in 2cb6a1a9, retest pending | D04 |
+| F-12 | P2 | defect | Draft locks after a rejected save | Fixed; iOS retest pending | D04 |
 
 ## Blockers
 

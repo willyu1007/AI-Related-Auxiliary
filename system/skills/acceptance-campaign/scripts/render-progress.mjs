@@ -5,7 +5,9 @@
  * Render an acceptance campaign's progress.md into a script-free index.html beside it. The format
  * is defined in ../references/progress-format.md; anything outside it is an error, and nothing is
  * written until the file is clean. Counts are always computed from the rows. Page labels are
- * Chinese when the title contains Chinese, otherwise English.
+ * Chinese when the title contains Chinese, otherwise English. The page is for people: it shows only
+ * `Updated` from the header and omits the Lane section and the Evidence column, and it warns when a
+ * cell it shows carries something that looks like a commit hash.
  *
  * Usage:
  *   node render-progress.mjs <progress.md> [--out <file.html>]
@@ -29,6 +31,15 @@ const COLUMNS = {
 const TEXT_SECTIONS = ['Summary', 'Lane', 'Next'];
 const QUALIFICATION_TAGS = 4;
 const QUALIFICATION_TAG_LENGTH = 16;
+const HASH_RE = /\b(?=[0-9a-f]*\d)(?=[0-9a-f]*[a-f])[0-9a-f]{7,40}\b/;
+/** Cells and sections the page shows, per table; hashes there are flagged for people-first wording. */
+const SHOWN = {
+  Rows: ['Item', 'Acceptance', 'Qualification', 'Remaining'],
+  Rulings: ['Decision'],
+  Handoff: ['Item', 'Needs', 'Gate'],
+  Findings: ['Summary', 'Disposition'],
+  Blockers: ['Item', 'Unlock'],
+};
 
 const LABELS = {
   en: {
@@ -155,6 +166,19 @@ function parse(source) {
 }
 
 const qualificationTags = (cell) => (cell === '-' ? [] : cell.split(';').map((t) => t.trim()).filter(Boolean));
+
+/** Warn where a shown cell reads like machine data (a commit hash) rather than prose for people. */
+function lintForPeople(doc) {
+  const warnings = [];
+  const check = (value, line, column) => {
+    const hit = value.match(HASH_RE);
+    if (hit) warnings.push(`line ${line}${column ? ` (${column})` : ''}: "${hit[0]}" looks like a commit hash; the page is for people`);
+  };
+  for (const ledger of doc.ledgers) for (const row of ledger.rows) for (const c of SHOWN.Rows) check(row[c], row.line, c);
+  for (const [name, records] of Object.entries(doc.tables)) for (const rec of records) for (const c of SHOWN[name]) check(rec[c], rec.line, c);
+  for (const name of ['Summary', 'Next']) for (const l of doc.text[name] ?? []) check(l.text, l.line);
+  return warnings;
+}
 
 function validate(doc, errors) {
   const ids = new Map();
@@ -322,7 +346,7 @@ function render(doc, inline, lang) {
 
   const text = (name) =>
     doc.text[name] ? `<section id="${name.toLowerCase()}"><h2>${t(name)}</h2>${renderText(doc.text[name], inline)}</section>` : '';
-  const meta = doc.meta.map(([k, v]) => `<span>${escapeHtml(t(k))}: ${inline(v, 0)}</span>`).join('');
+  const meta = doc.meta.filter(([k]) => k === 'Updated').map(([k, v]) => `<span>${escapeHtml(t(k))}: ${inline(v, 0)}</span>`).join('');
   const tallies = ['Blockers', 'Findings', 'Handoff', 'Rulings']
     .filter((name) => doc.tables[name])
     .map((name) => `<a class="chip" href="#${name.toLowerCase()}">${t(name)} ${doc.tables[name].length}</a>`)
@@ -337,7 +361,7 @@ function render(doc, inline, lang) {
 <div class="chips">${tallies}</div>
 ${text('Summary')}${text('Next')}${records('Blockers')}
 ${doc.ledgers.map(ledgerSection).join('\n')}
-${records('Findings')}${records('Handoff')}${records('Rulings')}${text('Lane')}
+${records('Findings')}${records('Handoff')}${records('Rulings')}
 </main></body></html>
 `;
 }
@@ -385,6 +409,7 @@ if (errors.length) {
   console.error('Format: references/progress-format.md');
   process.exit(1);
 }
+for (const w of lintForPeople(doc)) console.error(`warning: ${w}`);
 const out = path.resolve(args.out || path.join(path.dirname(input), 'index.html'));
 fs.writeFileSync(out, html);
 const tally = doc.ledgers.map((l) => `${l.name} ${countStatuses(l.rows).passed}/${l.rows.length} passed`);
