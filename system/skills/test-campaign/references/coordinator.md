@@ -12,38 +12,43 @@ Before the first dispatch:
 
 1. Inventory the features, their ids, acceptance conditions, required evidence qualification, and existing results. Record campaign completion conditions and applicable release gates. Mark unresolved conditions; work independent of them can begin.
 2. Cross-check features against existing repository tasks. Record each feature's module, primary task, related tasks, and the task-document locations that a result or fix may affect. Use explicit scope and ownership, not merely a changed file's directory. Record absent or uncertain mappings rather than creating a new task automatically.
-3. Plan the parallel modules, environments, dependencies, and integration triggers below.
+3. Follow `## Plan execution` to derive the module assignments and integration checkpoints.
 4. Create `progress.md` and generate the initial `progress.html` from it, grouping related features. Complete each module entry before dispatch.
 
-## Plan the path
+## Plan execution
+
+1. Map prerequisites and cross-module dependencies from the feature inventory and evidence gaps. Identify work executable now and work needing implementation, accounts, or environment preparation.
+2. Group checks and fixes into modules by ownership and dependencies. Identify which modules can run in parallel and allocate their environments and code lines under the distribution constraints. Assign cross-module supply to its owner and cross-module journeys to the integration module, with their required dependency results.
+3. Set module priorities, current goals, and entry conditions for later work from the release goals and dependency impact. Prioritize supply that unlocks downstream validation and reuse still-valid results.
+4. Set observable integration checkpoints: the required module results, changes to adopt, and validation the update enables. Record this path in the module entries and integration plan in `progress.md`.
+
+## Manage collaborators
 
 ### Distribution
 
-Keep the distribution within 6 environments and make the integration environment's allocation explicit. Cut modules for useful independent test-and-fix work, with one dedicated environment and code line per module.
-
-Show which modules run in parallel. A cross-module journey belongs to the integration module and runs after its dependencies have results. Identify non-duplicable devices or external services as shared dependencies with explicit access windows; modules do not borrow each other's environments.
-
-### Integration
-
-Plan integration around observable progress checkpoints. For each checkpoint, state the required module results, changes to adopt, and work it enables. Record one or more triggers:
-
-- **Planned checkpoint:** all its required results are verified, and the next work needs a common baseline.
-- **Dependency unlock:** verified supply is ready and adopting it will unblock critical downstream work.
-- **Shared repair:** a verified fix for a problem affecting multiple modules needs uniform adoption.
-
-Treat the recorded triggers as alternatives. Ready changes can wait for a planned checkpoint when earlier adoption would not help progress. A blocker starts dependency coordination, not a global stop by itself. On a trigger, begin `## Environments` / `### Global update`; actual handback and verification govern execution and release.
-
-## Manage collaborators
+Keep the distribution within 6 environments and make the integration environment's allocation explicit. Identify non-duplicable devices or external services as shared dependencies with explicit access windows; modules do not borrow each other's environments.
 
 Give a collaborator the whole module, not a sequence of individual actions. The launch prompt includes the collaborator identity, module id, and `progress.md` path and section. Confirm both parties can use the entry's report channel.
 
 Launch according to the distribution, in the background. Resume the same collaborator when available; otherwise give a replacement the current assignment and completed results from the record.
+
+### Follow progress
 
 After dispatch, monitor the assigned report channels while modules are active or dependencies, handbacks, or readiness remain pending. Use available event waits or bounded status queries. Assess substantive output and actual module or test-item waits to decide whether assignments or integration timing need to change. Record results and send required decisions or readiness instructions; ordinary reports do not require replanning, and unchanged state needs no repeated receipt.
 
 Before changing an affected assignment, have its collaborator safely finish the current unit and stop. Leave unaffected modules working unless a global integration or pause has been called.
 
 Send instructions using the [shared coordination protocol](../SKILL.md#coordination-instructions). Give each integration or environment maintenance assignment its scope, resources, and completion conditions.
+
+### Integration
+
+Use the planned checkpoints and any earlier-integration triggers:
+
+- **Planned checkpoint:** all its required results are verified, and the next work needs a common baseline.
+- **Dependency unlock:** verified supply is ready and adopting it will unblock critical downstream work.
+- **Shared repair:** a verified fix for a problem affecting multiple modules needs uniform adoption.
+
+Treat the recorded triggers as alternatives. Ready changes can wait for a planned checkpoint when earlier adoption would not help progress. A blocker starts dependency coordination, not a global stop by itself. On a trigger, begin `## Environments` / `### Global update`; actual handback and verification govern execution and release.
 
 ## Handle blockers
 
