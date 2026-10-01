@@ -19,7 +19,7 @@ Before the first dispatch:
 
 1. Map prerequisites and cross-module dependencies from the feature inventory and evidence gaps. Identify work executable now and work needing implementation, accounts, or environment preparation.
 2. Group checks and fixes into modules by ownership and dependencies. Identify which modules can run in parallel and allocate their environments and code lines under the distribution constraints. Assign cross-module supply to its owner and cross-module journeys to the integration module, with their required dependency results.
-3. Set module priorities, current goals, and entry conditions for later work from the release goals and dependency impact. Prioritize supply that unlocks downstream validation and reuse still-valid results.
+3. Order checks, fixes, and prerequisite work by release needs and dependencies. Prioritize work that unlocks downstream validation, define entry conditions for later work, and reuse still-valid results. Reflect the planned work in each module's current assignment.
 4. Set observable integration checkpoints: the required module results, changes to adopt, and validation the update enables. Record this path in the module entries and integration plan in `progress.md`.
 
 ## Manage collaborators
