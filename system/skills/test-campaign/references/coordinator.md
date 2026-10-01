@@ -41,7 +41,7 @@ Before the first dispatch:
 Use the planned checkpoints and any earlier-integration triggers:
 
 - **Planned checkpoint:** all its required results are verified, and the next work needs a common baseline.
-- **Dependency unlock:** verified supply is ready and adopting it will unblock critical downstream work.
+- **Dependency unlock:** verified supply is ready and adopting it into the common baseline will unblock assigned downstream work.
 - **Shared repair:** a verified fix for a problem affecting multiple modules needs uniform adoption.
 
 Treat the recorded triggers as alternatives. Ready changes can wait for a planned checkpoint when earlier adoption would not help progress. A blocker starts dependency coordination, not a global stop by itself. On a trigger, begin `## Environments` / `### Global update`; actual handback and verification govern execution and release.
@@ -52,8 +52,8 @@ A blocker report names the module, feature, missing condition, unlock condition,
 
 1. Decide which collaborator supplies the missing functionality or resource. Local fixes stay with their module; cross-module supply is assigned to its owner.
 2. Dispatch that supply and keep unrelated, executable work moving. A blocked item does not stop its whole module when other assigned items remain executable.
-3. Ask the user when only they can clear a condition. After 30 minutes without an answer, reassess other executable work; elapsed time is not approval. An unresolved account, device, or decision does not by itself call a global integration stop.
-4. When supply is verified and ready, assess it against the recorded integration triggers. Other open blockers remain recorded with their exact scope.
+3. Coordinate account, device, and decision prerequisites with the responsible party; ask the user when only they can clear a condition. After 30 minutes without an answer, reassess other executable work; elapsed time is not approval. These prerequisites require integration only when resolving them needs a common baseline update.
+4. When verified supply needs adoption into the common baseline to advance blocked assigned work, trigger unified integration through `## Environments` / `### Global update`. Confirm unlock conditions in the actual environment before clearing affected blockers; keep other blockers recorded with their exact scope.
 
 ## Environments
 
