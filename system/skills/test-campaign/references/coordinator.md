@@ -10,10 +10,10 @@ You own the conversation with the user, including decisions only the user can cl
 
 Before the first dispatch:
 
-1. Inventory the features, their ids, acceptance conditions, required evidence qualification, and existing results. Mark unresolved conditions; work independent of them can begin.
+1. Inventory the features, their ids, acceptance conditions, required evidence qualification, and existing results. Record campaign completion conditions and applicable release gates. Mark unresolved conditions; work independent of them can begin.
 2. Cross-check features against existing repository tasks. Record each feature's module, primary task, related tasks, and the task-document locations that a result or fix may affect. Use explicit scope and ownership, not merely a changed file's directory. Record absent or uncertain mappings rather than creating a new task automatically.
 3. Plan the parallel modules, environments, dependencies, and integration triggers below.
-4. Create `progress.md` and its initial human view, grouping related features. Include each module's boundary, goal, environment, code line, and current assignment in the record before dispatch.
+4. Create `progress.md` and its initial human view, grouping related features. Complete each module entry before dispatch.
 
 ## Plan the path
 
@@ -25,6 +25,8 @@ Each distribution entry names the wave, module, collaborator, environment, and c
 
 ### Integration
 
+For each wave, name the required results and permitted carry-over before advancing. Reports received alone do not satisfy its exit conditions.
+
 Write the conditions that trigger integration, such as verified supply that clears a dependency or a completed wave ready for cross-module testing. A blocker starts dependency coordination; it does not immediately stop everyone. Once the necessary supply is ready to integrate, use the global update sequence below.
 
 ### Check
@@ -35,18 +37,13 @@ Write the conditions that trigger integration, such as verified supply that clea
 
 ## Manage collaborators
 
-Give a collaborator the whole module, not a sequence of individual actions. Keep its assignment in its `progress.md` section. The launch prompt includes the collaborator identity, module id, record path and section, and assigned environment and code line.
+Give a collaborator the whole module, not a sequence of individual actions. The launch prompt includes the collaborator identity, module id, and `progress.md` path and section. Confirm both parties can use the entry's report channel.
 
 Launch according to the distribution, in the background. Resume the same collaborator when available; otherwise give a replacement the current assignment and completed results from the record.
 
-Collaborators continue inside their assignment after an ordinary report. Record substantive results; reply when a decision, changed condition, or instruction is needed. Do not make every check wait for a reply saying "continue".
+After dispatch, monitor the assigned report channels while modules are active or dependencies, handbacks, or readiness remain pending. Use available event waits or bounded status queries. Process actionable reports, record substantive results, and send required decisions or readiness instructions; unchanged state needs no repeated receipt.
 
-Use explicit instructions:
-
-- **Continue:** proceed under the existing assignment.
-- **Finish the current unit and stop:** start no new checks, fixes, or subagent tasks; safely finish already-started units and report actual stopping and resource handback. Require acknowledgment; it is not the handback itself.
-- **Change assignment:** state only the changed boundary, goal, environment, code line, or dependency. Update the module entry before the changed work begins.
-- **Resume / global continue:** proceed after checking the latest assignment and actual environment readiness. A stopped collaborator does not infer this instruction from elapsed time or a routine reply.
+Send instructions using the [shared coordination protocol](../SKILL.md#coordination-instructions). Give each integration or environment maintenance assignment its scope, resources, and completion conditions.
 
 ## Handle blockers
 
@@ -72,29 +69,23 @@ Declare ready only after actual checks. Committed code is not proof that it is l
 For each integration, use this sequence; do not release individual modules early.
 
 1. Tell every active collaborator to finish the current unit and stop, including its subagents. Wait for actual stops and handbacks, with verified commits, uncommitted work, and pending operations accounted for. Preserve unknown commands and their recovery context; do not change an affected environment if that would lose recoverability.
-2. Have the integration collaborator merge verified changes onto the integration line, following repository rules for contracts, generated artifacts, migrations, and commits. Preserve unfinished or foreign work.
-3. Update the integration environment and verify the affected cross-module behavior there. A merge or health response alone does not clear a functional blocker.
-4. Bring the verified baseline onto every module code line, update every environment, and check each module's required entry points. Preserve test data and still-needed identities, credentials, and command state; an update is not a default reset.
-5. Record actual loaded baselines and readiness for all environments, adjust the next assignments, then issue one global continue instruction. If a merge or environment fails, keep the global stop, fix it or restore a verified baseline, and recheck before release.
+2. Assign the integration collaborator a maintenance unit to merge verified changes onto the integration line, following repository rules for contracts, generated artifacts, migrations, and commits. Preserve unfinished or foreign work. Record the intended baseline, affected features, and required rechecks under `### Evidence validity`.
+3. Assign the integration environment update and verification of affected cross-module behavior there. A merge or health response alone does not clear a functional blocker.
+4. Explicitly assign maintenance to bring the verified baseline onto every module code line, update every environment, and check each module's required entry points. Preserve test data and still-needed identities, credentials, and command state; an update is not a default reset.
+5. Record actual loaded baselines, readiness and maintenance handbacks for all environments, and current evidence validity. Include outstanding acceptance rechecks in the next assignments, then issue one global continue instruction. If a merge or environment fails, keep business work stopped, assign a bounded repair or restoration to a verified baseline, and recheck before release.
 
 ## Write the documents
 
-Only you write `progress.md` and its derived `progress.html`. Raw evidence remains at its reported location. Keep current module facts and significant integrations or decisions, rather than a transcript of ordinary replies.
+Keep current module facts and significant integrations or decisions in `progress.md` and its derived human view, rather than a transcript of ordinary replies. Raw evidence remains at its reported location.
 
-### Path
+### Plan and assignments
 
-- the path: each wave, module, and environment
-- the parallel distribution: the modules that run at the same time, with the environment and code line of each
-- the integration triggers
-- which environment and code line belong to each collaborator
-
-Rewrite this when the distribution changes.
+Keep the wave distribution, integration triggers, and current module entries aligned with the plan. Update them when the distribution changes.
 
 ### Modules
 
 Update module entries on substantive reports:
 
-- boundary, goal, assignment, environment, and code line
 - what was checked, fixed, and retested, including the judgment, evidence qualification, evidence link, and actual runtime baseline
 - current work, item-level blockers and unlock conditions, actual waits, and handback or pending-operation state
 
@@ -112,9 +103,13 @@ After an integration, add the merge and the check.
 
 ### Human view
 
-Group related features and show id, test item, acceptance condition, status, evidence qualification, and evidence/runtime links. Update on a judged check, verified fix, module completion, or substantive coordination change. Keep not tested, testing, partially passed, passed, and blocked as statuses; record failures in the findings and use blocked for missing prerequisites.
+Group related features and show id, test item, acceptance condition, status, evidence qualification, and evidence/runtime links. Update on a judged check, verified fix, module completion, or substantive coordination change. Use not tested, testing, partially passed, passed, failed, and blocked as statuses. A known unresolved failure of a required check makes the feature failed, even if other parts pass. Use blocked for missing prerequisites and partially passed for passed coverage with remaining unverified qualifications; keep subitem findings and blockers visible.
 
 Pass only the scope established by the evidence and required by that feature. Distinguish contract/API, simulator platform, physical device, and cross-module qualifications; mark development identities or fixtures where relevant. A lower-level result does not automatically qualify the whole feature.
+
+### Evidence validity
+
+When tested behavior changes or a new baseline is adopted, identify affected features and qualifications needing recheck. Preserve their prior evidence as historical; exclude affected passes from current acceptance until qualified retests. Keep known failures unresolved until a retest of the failed qualification clears them. Retain unaffected evidence with the basis for reuse, and recalculate statuses and counts for the current baseline. Assign required rechecks to modules without rerunning unrelated checks.
 
 ## Record time
 
@@ -124,13 +119,17 @@ Pass only the scope established by the evidence and required by that feature. Di
 
 ## Pause and resume
 
-On a user pause, stop new dispatches and tell collaborators to finish the current unit and stop. Immediately stop an operation that cannot safely continue. Save actual outcomes, stopped versus still-running modules, pending operations, resource ownership, and recovery instructions; do not call a requested stop complete before handback.
+On a user pause, stop new dispatches and tell collaborators to finish the current unit and stop. Immediately stop an operation that cannot safely continue. Save actual outcomes, stopped versus still-running modules, pending operations, resource ownership, and recovery instructions; do not call a requested stop complete before handback. After closure, suspend the coordination loop and preserve pending follow-ups for explicit resume.
 
 On an explicit resume, read the latest record and reports, check actual worktrees, loaded baselines, services, devices, and pending operations, then send resume instructions. Do not reuse an old readiness claim without checking. A pause is not campaign completion or permission to dismantle its environments.
 
 ## Finish and clean up
 
 Before module completion, obtain proportionate independent review, necessary residue cleanup, decisive verification of affected behavior, and correct task-document synchronization. Do not rerun unrelated checks for every report.
+
+Close campaign execution only when every in-scope feature has a current judgment with evidence or a stated reason evidence is missing, remaining failed, blocked, or unverified work has a disposition consistent with the agreed completion conditions, and actual stops, handbacks, pending operations, and task records are accounted for. Executable work still required by the assignment remains unfinished; deferral or exclusion must follow agreed conditions or a user decision.
+
+The final report states tested and untested scope, outstanding failures and blockers with their dispositions, the verified baseline, and whether applicable release gates are met. Report execution closure separately from release readiness; unmet or unverified release gates remain explicit.
 
 After campaign completion, arrange cleanup only for campaign-owned resources confirmed unused. Follow existing authorization and repository rules for merging into the user's main line. Preserve uncommitted and unpushed work, final records, necessary evidence, and recovery information at a durable location before cleanup.
 

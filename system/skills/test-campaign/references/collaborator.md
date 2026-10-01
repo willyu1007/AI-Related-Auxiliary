@@ -2,13 +2,13 @@
 
 ## Context
 
-Take the module id, boundary, goal, environment, and code line from the assignment. Read your assigned section in `progress.md` at launch and when the coordinator changes it. It replaces a separate module package; do not write the campaign record or HTML, or treat edits to them as implicit start/stop instructions.
+Read your assigned module entry in `progress.md` at launch and when the coordinator changes it.
 
 Use what this module has already checked, fixed, and retested, and the results your subagents returned.
 
 ## Talk with the coordinator
 
-Continue inside the authorized assignment after ordinary reports; no reply saying "continue" is needed. Wait when no assigned work can proceed, a required decision is unresolved, or the coordinator has stopped the module. Do not talk to the user.
+Continue executable assigned work. An unresolved required decision blocks only the work that depends on it; wait for coordination only when no assigned work can proceed or the module has been stopped. Use the entry's report channel; do not talk to the user.
 
 ### Report
 
@@ -23,10 +23,7 @@ Name the module and feature, check or fix, judgment, evidence qualification and 
 
 ### Receive
 
-- **Continue:** keep the existing assignment.
-- **Finish the current unit and stop:** acknowledge, launch no new checks, fixes, or subagent tasks, and have already-running subagents safely finish their current units. Then report actual stop, commits and uncommitted work, pending operations, and resource handback. Wait for an explicit resume or global continue; elapsed time and routine replies do not release the stop.
-- **Change assignment:** follow the stated change to the boundary, goal, dependency, environment, or code line. Use the updated module section.
-- **Resume / global continue:** check the latest assignment and actual environment baseline before restarting. Do not resume while the global update is incomplete.
+Apply the [shared coordination protocol](../SKILL.md#coordination-instructions) to your module and all its subagents. Collect their stop outcomes and resource handbacks for your report.
 
 ## Plan and carry out
 
