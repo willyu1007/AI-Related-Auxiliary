@@ -25,13 +25,13 @@ Show which modules run in parallel. A cross-module journey belongs to the integr
 
 ### Integration
 
-Write the conditions that trigger integration, such as verified supply that clears a dependency or module results ready for cross-module testing. A blocker starts dependency coordination; it does not immediately stop everyone. Once the necessary supply is ready to integrate, use the global update sequence below.
+Plan integration around observable progress checkpoints. For each checkpoint, state the required module results, changes to adopt, and work it enables. Record one or more triggers:
 
-### Check
+- **Planned checkpoint:** all its required results are verified, and the next work needs a common baseline.
+- **Dependency unlock:** verified supply is ready and adopting it will unblock critical downstream work.
+- **Shared repair:** a verified fix for a problem affecting multiple modules needs uniform adoption.
 
-- Check substantive output and actual module or test-item waits when a blocker changes, an integration is ready, or a module completes. Ordinary reports do not require replanning.
-- Change an affected assignment after its collaborator has safely stopped the current unit. Leave unaffected modules working unless a global integration or pause has been called.
-- Separate response delay from actual waiting as specified in `## Record time`.
+Treat the recorded triggers as alternatives. Ready changes can wait for a planned checkpoint when earlier adoption would not help progress. A blocker starts dependency coordination, not a global stop by itself. On a trigger, begin `## Environments` / `### Global update`; actual handback and verification govern execution and release.
 
 ## Manage collaborators
 
@@ -39,7 +39,9 @@ Give a collaborator the whole module, not a sequence of individual actions. The 
 
 Launch according to the distribution, in the background. Resume the same collaborator when available; otherwise give a replacement the current assignment and completed results from the record.
 
-After dispatch, monitor the assigned report channels while modules are active or dependencies, handbacks, or readiness remain pending. Use available event waits or bounded status queries. Process actionable reports, record substantive results, and send required decisions or readiness instructions; unchanged state needs no repeated receipt.
+After dispatch, monitor the assigned report channels while modules are active or dependencies, handbacks, or readiness remain pending. Use available event waits or bounded status queries. Assess substantive output and actual module or test-item waits to decide whether assignments or integration timing need to change. Record results and send required decisions or readiness instructions; ordinary reports do not require replanning, and unchanged state needs no repeated receipt.
+
+Before changing an affected assignment, have its collaborator safely finish the current unit and stop. Leave unaffected modules working unless a global integration or pause has been called.
 
 Send instructions using the [shared coordination protocol](../SKILL.md#coordination-instructions). Give each integration or environment maintenance assignment its scope, resources, and completion conditions.
 
@@ -50,7 +52,7 @@ A blocker report names the module, feature, missing condition, unlock condition,
 1. Decide which collaborator supplies the missing functionality or resource. Local fixes stay with their module; cross-module supply is assigned to its owner.
 2. Dispatch that supply and keep unrelated, executable work moving. A blocked item does not stop its whole module when other assigned items remain executable.
 3. Ask the user when only they can clear a condition. After 30 minutes without an answer, reassess other executable work; elapsed time is not approval. An unresolved account, device, or decision does not by itself call a global integration stop.
-4. When the supply needed for an integration is verified and ready, follow `## Environments` / `### Global update`. Other open blockers remain recorded with their exact scope.
+4. When supply is verified and ready, assess it against the recorded integration triggers. Other open blockers remain recorded with their exact scope.
 
 ## Environments
 
