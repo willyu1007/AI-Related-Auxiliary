@@ -54,7 +54,7 @@ Apply the [shared coordination protocol](../SKILL.md#coordination-instructions) 
 ### Divide
 
 - Assign independent parts of testing, fixes, or review within this module. Give each subagent a complete outcome and let it choose the execution steps.
-- Sequence dependent tasks and run independent tasks in parallel. Handle simple, one-pass work directly.
+- Parallelize independent tasks when doing so shortens module completion time. Keep dependent tasks and tasks competing for the same resource sequential; handle simple, one-pass work directly.
 
 ### Dispatch
 
