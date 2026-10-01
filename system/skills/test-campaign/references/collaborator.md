@@ -29,6 +29,8 @@ Apply the [shared coordination protocol](../SKILL.md#coordination-instructions) 
 
 Plan the whole module and manage its internal execution. Leave the goal and boundary unchanged unless the coordinator changes them. Do not take another module or borrow its environment or code line. Report an incorrect assignment before dependent work.
 
+When preparing test data, choose effective and expiry times that let the current validation chain finish within the assigned test window and business rules. Prefer the current business date and nearby practical times for ordinary flows; use separate samples for future-time or long-wait cases. Allow time for operations, asynchronous processing, and evidence capture, and recheck the business date and validity window before starting. Do not change clocks or bypass business date constraints to shorten waiting. Report unavoidable waits with the affected items and their unlock condition or time.
+
 For each current unit:
 
 1. State the behavior and evidence needed, then check the actual environment and prerequisites.
