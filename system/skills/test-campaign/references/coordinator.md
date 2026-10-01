@@ -50,20 +50,19 @@ Treat the recorded triggers as alternatives. Ready changes can wait for a planne
 
 A blocker report names the module, feature, missing condition, unlock condition, impact on the module, and work that can still proceed. Internal executor identities and scheduling remain with the collaborator.
 
-1. Decide which collaborator supplies the missing functionality or resource. Local fixes stay with their module; cross-module supply is assigned to its owner.
-2. Dispatch that supply and keep unrelated, executable work moving. A blocked item does not stop its whole module when other assigned items remain executable.
-3. Coordinate account, device, and decision prerequisites with the responsible party; ask the user when only they can clear a condition. After 30 minutes without an answer, reassess other executable work; elapsed time is not approval. These prerequisites require integration only when resolving them needs a common baseline update.
-4. When verified supply needs adoption into the common baseline to advance blocked assigned work, trigger unified integration through `## Environments` / `### Global update`. Confirm unlock conditions in the actual environment before clearing affected blockers; keep other blockers recorded with their exact scope.
+- **Supply:** assign missing functionality or resources to the responsible collaborator. Local fixes stay with their module; cross-module supply goes to its owner.
+- **Continuing work:** dispatch the supply and keep unrelated, executable work moving. A blocked item does not stop its whole module when other assigned items remain executable.
+- **External conditions:** coordinate account, device, and decision prerequisites with the responsible party; ask the user when only they can clear a condition. After 30 minutes without an answer, reassess other executable work; elapsed time is not approval. These prerequisites require integration only when resolving them needs a common baseline update.
+- **Integration:** when verified supply needs adoption into the common baseline to advance blocked assigned work, trigger unified integration through `## Environments` / `### Global update`. Confirm unlock conditions in the actual environment before clearing affected blockers; keep other blockers recorded with their exact scope.
 
 ## Environments
 
 ### Prepare
 
-Assign environment preparation and maintenance to a collaborator. Keep the environment-to-module-to-collaborator correspondence; that collaborator manages its inner subagents.
-
-Record the applicable worktree and code line, loaded source and contracts, configuration and migration baseline, service endpoints, device identifiers, health and required read routes, permitted operations, current holder, and pending operations. Never put secrets in this record. Preparing an environment does not override repository build, migration, or authorization rules.
-
-Declare ready only after actual checks. Committed code is not proof that it is loaded. Release or reassign resources only after actual handback, not their expected finish time.
+- Assign preparation and maintenance to the environment's module collaborator, who manages its inner subagents. Follow repository build, migration, and authorization rules.
+- Record the applicable worktree and code line, loaded source and contracts, configuration and migration baseline, service endpoints, device identifiers, health and required read routes, permitted operations, current holder, and pending operations. Never record secrets.
+- Declare ready only after actual checks. Committed code is not proof that it is loaded.
+- Release or reassign resources only after actual handback, not their expected finish time.
 
 ### Global update
 
@@ -92,25 +91,39 @@ Update module entries on substantive reports:
 
 ### Task mappings
 
-Keep the feature-to-module-to-existing-task mapping from initialization. After a fix or decisive result, cross-check its actual impact, then arrange synchronization of the correct task-document locations through the repository's own workflow. A related task neither expands campaign scope nor has to be completed in full. Do not copy whole task bundles into the campaign record or overwrite their goals and completion conditions.
+- Keep the feature-to-module-to-existing-task mapping from initialization.
+- After a fix or decisive result, cross-check its actual impact, then arrange synchronization of the correct task-document locations through the repository's own workflow.
+- Keep campaign scope unchanged by related-task mappings; a related task need not be completed in full.
+- Do not copy whole task bundles into the campaign record or overwrite their goals and completion conditions.
 
 ### Merges
+
+After each integration, record:
 
 - what was merged, the integrated baseline, and the blockers it cleared
 - actual environment update and verification results, including failures or rollback
 - schedule judgments and assignment changes
 
-After an integration, add the merge and the check.
-
 ### Human view
 
-Group related features and show id, test item, acceptance condition, status, evidence qualification, and evidence/runtime links. Update on a judged check, verified fix, module completion, or substantive coordination change. Use not tested, testing, partially passed, passed, failed, and blocked as statuses. A known unresolved failure of a required check makes the feature failed, even if other parts pass. Use blocked for missing prerequisites and partially passed for passed coverage with remaining unverified qualifications; keep subitem findings and blockers visible.
-
-Pass only the scope established by the evidence and required by that feature. Distinguish contract/API, simulator platform, physical device, and cross-module qualifications; mark development identities or fixtures where relevant. A lower-level result does not automatically qualify the whole feature.
+- Group related features and show id, test item, acceptance condition, status, evidence qualification, and evidence/runtime links.
+- Update on a judged check, verified fix, module completion, or substantive coordination change.
+- Use not tested, testing, partially passed, passed, failed, and blocked as statuses. Keep subitem findings and blockers visible.
+- Mark a feature failed when a required check has a known unresolved failure, even if other parts pass.
+- Use blocked for missing prerequisites and partially passed for passed coverage with remaining unverified qualifications.
+- Distinguish contract/API, simulator platform, physical device, and cross-module qualifications; mark development identities or fixtures where relevant.
+- Pass only the scope established by the evidence and required by that feature. A lower-level result does not automatically qualify the whole feature.
 
 ### Evidence validity
 
-When tested behavior changes or a new baseline is adopted, identify affected features and qualifications needing recheck. Preserve their prior evidence as historical; exclude affected passes from current acceptance until qualified retests. Keep known failures unresolved until a retest of the failed qualification clears them. Retain unaffected evidence with the basis for reuse, and recalculate statuses and counts for the current baseline. Assign required rechecks to modules without rerunning unrelated checks.
+When tested behavior changes or a new baseline is adopted:
+
+- Identify affected features and qualifications needing recheck.
+- Preserve their prior evidence as historical; exclude affected passes from current acceptance until qualified retests.
+- Keep known failures unresolved until a retest of the failed qualification clears them.
+- Retain unaffected evidence with the basis for reuse.
+- Assign required rechecks to modules without rerunning unrelated checks.
+- Recalculate statuses and counts for the current baseline.
 
 ## Record time
 
@@ -120,18 +133,42 @@ When tested behavior changes or a new baseline is adopted, identify affected fea
 
 ## Pause and resume
 
-On a user pause, stop new dispatches and tell collaborators to finish the current unit and stop. Immediately stop an operation that cannot safely continue. Save actual outcomes, stopped versus still-running modules, pending operations, resource ownership, and recovery instructions; do not call a requested stop complete before handback. After closure, suspend the coordination loop and preserve pending follow-ups for explicit resume.
+On a user pause:
 
-On an explicit resume, read the latest record and reports, check actual worktrees, loaded baselines, services, devices, and pending operations, then send resume instructions. Do not reuse an old readiness claim without checking. A pause is not campaign completion or permission to dismantle its environments.
+- Stop new dispatches and tell collaborators to finish the current unit and stop. Immediately stop an operation that cannot safely continue.
+- Save actual outcomes, stopped versus still-running modules, pending operations, resource ownership, and recovery instructions. Do not call a requested stop complete before handback.
+- After closure, suspend the coordination loop and preserve pending follow-ups for explicit resume.
+- Keep the campaign and its environments recoverable; a pause is not campaign completion or permission to dismantle them.
+
+On an explicit resume:
+
+- Read the latest record and reports, and check actual worktrees, loaded baselines, services, devices, and pending operations. Do not reuse an old readiness claim without checking.
+- Send resume instructions after these checks.
 
 ## Finish and clean up
 
-Before module completion, obtain proportionate independent review, necessary residue cleanup, decisive verification of affected behavior, and correct task-document synchronization. Do not rerun unrelated checks for every report.
+Before module completion:
 
-Close campaign execution only when every in-scope feature has a current judgment with evidence or a stated reason evidence is missing, remaining failed, blocked, or unverified work has a disposition consistent with the agreed completion conditions, and actual stops, handbacks, pending operations, and task records are accounted for. Executable work still required by the assignment remains unfinished; deferral or exclusion must follow agreed conditions or a user decision.
+- Obtain proportionate independent review, necessary residue cleanup, decisive verification of affected behavior, and correct task-document synchronization.
+- Do not rerun unrelated checks for every report.
 
-The final report states tested and untested scope, outstanding failures and blockers with their dispositions, the verified baseline, and whether applicable release gates are met. Report execution closure separately from release readiness; unmet or unverified release gates remain explicit.
+Close campaign execution only when:
 
-After campaign completion, arrange cleanup only for campaign-owned resources confirmed unused. Follow existing authorization and repository rules for merging into the user's main line. Preserve uncommitted and unpushed work, final records, necessary evidence, and recovery information at a durable location before cleanup.
+- Every in-scope feature has a current judgment with evidence or a stated reason evidence is missing.
+- Remaining failed, blocked, or unverified work has a disposition consistent with the agreed completion conditions.
+- Actual stops, handbacks, pending operations, and task records are accounted for.
+- Required, executable work is complete; any deferral or exclusion follows agreed conditions or a user decision.
 
-Prefer recoverable worktree archival. Stop environments or remove branches and temporary files only after checking ownership, active users, and dependencies. Keep shared, active, or unknown-owned resources. Remove the temporary campaign directory only after required contents are preserved.
+In the final report:
+
+- State tested and untested scope, outstanding failures and blockers with their dispositions, the verified baseline, and whether applicable release gates are met.
+- Report execution closure separately from release readiness; keep unmet or unverified release gates explicit.
+
+After campaign completion:
+
+- Arrange cleanup only for campaign-owned resources confirmed unused.
+- Follow existing authorization and repository rules for merging into the user's main line.
+- Preserve uncommitted and unpushed work, final records, necessary evidence, and recovery information at a durable location before cleanup.
+- Prefer recoverable worktree archival.
+- Stop environments or remove branches and temporary files only after checking ownership, active users, and dependencies. Keep shared, active, or unknown-owned resources.
+- Remove the temporary campaign directory only after required contents are preserved.

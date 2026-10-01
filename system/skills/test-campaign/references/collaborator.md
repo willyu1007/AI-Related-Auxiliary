@@ -19,7 +19,12 @@ Report when:
 - a blocker cannot be cleared within this module
 - the module or a requested stop has finished
 
-Name the module and feature, check or fix, judgment, evidence qualification and links, actual runtime baseline, and current work. For blockers, name the missing and unlock conditions, scope of impact, and what can still proceed. Report actual module or feature waits with reason and start/end times; keep inner executor identities and timing within your own management. Omit secrets, tokens, and private connection strings.
+For each report:
+
+- **Results:** module and feature, check or fix, judgment, evidence qualification and links, actual runtime baseline, and current work.
+- **Blockers:** missing and unlock conditions, scope of impact, and what can still proceed.
+- **Waits:** actual module or feature waits, with reason and start/end times. Keep inner executor identities and timing within your own management.
+- **Privacy:** omit secrets, tokens, and private connection strings.
 
 ### Receive
 
