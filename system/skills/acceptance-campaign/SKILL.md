@@ -16,11 +16,12 @@ slots.
 
 - Run test batches in parallel only across slots and data partitions; each slot and each
   partition belongs to one batch at a time. A batch may hold several slots for a cross-system
-  journey. Partitions never overlap: when a write affects a whole group (attendance affects a
-  class), the group is the partition, and when a batch must change something other partitions
-  also read (an organization-wide setting, a shared catalog, a global flag), that shared object is
-  a partition held by that batch. Run fix and integration work off the lane, in worktrees,
-  disposable databases, and local test runs.
+  journey. A batch holds every partition it writes and every shared state its acceptance depends
+  on: when a write affects a whole group (attendance affects a class), hold the group; when a
+  batch changes something others read (an organization-wide setting, a shared catalog, a global
+  flag), it holds that object. Share only stable read-only content. Put work whose effects cannot
+  be separated in a window. Run fix and integration work off the lane, in worktrees, disposable
+  databases, and local test runs.
 - Change the lane only through the lane operator and only while no test batch runs. Record the
   lane closed while a change or resume is under way, and open again once the operator's smoke
   check passes.
@@ -40,7 +41,8 @@ dispatch: find a missing fact in the records, by a read-only check, or by asking
   the lane, and owns the runbook.
 - **Test batch** runs checks on the slots and partitions it holds.
 - **Fix unit** fixes and verifies in its own worktree from the lane head.
-- **Integrator** prepares the main-line landing in fresh worktrees and returns push commands.
+- **Integrator** assembles verified fixes into a candidate lane head and prepares the main-line
+  landing, in fresh worktrees, and returns heads and push commands.
 
 Within a session, reuse one agent for the lane operator and one for the integrator. Do short work
 that needs no slot yourself, such as a read-only check or a records update.
@@ -96,9 +98,10 @@ runbook there.
    decision as a numbered ruling. Check that every row and open item of the source made it in, and
    tell the user the old records will no longer be updated. Add anything found missing later and
    note it in the Summary.
-2. List rows with their acceptance condition, including the evidence qualification it requires
-   (for example "iOS and Android device"), and any existing result with its baseline. Reuse valid
-   results.
+2. List rows with their acceptance condition for the lane's scope, including the evidence
+   qualification it requires (for example "iOS simulator and Android emulator"), and any existing
+   result with its baseline. Name hardware `physical device` and virtual targets `simulator` or
+   `emulator`; never write a bare "device". Reuse valid results.
 3. Map each ledger to its repository task in the `Tasks` header. Record missing mappings instead
    of creating tasks or widening scope.
 4. Fill the Lane section as progress-format.md requires. Confirm the runbook rebuilds the lane from
@@ -119,7 +122,8 @@ runbook there.
   holds. Dispatch a test batch only when every slot and partition it needs is free, and name in its
   brief what it holds and any time gate as its Not-before time. Run fix units in parallel with
   disjoint file ownership, each from the current lane head.
-- Before a window, stop every test batch yourself.
+- Open a window only after every test batch has handed back. A hand-back time never frees a
+  resource; only the actual handback does.
 - Leave a running unit's slot, partitions, and worktree alone.
 
 ### Test data
@@ -133,8 +137,10 @@ runbook there.
 - Use the existing sign-in identities and ask the user for new ones. Plan one disposable identity
   per destructive case and record which are spent.
 - Upload only synthetic media or public sample images, and only into the batch's partitions.
-- Keep fixture timestamps on real time when a row checks time behavior; seed time-gated samples
-  ahead instead of backdating them.
+- Use the current business date and the nearest feasible effective and expiry times, with margin
+  for the operations, asynchronous processing, and evidence capture. Use separate samples for
+  future times and long waits, seed time-gated samples ahead, and never backdate data, change
+  clocks, or bypass business time rules.
 - Data a fixture created does not count as evidence for the flow that normally creates it; tag such
   results `fixture` in the qualification.
 - Treat a lane stand-in for an external service (automatic moderation, a fake push gateway) as a
@@ -147,14 +153,15 @@ Classify every finding before acting on it:
 
 | Kind | Example | Disposition |
 | --- | --- | --- |
-| `defect` | A draft locks forever after a rejected save | Fix unit, then retest on the lane |
+| `defect` | In-scope behavior is wrong or missing: a draft locks forever after a rejected save | Fix unit, then retest on the lane; if the fix needs a contract change or new design, ask the user whether to fix now or defer |
 | `design` | A board intentionally shows only today | Document where the design lives; judge the row on it |
-| `gap` | No write path exists for a second account owner | Register in the task's gap list; judge on substitute evidence only under a ruling |
+| `gap` | A capability whose scope is unconfirmed: a second account owner | Ask for a ruling; in scope, treat it as a defect; out of scope, register it in the task's gap list and judge on substitute evidence only under that ruling |
 | `environment` | A launcher forces a feature switch off | Fix the lane or runbook |
 | `ruling` | A capacity limit or a label is undecided | Ask the user; continue unaffected work |
 | `handoff` | The check needs a real identity provider | Move it to the handoff package |
 
-Before calling a finding a defect, check the required switches, rebuilt artifacts, and loaded
+Classifying a finding never lowers an acceptance condition or widens scope. Before calling a
+finding a defect, check the required switches, rebuilt artifacts, and loaded
 baseline; rule out tool artifacts (inspector caches, input typed by automation tools), other
 writers (including the user's own actions), and device limits; and re-observe it through a second
 channel such as a server read. Grade defects P1 (lost or wrong data, security, a blocked main user
@@ -181,10 +188,11 @@ when the user agrees.
   emulator or simulator on a named platform, physical device, cross-system journey) and under
   which identity and data. Pass only what was established, per platform; never pass a device row
   on source, unit tests, mocks, or an API check.
-- Move what the development environment cannot close (real identity providers, production content
-  moderation, real push credentials, external services) into the handoff package with what it needs
-  and its release gate. A partial row lists only the remainder the lane can obtain; once that is
-  established, pass the row and leave the handed-off part in the handoff package.
+- Move what the development environment cannot close (physical devices, real identity providers,
+  production content moderation, real push credentials, external services) into the handoff
+  package with what it needs and its release gate, linked to its rows. Pass a row when its lane
+  scope is established; the release requirement stays with the handoff item, and handing an item
+  off is never evidence.
 - Judge after each test batch hands back: flip rows with their evidence, re-render, and tell the
   user the delta.
 - When the loaded baseline changes, retest before they pass again the rows the incoming fixes name
@@ -193,9 +201,12 @@ when the user agrees.
 
 ### Sync
 
-While no test batch runs, have the lane operator bring verified fixes onto the lane. Record the new
-loaded baseline and the rows to retest. If the smoke check fails, keep the lane closed until it is
-repaired or returned to the previous baseline.
+While no test batch runs, bring verified fixes onto the lane. With one fix, have the lane operator
+fast-forward to its branch. With several, have the integrator merge them from the lane head into a
+candidate head, update repository-required artifacts, and run the repository gates; then have the
+lane operator fast-forward to that head. Record the new loaded baseline and the rows to retest. If
+the smoke check fails, keep the lane closed until it is repaired or returned to the previous
+baseline.
 
 ### Land
 
@@ -205,8 +216,9 @@ unit worktrees and branches.
 
 ### Pause and resume
 
-- Pause: dispatch nothing new, collect the running handbacks, and record running state, pending
-  operations, and resume steps in `progress.md`. Keep the lane up.
+- Pause: dispatch nothing new, send running units a stop instruction, wait for their actual
+  handbacks, and record running state, pending operations, and resume steps in `progress.md`. Keep
+  the lane up. Dispatch remaining work later as new briefs.
 - Resume: read `progress.md`, record the lane closed, re-check pending operations, and have the
   lane operator check the runbook against the lane and run the smoke check; never reuse earlier
   readiness claims.

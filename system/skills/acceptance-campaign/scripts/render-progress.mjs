@@ -320,6 +320,20 @@ function render(doc, inline, lang) {
   const refLinks = (cell) =>
     cell === '-' ? '—' : cell.split(',').map((id) => `<a href="#${anchor(id.trim())}">${escapeHtml(id.trim())}</a>`).join(', ');
 
+  const handoffByRow = new Map();
+  for (const rec of doc.tables.Handoff ?? []) {
+    if (rec.Rows === '-') continue;
+    for (const id of rec.Rows.split(',').map((s) => s.trim())) {
+      handoffByRow.set(id, [...(handoffByRow.get(id) ?? []), rec.ID]);
+    }
+  }
+  const handoffTag = (rowId) => {
+    const ids = handoffByRow.get(rowId);
+    if (!ids) return '';
+    const links = ids.map((id) => `<a href="#${anchor(id)}">${escapeHtml(id)}</a>`).join(', ');
+    return `<div class="muted">${t('Handoff')} ${links}</div>`;
+  };
+
   const card = (ledger, index) => {
     const counts = countStatuses(ledger.rows);
     const total = ledger.rows.length;
@@ -344,7 +358,7 @@ function render(doc, inline, lang) {
       const trs = rows.map((r) => `<tr id="${anchor(r.ID)}" class="r-${r.Status}">
 <td data-label="${t('ID')}" class="id">${escapeHtml(r.ID)}</td>
 <td data-label="${t('Item')}" class="item">${inline(r.Item, r.line)}${r.Acceptance === '-' ? '' : `<div class="muted">${inline(r.Acceptance, r.line)}</div>`}</td>
-<td data-label="${t('Status')}">${chip(r.Status)}</td>
+<td data-label="${t('Status')}">${chip(r.Status)}${handoffTag(r.ID)}</td>
 <td data-label="${t('Qualification')}">${qualificationTags(r.Qualification).map((q) => `<span class="tag">${escapeHtml(q)}</span>`).join('')}</td>
 <td data-label="${t('Remaining')}" class="remaining">${r.Remaining === '-' ? '' : inline(r.Remaining, r.line)}</td></tr>`).join('\n');
       return `<details${open}><summary>${escapeHtml(group || t('ungrouped'))} <span class="muted">${t('of')(passed, rows.length)}</span></summary>
@@ -360,7 +374,7 @@ function render(doc, inline, lang) {
     const columns = COLUMNS[name];
     const label = (c) => (c === 'Summary' ? t('Content') : t(c));
     const head = columns.map((c) => `<th>${label(c)}</th>`).join('');
-    const body = list.map((rec) => `<tr>${columns.map((c) => {
+    const body = list.map((rec) => `<tr id="${anchor(rec.ID)}">${columns.map((c) => {
       const value = rec[c];
       let html;
       if (c === 'Rows') html = refLinks(value);

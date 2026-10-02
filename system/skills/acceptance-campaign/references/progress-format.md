@@ -30,8 +30,8 @@ Card payment passes on both platforms; the iOS refund check waits for the 09:00 
 
 | ID | Group | Item | Acceptance | Status | Qualification | Remaining | Evidence |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| PAY-01 | Payment | Card payment | Paying with a saved card shows the receipt; iOS and Android device | passed | iOS simulator; Android emulator; test card | - | [run 3](evidence/pay-01.png) |
-| PAY-02 | Payment | Refund | A refund appears in the order history within a minute; iOS and Android device | partial | Android emulator; test card | iOS refund after the sandbox reset | - |
+| PAY-01 | Payment | Card payment | Paying with a saved card shows the receipt; iOS simulator and Android emulator | passed | iOS simulator; Android emulator; test card | - | [run 3](evidence/pay-01.png) |
+| PAY-02 | Payment | Refund | A refund appears in the order history within a minute; iOS simulator and Android emulator | partial | Android emulator; test card | iOS refund after the sandbox reset | - |
 
 ## Findings
 
@@ -43,7 +43,7 @@ Card payment passes on both platforms; the iOS refund check waits for the 09:00 
 
 | ID | Item | Needs | Gate | Rows |
 | --- | --- | --- | --- | --- |
-| HO-1 | Live card network | A real acquirer account | Production payments | PAY-01 |
+| HO-1 | Card payment on physical devices | A real acquirer account and physical iOS and Android devices | Production payments | PAY-01 |
 
 ## Rulings
 
@@ -56,7 +56,7 @@ Card payment passes on both platforms; the iOS refund check waits for the 09:00 
 - Runbook: docs/runbook.md
 - Loaded: app@1a2b3c4, api@5d6e7f8; api ready line "api ready"; client marker "build 3c4" on the About screen; smoke passed 2026-03-14 08:40 (evidence/smoke-0314.txt); lane open
 - Slots: ios-1 = simulator 0A1B, app com.example.shop, UTC, test-account picker, free; android-1 = emulator-5554, app com.example.shop, UTC, test-account picker, free; web-1 = http://localhost:3000/admin, admin login from the runbook, free
-- Partitions: store-a with buyer-1, free; store-b with buyer-2, free, holds 3 leftover test orders
+- Partitions: store-a with buyer-1, free; store-b with buyer-2, free, holds 3 leftover test orders; refund settings, free
 - Switches: PAYMENTS_SANDBOX=true; REFUNDS_ENABLED=true; EMAIL_SEND=false
 - Time zone: business dates and gates use UTC
 - Objects: refund order 1042 in store-a, owned by buyer-1, due 2026-03-15 09:00 +00:00, seeded for PAY-02
@@ -77,8 +77,9 @@ Card payment passes on both platforms; the iOS refund check waits for the 09:00 
   Each cell is one line; separate several facts with `; `.
 - **IDs**: unique across all tables, including across ledgers. Suggested prefixes: `R` for
   rulings, `HO-` for handoff items, `F-` for findings, `B-` for blockers.
-- **Acceptance**: required; the condition to verify, including the evidence qualification it
-  requires.
+- **Acceptance**: required; the condition to verify within the lane's scope, including the evidence
+  qualification it requires. Name hardware `physical device` and virtual targets `simulator` or
+  `emulator`. Put release-level requirements in a linked Handoff item.
 - **Status**: one of `not-tested`, `partial`, `passed`, `failed`, `blocked`. `Remaining` is required
   unless the status is `passed`: the next check, or for an interrupted chain the step to resume
   from.
@@ -99,7 +100,7 @@ Card payment passes on both platforms; the iOS refund check waits for the 09:00 
   - `Loaded:` the loaded baseline with its runtime markers, the last smoke result with its evidence
     path, and whether the lane is open or closed.
   - `Slots:` each slot's device or URL, app id, device time zone, sign-in, and holder.
-  - `Partitions:` each partition's identities, holder, and leftover data.
+  - `Partitions:` each partition's identities, holder with `write` or `depend`, and leftover data.
   - `Switches:` as `name=value`, every switch a row depends on or that has wide side effects, with
     its window or ruling; plain feature gates stay in the runbook.
   - `Time zone:` the business time zone that dates, due times, and gates use.

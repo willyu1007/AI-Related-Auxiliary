@@ -8,12 +8,14 @@ alone.
 ## Common ending
 
 ```text
-Stuck: on a missing prerequisite or a refused action, stop, write BLOCKER.md in your work dir
-(what, why, unlock condition, what can still proceed), and hand back. Never retry a refused
-action another way.
+Stuck: a missing prerequisite or a refused action blocks only the checks that depend on it.
+Write BLOCKER.md in your work dir (what, why, unlock condition), finish the independent checks,
+then hand back. Hand back at once if preflight fails or the lane itself misbehaves (a service
+down, a smoke-level fault). Never retry a refused action another way.
+Stop: on a stop instruction, start no new check and hand back at a safe point.
 Hand back:
-- Results: per row or behavior, what you observed, its evidence qualification, evidence paths,
-  and the loaded baseline.
+- Results: per row or behavior, what you observed or why it was not run, its evidence
+  qualification, evidence paths, and the loaded baseline.
 - Writes and side effects: records created or changed, identities used, device state changes,
   switches toggled; keep them apart from read-only checks.
 - Pending: operations with an unknown outcome, under their original operation.
@@ -34,7 +36,7 @@ command> | smoke | restore | window for <purpose>>.
 Sync: fast-forward only. Report dependency, schema, or migration changes; migrate only when this
 brief says so, and after a dump. Rebuild every built artifact the lane consumes, restart only the
 affected services, and reload the clients.
-Window: the coordinator has stopped every test batch; run, restore, verify the restore, and close.
+Window: every test batch has handed back; run, restore, verify the restore, and close.
 Smoke before opening the lane. If a lane process is down, restart it from the runbook, rerun the
 whole smoke, and report the restart.
 - health: <routes>
@@ -59,13 +61,16 @@ Rows: <id: acceptance condition; remaining work>.
 Known: <rulings, design decisions, handoff items, and open findings that bear on these rows>.
 Expect: loaded marker <marker>; identities <identity per client or step>; business date <date>
 in <time zone>.
-Partitions you may write: <partitions>. Destructive flows use <disposable identities or objects>.
+Partitions you hold: <partition: write or depend>. Write only in partitions marked write.
+Destructive flows use <disposable identities or objects>.
 Objects: <ids of the records, invitations, or samples you act on>.
 Off limits: <other slots, devices, checkouts, services>.
 Constraints: <project rules every unit follows, from the runbook>.
 Work dir: <path>. Not before: <time and zone, or none>. Hand back by: <time and zone>; if you
 cannot finish by then, stop at a safe point and hand back what you have.
 Preflight the loaded marker, identities, and date and time zone; a mismatch is a blocker.
+Use the current business date and the nearest feasible effective and expiry times, with margin
+for your operations, asynchronous processing, and evidence capture.
 Leave the lane's services, configuration, and code, and device clocks, unchanged. Upload only
 synthetic media or public sample images, and only into your partitions; never private photos of
 real people unless this brief supplies consented ones.
@@ -98,13 +103,15 @@ Done: <condition>. Return the branch, head, and the checks you ran with their ex
 ```text
 Role: integrator. Repositories in landing order: <repository: lane head>.
 Work dir: <path>.
-In a fresh worktree per repository, branch from its lane head and confirm the main line is an
-ancestor.
-Write the task records for <tasks>: decisive results, rulings <ids>, handoff items, and gaps.
-Then update repository-required artifacts in the repository's order: <locks, pins, generated
-files>. Finish the depended-on repository first.
-Run the full gates on each final head in a clean tree.
-Return the final heads and push commands that check ancestry and push without touching main
-checkouts, in landing order, with the checks you ran and their exit codes. Do not push and do not
-bypass hooks.
+Task: <assemble a candidate lane head from <fix branches> | land the lane on the main line>.
+Assemble: in a fresh worktree per repository, branch from the lane head, merge the fix branches,
+update repository-required artifacts in the repository's order, and run the full gates on the
+head in a clean tree. Return the candidate heads; leave the lane to its operator.
+Land: in a fresh worktree per repository, branch from its lane head and confirm the main line is
+an ancestor. Write the task records for <tasks>: decisive results, rulings <ids>, handoff items,
+and gaps. Then update repository-required artifacts in the repository's order: <locks, pins,
+generated files>. Finish the depended-on repository first. Run the full gates on each final head
+in a clean tree. Return the final heads and push commands that check ancestry and push without
+touching main checkouts, in landing order.
+Return the checks you ran and their exit codes. Do not push and do not bypass hooks.
 ```
