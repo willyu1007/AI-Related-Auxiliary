@@ -138,7 +138,7 @@ Classify every finding before acting on it:
 
 | Kind | Example | Disposition |
 | --- | --- | --- |
-| `defect` | In-scope behavior is wrong or missing: a draft locks forever after a rejected save | Fix unit, then retest on the lane; ask the user whether to fix now or defer only when the fix needs a new product decision, a breaking contract change, or work beyond the authorized scope |
+| `defect` | In-scope behavior is wrong or missing: a draft locks forever after a rejected save | Fix unit, then retest on the lane; ask the user whether to fix now or defer only when the fix needs a new product decision, a breaking contract change, or work beyond the authorized scope, and record the answer in the finding's Disposition |
 | `design` | A board intentionally shows only today | Document where the design lives; judge the row on it |
 | `gap` | A capability whose scope is unconfirmed: a second account owner | Ask for a ruling; in scope, treat it as a defect; out of scope, register it in the task's gap list and judge on substitute evidence only under that ruling |
 | `environment` | A launcher forces a feature switch off | Fix the lane or runbook |
@@ -157,8 +157,7 @@ with a workaround), or P3 (polish). Fix P1 and P2 in the campaign, and P3 when t
 - Ask with options, a recommended default, and the rows each option affects. Batch the questions.
 - Number as a ruling every decision that changes scope, an acceptance basis, a business policy, or
   a switch with side effects; update the affected acceptance conditions and carry it to the task's
-  decision record at the next landing. Record a fix-now or defer answer in the finding's
-  Disposition, citing the user's decision.
+  decision record at the next landing.
 - Hold only the affected rows while a ruling is pending, and never treat elapsed time as consent.
 - Pass the rows of a fix that changes user-facing design only after the user confirms screenshots
   from the lane.

@@ -78,9 +78,8 @@ cannot finish by then, stop at a safe point and hand back what you have.
 Preflight the loaded marker, identities, and date and time zone; a mismatch is a blocker.
 Use the current business date and the nearest feasible effective and expiry times, with margin
 for your operations, asynchronous processing, and evidence capture.
-Leave the lane's services, configuration, and code, and device clocks, unchanged. Upload only
-synthetic media or public sample images, and only into your partitions; never private photos of
-real people unless this brief supplies consented ones.
+Leave the lane's services, configuration, and code, and device clocks, unchanged.
+Upload only synthetic media or public sample images, and only into your partitions.
 Log every business write with its object and purpose. If a write's outcome is unknown, do not
 resend it as a new operation; check it and report it as pending.
 Before reporting a defect, rule out tool artifacts, input typed by automation tools, other
