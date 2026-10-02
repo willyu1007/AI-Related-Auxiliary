@@ -1,112 +1,103 @@
-# Units
+# Unit brief templates
 
-You were dispatched by the campaign coordinator. The shared [terms](../SKILL.md#terms) and
-[rules](../SKILL.md#rules) apply to you; the coordinator's process does not. Do not talk to the
-user; your handback is your report.
+Paste the unit's template into its brief, keep only the lines its task needs, and append the
+common ending. Fill every `<placeholder>` before dispatch; never send a gap the unit would have to
+guess. The unit sees nothing else from the campaign, so the brief must stand alone.
 
-## Brief
+## Common ending
 
-The coordinator's brief gives:
-
-- **Goal and completion**: what done means for this unit.
-- **Boundary**: the rows, behaviors, files, or services in scope.
-- **Baseline**: the lane head or branch to start from, and for tests the loaded baseline to expect.
-- **Resources**: slot, data partitions, worktree path, ports.
-- **File ownership**: the paths you may change (fix units and integrators).
-- **Stuck policy**: on a missing prerequisite or a refused action, write `BLOCKER.md` in your work
-  directory (what, why, unlock condition, what can still proceed) and hand back immediately.
-
-Report a wrong or incomplete brief before doing work that depends on it.
-
-## Handback
-
-Return:
-
-- **Results**: per row or behavior, what you observed, the evidence qualification, evidence paths,
+```text
+Stuck: on a missing prerequisite or a refused action, stop, write BLOCKER.md in your work dir
+(what, why, unlock condition, what can still proceed), and hand back. Never retry a refused
+action another way.
+Hand back:
+- Results: per row or behavior, what you observed, its evidence qualification, evidence paths,
   and the loaded baseline.
-- **Writes and side effects**: business records created or changed, identities used, device state
-  changes, and switches toggled, kept apart from read-only checks.
-- **Pending**: operations with an unknown outcome, under their original ids.
-- **Blockers**: unlock conditions and impact.
-- **Resources**: what you return and its state (signed out, gate shown, window closed, worktree
-  clean).
-- **Commits**: branch, head, and the checks you ran with their exit codes.
+- Writes and side effects: records created or changed, identities used, device state changes,
+  switches toggled; keep them apart from read-only checks.
+- Pending: operations with an unknown outcome, under their original operation.
+- Blockers: unlock conditions and impact.
+- Resources: what you return and its state.
+```
 
 ## Lane operator
 
-- Own the runbook: start commands, environment file location, ports, data stores, invariants, sync
-  steps, smoke checks, restore steps, and known traps. The lane must be rebuildable from the runbook
-  and its files alone; nothing may exist only in a process's memory.
-- Launchers assert the lane's invariants (store names, registration or schema hashes) and pass
-  required feature switches explicitly, because local defaults may force them off.
-- Sync: fast-forward only. Note dependency, schema, or migration changes; migrate only as
-  authorized and after a dump. Rebuild every built artifact the lane consumes, restart only the
-  affected services, and reload the clients.
-- Smoke: health; invariants; allow-lists; required switches on the running processes (names and
-  counts only); key read routes for the changed rows; a loaded marker in each client.
-- Exclusive window: announce it, confirm the other batches stopped, run it, restore, verify the
-  restore, and close it.
-- Before large builds, check free disk. Track the ports, processes, and devices the lane holds.
+```text
+Role: lane operator for <campaign>. Only you change the lane.
+Lane: runbook <path>; environment file <path>; slots <slot: device or URL, app id>.
+Off limits: <devices, checkouts, services the campaign does not own>.
+Work dir: <path>. Hand back by: <time and zone>.
+Task: <start | sync to <branch@head> | smoke | restore | window for <purpose>>.
+Sync: fast-forward only. Report dependency, schema, or migration changes; migrate only when this
+brief says so, and after a dump. Rebuild every built artifact the lane consumes, restart only the
+affected services, and reload the clients.
+Window: confirm the other batches stopped, run, restore, verify the restore, and close.
+Smoke before opening the lane. If a lane process is down, restart it from the runbook, rerun the
+whole smoke, and report the restart.
+- health: <routes>
+- invariants: <store names, registration or schema hashes>
+- allow-lists: <list and its expected entries or snapshot path>
+- switches on the running processes: <name=value list>
+- device time zones: <zone>
+- read routes for the rows the next batches test: <routes>
+- loaded marker in each client: <markers>
+Keep the runbook able to rebuild the lane from files alone, covering the worktrees, stores, and
+ports the campaign owns, and add the traps you hit. If there is no runbook, write it at <path>.
+Check free disk before builds and installs.
+Done: <condition>. Return the loaded baseline, changed processes and ports, and smoke results.
+```
 
 ## Test batch
 
-- Preflight: the loaded marker matches the brief, required switches are on, the identity is right,
-  the business date and time zone are as planned, the partitions hold no foreign writes, and the
-  slot is free.
-- Prefer the current business date and near effective and expiry times; use separate samples for
-  long waits. Do not change clocks or bypass business rules.
-- Log every business write with its object and purpose. Destructive flows (account closure,
-  revocation) use disposable identities or objects named in the brief. Upload only synthetic or
-  public non-personal media unless the brief provides consented material.
-- Before reporting a defect, rule out tool artifacts, injected-input artifacts, other writers, and
-  device capability limits, and confirm through a second channel.
-- Capture evidence that matches the qualification: screenshots for visual state, recordings for
-  motion, server reads for persisted state.
-- Exit: sign out or return to the starting gate, close any window, and record what remains in the
-  partitions.
+```text
+Role: test batch. Slots, held only by you until handback: <slot: device or URL, app id, client>.
+Rows: <id: acceptance condition; remaining work>.
+Known: <rulings, design decisions, handoff items, and open findings that bear on these rows>.
+Expect: loaded marker <marker>; identities <identity per client or step>; business date <date>
+in <time zone>.
+Partitions you may write: <partitions>. Destructive flows use <disposable identities or objects>.
+Off limits: <other slots, devices, checkouts, services>.
+Work dir: <path>. Not before: <time and zone, or none>. Hand back by: <time and zone>.
+Preflight the marker, switches <switches>, identities, and date and time zone; a mismatch is a
+blocker.
+Leave the lane, the code, and device clocks unchanged. Upload only synthetic media or public
+sample images, never private photos of real people unless this brief supplies consented ones.
+Log every business write with its object and purpose. If a write's outcome is unknown, do not
+resend it as a new operation; check it and report it as pending.
+Before reporting a defect, rule out tool artifacts, input typed by automation tools, other
+writers, and device limits, and confirm it through <server read route or tool>.
+Evidence under <evidence dir>: screenshots for visual state, recordings for motion, server reads
+for persisted state.
+Exit: leave each slot at <exit state, such as signed out> and list what
+remains in the partitions.
+```
 
 ## Fix unit
 
-- Work in your own worktree from the lane head. Never touch the lane, main checkouts, or other
-  worktrees.
-- Change only owned files; route cross-boundary needs to the coordinator.
-- Verify the exact commit in a clean tree and read exit codes, not filtered output. Include the
-  repository gates your change can affect, such as routing tables, contracts, or generated counts.
-- Mark a fix whose correctness depends on runtime wiring (launchers, switches, configuration) as
-  "needs smoke on sync" and say what to check.
-- If the fix changes user-facing design, say so; its rows wait for the user's confirmation.
+```text
+Role: fix unit. Rows or findings: <ids>. Goal: <observable behavior after the fix>.
+Worktree <path>, branch <branch> from lane head <head>. Change only <paths>.
+Work dir: <path outside the worktree>.
+Leave the lane, main checkouts, and other worktrees untouched, and do not bypass hooks.
+Verify the exact commit in a clean tree and read exit codes: <typecheck, tests, and repository
+gates such as routing tables, contracts, or generated counts>.
+If correctness depends on launchers, switches, or configuration, mark "needs smoke on sync" and
+say what to check. Say whether user-facing design changed.
+Done: <condition>. Return the branch, head, and the checks you ran with their exit codes.
+```
 
 ## Integrator
 
-- Branch from the lane head in a fresh worktree and confirm the main line is an ancestor.
-- Write the task records, then the repository-required artifacts in the repository's order. Across
-  repositories, finish the depended-on repository first so the dependent one can pin its head.
-- Run the full gates on the final head in a clean tree.
-- Return the final heads and push commands that check ancestry and push without touching main
-  checkouts, in dependency order. Do not push and do not bypass hooks.
-
-## Examples
-
-A fix unit brief:
-
 ```text
-Role: fix unit. Rows: D04.
-Goal: a save rejected as unknown_activity_tag refreshes the slot's tags, keeps the draft,
-      and retries under a new command id.
-Start: worktree <worktrees>/d04-retired-term, branch fix/d04-retired-term from lane head 86c0021f.
-Own: apps/mobile/src/teacher/activity-slot/**, packages/integrations/src/teacher-board.ts
-Done: tests for the rejection path; typecheck and affected suites exit 0 on the head; handback.
-Stuck: write BLOCKER.md and hand back.
-```
-
-A test batch handback:
-
-```text
-Slot: android-1. Partitions: demo class A, synthetic child 01. Loaded: bundle marker found, lane 7037261a.
-D04 passed (Android, development teacher identity): add domain, tag activity, record keeps the tag,
-    retired tag still readable. evidence/android-r18/d04-*.png
-E02 partial: 120 items read across two pages; next-day due item seeded for tomorrow.
-Writes: 1 domain added; 3 records; 1 attention item appended to synthetic child 01.
-Pending: none. Blockers: none.
-Returned: signed out, gate shown, port forwarding unchanged.
+Role: integrator. Repositories in landing order: <repository: lane head>.
+Work dir: <path>.
+In a fresh worktree per repository, branch from its lane head and confirm the main line is an
+ancestor.
+Write the task records for <tasks>: decisive results, rulings <ids>, handoff items, and gaps.
+Then update repository-required artifacts in the repository's order: <locks, pins, generated
+files>. Finish the depended-on repository first so the dependent one can pin its head.
+Run the full gates on each final head in a clean tree.
+Return the final heads and push commands that check ancestry and push without touching main
+checkouts, in landing order, with the checks you ran and their exit codes. Do not push and do not
+bypass hooks.
 ```

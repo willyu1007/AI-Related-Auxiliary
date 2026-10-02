@@ -18,7 +18,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-const STATUSES = ['passed', 'partial', 'testing', 'failed', 'blocked', 'not-tested'];
+const STATUSES = ['passed', 'partial', 'failed', 'blocked', 'not-tested'];
 const KINDS = ['defect', 'design', 'gap', 'environment', 'ruling'];
 const SEVERITIES = ['P1', 'P2', 'P3', '-'];
 const COLUMNS = {
@@ -26,9 +26,13 @@ const COLUMNS = {
   Rulings: ['ID', 'Date', 'Decision', 'Rows'],
   Handoff: ['ID', 'Item', 'Needs', 'Gate', 'Rows'],
   Findings: ['ID', 'Severity', 'Kind', 'Summary', 'Disposition', 'Rows'],
-  Blockers: ['ID', 'Item', 'Unlock', 'Owner', 'Since'],
+  Blockers: ['ID', 'Item', 'Unlock', 'Owner', 'Since', 'Rows'],
 };
 const TEXT_SECTIONS = ['Summary', 'Lane', 'Next'];
+/** Lane facts a fresh coordinator needs to resume; each is a required `- Label:` bullet. */
+const LANE_FACTS = ['Runbook', 'Loaded', 'Slots', 'Partitions', 'Switches', 'Time zone', 'Samples', 'Pending', 'Off limits'];
+const UPDATED_RE = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}( [+-]\d{2}:\d{2})?$/;
+const COUNT_IN_NAME_RE = /\d+\s*(项|行|条|rows?\b|items?\b)/i;
 const QUALIFICATION_TAGS = 4;
 const QUALIFICATION_TAG_LENGTH = 16;
 const HASH_RE = /\b(?=[0-9a-f]*\d)(?=[0-9a-f]*[a-f])[0-9a-f]{7,40}\b/;
@@ -43,12 +47,12 @@ const SHOWN = {
 
 const LABELS = {
   en: {
-    passed: 'passed', partial: 'partial', testing: 'testing', failed: 'failed', blocked: 'blocked',
+    passed: 'passed', partial: 'partial', failed: 'failed', blocked: 'blocked',
     'not-tested': 'not tested', defect: 'defect', design: 'design', gap: 'gap',
     environment: 'environment', ruling: 'ruling', ungrouped: 'Ungrouped', Content: 'Summary', of: (n, t) => `${n} / ${t} passed`,
   },
   zh: {
-    passed: '通过', partial: '部分通过', testing: '测试中', failed: '失败', blocked: '阻塞', 'not-tested': '未测',
+    passed: '通过', partial: '部分通过', failed: '失败', blocked: '阻塞', 'not-tested': '未测',
     defect: '缺陷', design: '设计', gap: '产品缺口', environment: '环境', ruling: '待裁定', ungrouped: '未分组',
     of: (n, t) => `${n} / ${t} 通过`,
     Summary: '概况', Next: '下一步', Lane: '车道', Rulings: '裁定', Handoff: '交接包', Findings: '发现',
@@ -135,7 +139,10 @@ function parse(source) {
     if (kv) doc.meta.push([kv[1].trim(), kv[2].trim()]);
     else errors.push(`line ${i + 1}: the header takes only "Key: value" lines`);
   }
-  if (!doc.meta.some(([key]) => key === 'Updated')) errors.push('header: "Updated:" is required');
+  const updated = doc.meta.find(([key]) => key === 'Updated');
+  if (!updated) errors.push('header: "Updated:" is required');
+  else if (!UPDATED_RE.test(updated[1])) errors.push(`header: "Updated: ${updated[1]}" must be YYYY-MM-DD HH:MM with an optional ±HH:MM offset`);
+  if (!doc.meta.some(([key]) => key === 'Tasks')) errors.push('header: "Tasks:" is required (the repository task each ledger maps to)');
 
   const sections = [];
   for (; i < lines.length; i++) {
@@ -162,6 +169,7 @@ function parse(source) {
     }
   }
   if (!doc.ledgers.length) errors.push('at least one "## Rows: <ledger name>" section is required');
+  if (!doc.text.Lane) errors.push('the "## Lane" section is required');
   return { doc, errors };
 }
 
@@ -177,6 +185,9 @@ function lintForPeople(doc) {
   for (const ledger of doc.ledgers) for (const row of ledger.rows) for (const c of SHOWN.Rows) check(row[c], row.line, c);
   for (const [name, records] of Object.entries(doc.tables)) for (const rec of records) for (const c of SHOWN[name]) check(rec[c], rec.line, c);
   for (const name of ['Summary', 'Next']) for (const l of doc.text[name] ?? []) check(l.text, l.line);
+  for (const ledger of doc.ledgers) {
+    if (COUNT_IN_NAME_RE.test(ledger.name)) warnings.push(`ledger "${ledger.name}" carries a count in its name; the page computes counts`);
+  }
   return warnings;
 }
 
@@ -199,9 +210,24 @@ function validate(doc, errors) {
         errors.push(`line ${row.line}: "${row.ID}" is ${row.Status}, so Remaining must say what is left`);
       }
       const tags = qualificationTags(row.Qualification);
+      if ((row.Status === 'passed' || row.Status === 'partial') && !tags.length) {
+        errors.push(`line ${row.line}: "${row.ID}" is ${row.Status}, so Qualification must say what was established`);
+      }
+      if (row.Status === 'not-tested' && tags.length) {
+        errors.push(`line ${row.line}: "${row.ID}" is not-tested, so Qualification must be "-"; put required qualification in Acceptance`);
+      }
       if (tags.length > QUALIFICATION_TAGS || tags.some((t) => [...t].length > QUALIFICATION_TAG_LENGTH)) {
         errors.push(`line ${row.line}: Qualification takes at most ${QUALIFICATION_TAGS} tags of at most ${QUALIFICATION_TAG_LENGTH} characters, separated by ";"`);
       }
+    }
+  }
+  const switches = doc.text.Lane?.find((l) => l.text.trim().startsWith('- Switches:'));
+  if (switches && !/=|:\s*none\s*$/.test(switches.text.replace(/^\s*- Switches:/, ':'))) {
+    errors.push(`line ${switches.line}: write each switch as name=value, or "none"`);
+  }
+  for (const fact of LANE_FACTS) {
+    if (doc.text.Lane && !doc.text.Lane.some((l) => l.text.trim().startsWith(`- ${fact}:`))) {
+      errors.push(`"## Lane" needs a "- ${fact}:" bullet (write "none" if empty)`);
     }
   }
   for (const [name, records] of Object.entries(doc.tables)) {
@@ -368,9 +394,9 @@ ${records('Findings')}${records('Handoff')}${records('Rulings')}
 
 const CSS = `
 :root{--bg:#fafaf9;--fg:#1c1917;--muted:#78716c;--line:#e7e5e4;--card:#fff;--tag:#f5f5f4;--link:#1d4ed8;
---passed:#15803d;--partial:#b45309;--testing:#2563eb;--failed:#b91c1c;--blocked:#7c3aed;--not-tested:#a8a29e}
+--passed:#15803d;--partial:#b45309;--failed:#b91c1c;--blocked:#7c3aed;--not-tested:#a8a29e}
 @media (prefers-color-scheme:dark){:root{--bg:#1c1917;--fg:#e7e5e4;--muted:#a8a29e;--line:#44403c;--card:#292524;--tag:#3a3532;--link:#93c5fd;
---passed:#4ade80;--partial:#fbbf24;--testing:#60a5fa;--failed:#f87171;--blocked:#c4b5fd;--not-tested:#78716c}}
+--passed:#4ade80;--partial:#fbbf24;--failed:#f87171;--blocked:#c4b5fd;--not-tested:#78716c}}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.55 system-ui,-apple-system,"PingFang SC","Noto Sans CJK SC",sans-serif}
 main{max-width:1180px;margin:0 auto;padding:24px 16px 64px}h1{font-size:22px;margin:0 0 4px}h2{font-size:17px;margin:32px 0 10px}
 a{color:var(--link)}.muted{color:var(--muted);font-size:12px}.meta{display:flex;flex-wrap:wrap;gap:4px 16px;color:var(--muted)}
@@ -380,9 +406,9 @@ a{color:var(--link)}.muted{color:var(--muted);font-size:12px}.meta{display:flex;
 .bar{display:flex;height:8px;border-radius:4px;overflow:hidden;background:var(--line)}.bar span{display:block}
 .chips{display:flex;flex-wrap:wrap;gap:8px}.chip{display:inline-block;padding:0 8px;border-radius:10px;font-size:12px;border:1px solid currentColor;white-space:nowrap}
 .tag{display:inline-block;margin:0 4px 4px 0;padding:0 6px;border-radius:4px;background:var(--tag);font-size:12px;white-space:nowrap}
-.s-passed{color:var(--passed);background:var(--passed)}.s-partial{color:var(--partial);background:var(--partial)}.s-testing{color:var(--testing);background:var(--testing)}
+.s-passed{color:var(--passed);background:var(--passed)}.s-partial{color:var(--partial);background:var(--partial)}
 .s-failed{color:var(--failed);background:var(--failed)}.s-blocked{color:var(--blocked);background:var(--blocked)}.s-not-tested{color:var(--not-tested);background:var(--not-tested)}
-.chip.s-passed,.chip.s-partial,.chip.s-testing,.chip.s-failed,.chip.s-blocked,.chip.s-not-tested{background:none}
+.chip.s-passed,.chip.s-partial,.chip.s-failed,.chip.s-blocked,.chip.s-not-tested{background:none}
 .k-P1,.k-defect{color:var(--failed)}.k-P2,.k-gap{color:var(--partial)}.k-P3,.k-design,.k-environment,.k-ruling{color:var(--muted)}
 details{border:1px solid var(--line);border-radius:8px;background:var(--card);margin:8px 0}summary{padding:8px 12px;cursor:pointer;font-weight:600}
 table{width:100%;border-collapse:collapse}th,td{text-align:left;vertical-align:top;padding:6px 10px;border-top:1px solid var(--line);overflow-wrap:break-word}
@@ -412,5 +438,8 @@ if (errors.length) {
 for (const w of lintForPeople(doc)) console.error(`warning: ${w}`);
 const out = path.resolve(args.out || path.join(path.dirname(input), 'index.html'));
 fs.writeFileSync(out, html);
-const tally = doc.ledgers.map((l) => `${l.name} ${countStatuses(l.rows).passed}/${l.rows.length} passed`);
+const tally = doc.ledgers.map((l) => {
+  const counts = countStatuses(l.rows);
+  return `${l.name}: ${STATUSES.filter((s) => counts[s]).map((s) => `${counts[s]} ${s}`).join(', ')}`;
+});
 console.log(`rendered ${out}: ${tally.join('; ')}`);
