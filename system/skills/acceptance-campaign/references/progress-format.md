@@ -1,8 +1,9 @@
 # progress.md format
 
-Follow this layout and these rules exactly. Never write counts. Write status and kind values in
-English. Write every cell outside the header, Lane, and Evidence as plain prose for people, and put
-commit hashes, ports, paths, and process ids only in the header, Lane, or Evidence.
+Follow this layout and these rules exactly. Never write row counts or status tallies. Write status
+and kind values in English. Write every cell outside the header, Lane, and Evidence as plain prose
+for people, and put commit hashes, ports, paths, and process ids only in the header, Lane, or
+Evidence.
 
 ## Layout
 
@@ -54,7 +55,7 @@ Card payment passes on both platforms; the iOS refund check waits for the 09:00 
 ## Lane
 
 - Runbook: docs/runbook.md
-- Loaded: app@1a2b3c4, api@5d6e7f8; api ready line "api ready"; client marker "build 3c4" on the About screen; smoke passed 2026-03-14 08:40 (evidence/smoke-0314.txt); lane open
+- Loaded: app@1a2b3c4, api@5d6e7f8; load proofs: api GET /version returns 5d6e7f8, the About screen shows build 1a2b3c4; smoke passed 2026-03-14 08:40 (evidence/smoke-0314.txt); lane open
 - Slots: ios-1 = simulator 0A1B, app com.example.shop, UTC, test-account picker, free; android-1 = emulator-5554, app com.example.shop, UTC, test-account picker, free; web-1 = http://localhost:3000/admin, admin login from the runbook, free
 - Partitions: store-a with buyer-1, free; store-b with buyer-2, free, holds 3 leftover test orders; refund settings, free
 - Switches: PAYMENTS_SANDBOX=true; REFUNDS_ENABLED=true; EMAIL_SEND=false
@@ -97,7 +98,7 @@ Card payment passes on both platforms; the iOS refund check waits for the 09:00 
 - **Lane**: `-` bullets starting with each of the labels below, all required. Write `none` where a
   list is empty.
   - `Runbook:` its path.
-  - `Loaded:` the loaded baseline with its runtime markers, the last smoke result with its evidence
+  - `Loaded:` the loaded baseline with its load proofs, the last smoke result with its evidence
     path, and whether the lane is open or closed.
   - `Slots:` each slot's device or URL, app id, device time zone, sign-in, and holder.
   - `Partitions:` each partition's identities, holder with `write` or `depend`, and leftover data.
@@ -107,8 +108,9 @@ Card payment passes on both platforms; the iOS refund check waits for the 09:00 
   - `Objects:` seeded samples and the objects of an interrupted chain: object, partition,
     identities, due time with zone, and the report of the last run.
   - `Pending:` operations with an unknown outcome, under their original operation.
-  - `Units:` each running unit's role, agent, work dir or worktree, what it holds, and its hand-back
-    time.
+  - `Units:` each unit's role, agent, state (running, handed back, awaiting sync), work dir or
+    worktree, branch or head, verification evidence, what it holds, hand-back time, and next step.
+    Keep an entry until its work is adopted or discarded.
   - `Off limits:` devices, checkouts, and services the campaign does not own.
 - **Inline formatting**: links `[text](href)`, code spans, and `**bold**`. Write relative links from
   the directory of `progress.md`, to files that exist.
