@@ -15,7 +15,7 @@ Run every check against one lane: the running services, data stores, configurati
 slots.
 
 - Run test batches in parallel only across slots and data partitions; give each slot and each
-  partition to one batch at a time. A batch may hold several slots for a cross-system journey. A
+  partition to one batch at a time. Let a batch hold several slots for a cross-system journey. A
   batch holds every partition it writes and every shared state its acceptance depends on: the
   whole group when a write affects it (attendance affects a class), and any shared object it
   changes (an organization-wide setting, an identity's roles, a shared catalog, a global flag).
@@ -42,10 +42,10 @@ slots.
 
 1. Continue a campaign through Resume (section 6), on its existing `progress.md`. Only when
    adopting another set of records, transcribe them into `progress.md` in a new campaign
-   directory: rows, handoff items, findings, blockers, lane facts, and the user decisions that
-   rank as rulings (section 4). Check that every row and open item made it in, tell the user the
-   old records will no longer be updated, and add anything found missing later with a note in the
-   Summary.
+   directory: rows, handoff-package items, findings, blockers, lane facts, and the user decisions
+   that rank as rulings (section 4). Check that every row and open item made it in, tell the user
+   the old records will no longer be updated, and add anything found missing later with a note in
+   the Summary.
 2. Keep the campaign directory outside every worktree: use the location the user's instructions
    name for presentation artifacts, otherwise `<Desktop>/acceptance-campaign/<slug>/`, with a
    kebab-case slug. Put `progress.md`, the rendered `index.html`, `evidence/` (screenshots,
@@ -54,8 +54,8 @@ slots.
 3. Write `progress.md` yourself, as one current snapshot, in the format of
    [references/progress-format.md](references/progress-format.md): each row with its acceptance
    condition for the lane's scope and any existing result with its baseline (reuse valid results),
-   and each ledger mapped to its repository task in the `Tasks` header. Record missing mappings
-   instead of creating tasks or widening scope.
+   each ledger mapped to its repository task in the `Tasks` header, and this session named in the
+   `Coordinator` header. Record missing mappings instead of creating tasks or widening scope.
 4. Check the runbook against the lane operator's runbook duty in
    [references/units.md](references/units.md); if it is missing or incomplete, have the lane
    operator complete it.
@@ -76,6 +76,8 @@ slots.
      runbook.
    - **Test batch** runs checks on the slots and partitions it holds.
    - **Fix unit** fixes in its own worktree from the current lane head, within the modules it owns.
+     Dispatch a longer read-only investigation as a fix unit whose goal is a report and that
+     changes no code.
    - **Integrator** assembles candidate lane heads (section 5) and prepares the main-line landing
      (section 6), in fresh worktrees.
 2. Write the brief from its template in [references/units.md](references/units.md) and fill every
@@ -87,7 +89,10 @@ slots.
    worktree alone.
 4. Record the unit under Units with the resources it reserves and the state `dispatching`, then
    dispatch it, then add its agent and set it `running`. Keep the entry, with its state, branch or
-   head, verification evidence, and next step, until its work is adopted or discarded.
+   head, verification evidence, and next step, until its work is adopted: a test batch once its
+   results are judged into `progress.md`, a lane operation once it is recorded under Loaded, and a
+   fix unit or integrator once its code lands on the main line or is discarded. Mark code awaiting
+   sync `handed back` and code on the lane awaiting landing `on lane`.
 
 ## 4. Receive and judge
 
@@ -117,15 +122,16 @@ After each handback, judge its rows, update `progress.md`, re-render, and tell t
   baseline), tools (caches, automated input), other writers (including the user), and device
   limits, and re-observe it through a second channel such as a server read. Grade defects P1
   (lost or wrong data, security, a blocked main user flow), P2 (a broken flow with a workaround),
-  or P3 (polish); fix P1 and P2 in the campaign and P3 when the user agrees. Never lower an
+  or P3 (polish); fix P1 and P2 within the authorized scope by default, and P3 when the user
+  agrees. Never lower an
   acceptance condition or widen scope by classifying.
-- Ask the user about every open ruling.
-- Ask whether to fix a defect now or defer it only when the fix needs a new product decision, a
-  breaking contract change, or work beyond the authorized scope. Record the answer in the
-  finding's Disposition.
+- Ask the user about each open ruling, including a fix that needs a new product decision.
+- Ask whether to fix a defect now or defer it only when the fix needs a breaking contract change
+  or work beyond the authorized scope. Record the answer in the finding's Disposition.
 - Ask with options, a recommended default, and the rows each option affects, batching the
-  questions. Hold only the affected rows while a question is pending, and never treat elapsed time
-  as consent.
+  questions. Do not ask a pending question again while its facts and options are unchanged; ask
+  again after new evidence or a change of scope. Hold only the affected rows while a question is
+  pending, and never treat elapsed time as consent.
 - Number as a ruling every decision that changes scope, an acceptance basis, a business policy, or
   a switch with side effects, and update the affected acceptance conditions.
 - Pass the rows of a fix that changes user-facing design only after the user confirms screenshots
@@ -137,27 +143,33 @@ Make every lane change through one entry: record the lane closed, dispatch no te
 until every running test batch has actually handed back, have the lane operator do the work, run
 the final smoke check with the load proofs, and record the lane open. If the smoke check fails,
 keep the lane closed until it is repaired or returned to the previous baseline. Record the new
-loaded baseline, its load proofs, and the retest set.
+loaded baseline and its load proofs under Loaded.
 
 - **Code**: bring code onto the lane only as a candidate head that passed the repository gates. A
   branch that contains the current lane head and passed the gates is its own candidate; otherwise
   have the integrator merge from the current lane head. Across repositories, settle one candidate
-  per repository and check their dependencies on each other. The lane operator fast-forwards and
+  per repository and check their dependencies on each other. Assemble candidates off the lane
+  before taking the entry; test batches may run meanwhile. The lane operator fast-forwards and
   migrates only as its brief authorizes.
-- **Load proofs**: prove what is loaded with a marker that carries the build or version: a version
-  string in a bundle or log line, a version field, a registration hash, or a probe whose result
-  differs between the old and new code. Never accept a ready line or a git ref, and count a probe
-  only for the service and path it covers.
+- **Load proofs**: prove what is loaded for each changed service and client with existing version
+  information (a version string in a bundle or log line, a version field, a registration hash) or
+  a read-only probe whose result differs between the old and new code. Where neither exists, have
+  a fix unit add a minimal load marker. Use a business write as a probe only when the brief
+  authorizes it, on a disposable sample, inside the entry before the lane opens, and record the
+  sample as consumed. Never accept a ready line, a git ref, or a passing retest as a load proof,
+  and count a probe only for the service and path it covers.
 - **Retest**: take the rows and components that the fix units or the lane operator name as directly
   affected by this lane change, add the rows reached through contracts, permissions, or shared
-  logic, and retest that set. Turn its `passed`
-  rows to `partial`, keeping their evidence and baseline; leave `failed` rows `failed` until their
-  failed qualification is retested. A restart without a code or configuration change needs only
-  the smoke check.
+  logic, and retest that set. Turn its `passed` rows to `partial`, keeping their evidence and
+  baseline, and leave `failed` rows `failed` until their failed qualification is retested; set each
+  row's Remaining to the retest and list the retest in Next. If the retest needs consumed samples,
+  seed replacements first (references/test-data.md). After a restart without a code or
+  configuration change, run only the smoke check.
 - **Configuration and seeding**: run them as lane operations, after code and migrations and before
   the final smoke check.
 - **Window**: run exclusive work (fault injection, data resets, switching device time zones for a
-  test) inside the entry, record the window in `progress.md`, and end it with a verified restore.
+  test) inside the entry, record the window as the lane operator's entry under Units, and end it
+  with a verified restore.
 - **Fault**: when a unit reports a lane-level fault, take the entry at once, have the lane operator
   repair the lane, and re-judge the evidence taken during the fault.
 - **Slots**: to run more batches at once, have the lane operator add slots. Run work that needs a
@@ -168,13 +180,17 @@ loaded baseline, its load proofs, and the retest set.
 - **Pause**: dispatch nothing new, send running units a stop instruction, wait for their actual
   handbacks, and record running state, pending operations, and resume steps in `progress.md`. Keep
   the lane up, and dispatch the remaining work later as new briefs.
-- **Resume**, including a new session on the same campaign: read `progress.md`, record the lane
-  closed, re-check pending operations and Units, and have the lane operator check the runbook
-  against the lane and run the smoke check; never reuse earlier readiness claims.
+- **Resume**, including a new session on the same campaign: read the `Coordinator` header and
+  Units in `progress.md`; if another coordinator is still active, ask the user before acting.
+  Otherwise set `Coordinator` to this session, read the handoff document if there is one, record
+  the lane closed, re-check pending operations and Units, check the runbook as in section 2, have
+  the lane operator run the smoke check, and record the lane open once it passes; never reuse
+  earlier readiness claims.
 - **Land**: when the user asks to land the lane on the main line, have the integrator prepare it
   from the lane head, with the depended-on repository first, and sync decisive results, rulings,
   handoff items, and gaps into the mapped repository task records through the repository's task
-  workflow. After the push, remove merged unit worktrees and branches.
+  workflow. After the push, move the evidence the records cite into `evidence/`, then remove the
+  merged unit worktrees, branches, and Units entries.
 - **Handoff**: write a requested handoff document as a current snapshot of state, next steps, and
   constraints, and point it to `progress.md`.
 - **Close** execution when every row has a current judgment with evidence or a stated reason it

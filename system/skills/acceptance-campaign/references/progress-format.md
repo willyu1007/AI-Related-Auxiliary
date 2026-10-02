@@ -11,6 +11,7 @@ Evidence.
 # Shop app acceptance
 
 Updated: 2026-03-14 18:00 +00:00
+Coordinator: session 4f2a, since 2026-03-14 08:30 +00:00
 Tasks: Mobile → SHOP-12 in the app repository
 
 ## Summary
@@ -69,8 +70,8 @@ Card payment passes on both platforms; the iOS refund check waits for the 09:00 
 ## Rules
 
 - **Header**: the `#` title comes first, then `Key: value` lines. `Updated` (`YYYY-MM-DD HH:MM`
-  with an optional `±HH:MM` offset) and `Tasks` (the repository task each ledger maps to) are
-  required.
+  with an optional `±HH:MM` offset), `Coordinator` (the coordinating session and since when), and
+  `Tasks` (the repository task each ledger maps to) are required.
 - **Sections**: `##` headings are limited to `Summary`, `Next`, `Blockers`, `Rows: <ledger name>`,
   `Findings`, `Handoff`, `Rulings`, and `Lane`. At least one `Rows:` section and the `Lane` section
   are required; every other section appears at most once. Ledger names carry no counts.
@@ -98,7 +99,8 @@ Card payment passes on both platforms; the iOS refund check waits for the 09:00 
   handoff to the Handoff table. **Severity**: `P1`, `P2`, `P3`, or `-`.
 - **Rows columns** in Blockers, Findings, Handoff, and Rulings list row ids separated by commas, or
   `-`. Every id must exist in some ledger.
-- **Next**: the coming units in order, each with its slots, time gate, and hand-back time.
+- **Next**: the coming units in order, each with its slots, time gate, and hand-back time, or `set
+  at dispatch` when it is not yet known.
 - **Lane**: `-` bullets starting with each of the labels below, all required, complete enough to
   resume from without asking. Write `none` where a list is empty.
   - `Runbook:` its path.
@@ -112,9 +114,9 @@ Card payment passes on both platforms; the iOS refund check waits for the 09:00 
   - `Objects:` seeded samples and the objects of an interrupted chain: object, partition,
     identities, due time with zone, and the report of the last run.
   - `Pending:` operations with an unknown outcome, under their original operation.
-  - `Units:` each unit's role, agent, state (dispatching, running, handed back, awaiting sync),
-    work dir or worktree, branch or head, verification evidence, what it holds, hand-back time, and
-    next step. Keep an entry until its work is adopted or discarded.
+  - `Units:` each unit's role, agent, state (`dispatching`, `running`, `handed back`, `on lane`),
+    work dir or worktree, branch or head, verification evidence, what it holds, hand-back time when
+    one applies, and next step. Keep an entry until its work is adopted (SKILL.md section 3).
   - `Off limits:` devices, checkouts, and services the campaign does not own.
 - **Inline formatting**: links `[text](href)`, code spans, and `**bold**`. Write relative links from
   the directory of `progress.md`, to files that exist.

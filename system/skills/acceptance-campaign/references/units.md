@@ -29,7 +29,7 @@ Hand back:
 Role: lane operator for <campaign>. You alone change the lane.
 Lane: runbook <path>; environment file <path>; slots <slot: device or URL, app id>.
 Off limits: <devices, checkouts, services the campaign does not own>.
-Constraints: <project rules every unit follows, from the runbook>.
+Constraints: <applicable project rules and user instructions, including this task's constraints>.
 Work dir: <path>. Hand back by: <time and zone>.
 Task: <start | sync to <candidate heads> | change <configuration or allow-list> | seed <fixture
 command> | smoke | repair | restore | window for <purpose>>.
@@ -47,7 +47,8 @@ the whole smoke, and report the restart.
 - switches on the running processes: <name=value list>
 - device time zones: set to <business time zone, unless a row needs another>
 - read routes for the rows the next batches test: <routes>
-- load proofs for each changed service and client: <method and expected result>
+- load proofs for each changed service and client: <read-only method and expected result>; a
+  write probe only on <disposable sample> when this brief authorizes it, recorded as consumed
 Runbook: keep it able to rebuild the lane from files alone, covering the worktrees, stores, and
 ports the campaign owns; the environment file; start and sync steps; smoke checks (health routes,
 invariants, allow-list entries, read routes, load proofs, device time zones); sign-in per slot; how
@@ -68,18 +69,18 @@ Rows: <id: acceptance condition; remaining work>.
 Steps: <optional for a multi-identity or multi-client chain: ordered steps, each with identity,
 client, action, expected result, and check>.
 Known: <rulings, design decisions, handoff items, and open findings that bear on these rows>.
-Expect: loaded marker <marker>; identities <identity per client or step>; business date <date>
-in <time zone>.
+Expect: load proofs for the services and clients this batch depends on: <markers or probes>;
+identities <identity per client or step>; business date <date> in <time zone>.
 Partitions you hold: <partition: write or depend>. Write only in partitions marked write.
 Destructive flows use <disposable identities or objects>.
 Objects: <ids of the records, invitations, or samples you act on>.
 Write APIs: <authorized business write APIs and tools from the runbook, or none>; use them only to
 prepare a check or take API-level evidence, never in place of a required UI check.
 Off limits: <other slots, devices, checkouts, services>.
-Constraints: <project rules every unit follows, from the runbook>.
+Constraints: <applicable project rules and user instructions, including this task's constraints>.
 Work dir: <path>. Not before: <time and zone, or none>. Hand back by: <time and zone>; if you
 cannot finish by then, stop at a safe point and hand back what you have.
-Preflight the loaded marker, identities, and date and time zone; a mismatch is a blocker.
+Preflight the load proofs, identities, and date and time zone; a mismatch is a blocker.
 Use the current business date and the nearest feasible effective and expiry times, with margin
 for your operations, asynchronous processing, and evidence capture.
 Leave the lane's services, configuration, and code, and device clocks, unchanged.
@@ -102,6 +103,8 @@ Evidence: <finding, reproduction, evidence paths, and suspected cause marked as 
 Worktree <path>, branch <branch> from lane head <head>. Own modules: <modules>. Read any module;
 before changing code outside your modules, ask the coordinator to reassign ownership.
 Work dir: <path outside the worktree>. Disposable database: <per runbook <section>, or none>.
+Constraints: <applicable project rules and user instructions, including this task's constraints>.
+Hand back by: <time and zone, only for an integration slot or resource reservation, or none>.
 Leave the lane, main checkouts, and other worktrees untouched, and do not bypass hooks.
 Regenerate the generated files your gates require, and follow the repository's rules for locks and
 pins.
@@ -110,7 +113,7 @@ gates such as routing tables, contracts, or generated counts>.
 Done: <condition>. Return:
 - the branch, head, and checks you ran with their exit codes;
 - the rows and components the fix directly affects;
-- migrations, dependency, manifest, or contract changes (reporting one does not authorize it);
+- migrations, dependency, manifest, or contract changes;
 - a load proof for the lane: a method and the expected result that tell the new code from the old;
 - whether user-facing design changed.
 ```
@@ -119,7 +122,10 @@ Done: <condition>. Return:
 
 ```text
 Role: integrator. Repositories in landing order: <repository: lane head>.
-Work dir: <path>.
+Off limits: <the lane, main checkouts, and other units' worktrees>.
+Constraints: <applicable project rules and user instructions, including this task's constraints>.
+Work dir: <path>. Hand back by: <time and zone, only for a landing slot or resource reservation,
+or none>.
 Task: <assemble a candidate lane head from <fix branches> | land the lane on the main line>.
 Assemble: in a fresh worktree per repository, branch from the current lane head, merge the fix
 branches, rebuild the shared generated files, update locks and pins by the repository's rules, and

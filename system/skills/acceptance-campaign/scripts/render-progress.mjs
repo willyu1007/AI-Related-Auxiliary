@@ -143,6 +143,7 @@ function parse(source) {
   if (!updated) errors.push('header: "Updated:" is required');
   else if (!UPDATED_RE.test(updated[1])) errors.push(`header: "Updated: ${updated[1]}" must be YYYY-MM-DD HH:MM with an optional ±HH:MM offset`);
   if (!doc.meta.some(([key]) => key === 'Tasks')) errors.push('header: "Tasks:" is required (the repository task each ledger maps to)');
+  if (!doc.meta.some(([key]) => key === 'Coordinator')) errors.push('header: "Coordinator:" is required (the coordinating session and since when)');
 
   const sections = [];
   for (; i < lines.length; i++) {
@@ -445,6 +446,7 @@ validate(doc, errors);
 const lang = /[㐀-鿿]/.test(doc.title) ? 'zh' : 'en';
 const inline = makeInline(path.dirname(input), errors);
 for (const ledger of doc.ledgers) for (const row of ledger.rows) if (row.Evidence !== '-') inline(row.Evidence, row.line);
+for (const l of doc.text.Lane ?? []) inline(l.text, l.line);
 const html = render(doc, inline, lang);
 if (errors.length) {
   console.error(`${path.basename(input)}: ${errors.length} error(s); nothing written`);
