@@ -84,7 +84,7 @@ checks/          # 本仓库自己的校验，不是分发物
 | [resolve-vcs-conflicts](system/skills/resolve-vcs-conflicts/SKILL.md) | 在已获授权且进行中的 merge、rebase、cherry-pick 或 revert 中恢复双方意图并解决 Git 冲突 |
 | [tdd](system/skills/tdd/SKILL.md) | 在行为与测试 seam 足够稳定时，以 red → green → refactor 推进测试优先实现 |
 | [using-powershell](system/skills/using-powershell/SKILL.md) | 在 Windows PowerShell 5.1/PowerShell 7 中编写命令与 `.ps1`，避免 Bash/CMD 语法混入，并对 `.ps1` 跑无依赖 lint |
-| [wizard](system/skills/wizard/SKILL.md) | `general` 档的通用交互向导；为必须由用户持有私密访问、MFA 或实体设备才能完成的步骤生成临时脚本，在 `all` 档由 sensitive-ops 替代 |
+| [wizard](system/skills/wizard/SKILL.md) | `general` 档的通用交互向导；为必须由用户持有私密访问、MFA 或实体设备才能完成的步骤生成临时脚本，在 `will` 档由 sensitive-ops 替代 |
 | [write-prompt](system/skills/write-prompt/SKILL.md) | 为另一个 LLM、subagent、CLI agent 或运行时模型编写独立执行边界的 Prompt |
 | [aliyun-ops](system/skills/aliyun-ops/SKILL.md) | 排查或实施阿里云 ECS、RDS、RAM、OSS、ACR 及其部署链路，区分控制台提交、实际生效和业务验收；含自托管 Logto、密钥注入和联合 staging 的避坑规则 |
 | [uml-diagrams-new](system/skills/uml-diagrams-new/SKILL.md) | Mermaid + 官方 draw.io CLI/ELK 生成 UML/流程图；layout 预设；贴 Word 时读对应类型文档 |
@@ -101,14 +101,13 @@ checks/          # 本仓库自己的校验，不是分发物
 | 档位 | 覆盖关系 | 内容 |
 |---|---|---|
 | `minimal` | 基础档 | 治理主线以及 C++、PowerShell（仅 Windows）、review、research、tdd |
-| `general` | 包含 `minimal` | 增加日常调试、UI、HTML、清理、大范围功能测试、Codex 和 script-first 的 wizard |
-| `all` | 包含 `general`，但以 sensitive-ops 替换 wizard | 覆盖相同的用户绑定步骤，并增加 write-prompt、Prisma 和 `.ai/llm` |
-| `will` | 个人档：与 `all` 相同，但不装 C++、PowerShell 与两套 UML 图技能，并增加阿里云避坑 | 不安装 `cpp-code-style`、`cpp-code-style-manager`、`using-powershell`、`uml-diagrams`、`uml-diagrams-new`；安装 `aliyun-ops` |
+| `general` | 包含 `minimal` | 增加日常调试、UI、HTML、清理、Codex 和 script-first 的 wizard |
+| `will` | 个人档：包含 `general` 的日常技能，但以 sensitive-ops 替换 wizard，且不装 C++、PowerShell 与两套 UML 图技能 | 另含 write-prompt、Prisma、`.ai/llm`、`aliyun-ops`、`acceptance-campaign` |
 
-`wizard` 与 `sensitive-ops` 不会同时安装；`.codex` 在 `general`、`all` 和 `will` 下仍不安装三个 `codex-*` 技能。`using-powershell` 只在 Windows（`win32`）安装，且从不进入 `will`；macOS / Linux 会跳过，并删掉目标里已有的副本。
+`wizard` 与 `sensitive-ops` 不会同时安装；`.codex` 在 `general` 和 `will` 下仍不安装三个 `codex-*` 技能。`using-powershell` 只在 Windows（`win32`）安装，且从不进入 `will`；macOS / Linux 会跳过，并删掉目标里已有的副本。
 
 > [!CAUTION]
-> `all` 是仓库维护者的完整个人配置，包含较强的工作流与环境假设，并不代表更通用或更适合所有用户。使用前应逐项阅读相关 skill，尤其先确认 [sensitive-ops](system/skills/sensitive-ops/SKILL.md) 对敏感信息持久化、一次性凭证、生产授权和可选 shell helper 的处理方式符合你的设备、项目与团队安全要求；不符合时应调整 skill 或选择较低档位。
+> `will` 是仓库维护者的个人配置，包含较强的工作流与环境假设，并不代表更通用或更适合所有用户。使用前应逐项阅读相关 skill，尤其先确认 [sensitive-ops](system/skills/sensitive-ops/SKILL.md) 对敏感信息持久化、一次性凭证、生产授权和可选 shell helper 的处理方式符合你的设备、项目与团队安全要求；不符合时应调整 skill 或选择较低档位。
 
 全局同步：
 
@@ -117,7 +116,6 @@ checks/          # 本仓库自己的校验，不是分发物
 # 默认 general；.codex 不装 codex-*；AGENTS.md 落 ~/.codex 和 ~/.cursor，CLAUDE.md 落 ~/.claude
 node install-system-auxiliary.mjs
 node install-system-auxiliary.mjs --profile minimal
-node install-system-auxiliary.mjs --profile all
 node install-system-auxiliary.mjs --profile will
 
 # resources/ 不在脚本范围内，仍手动同步（各 Agent 环境里 resources/ 必须与 skills/ 同级）

@@ -17,7 +17,6 @@
  * Usage:
  *   node install-system-auxiliary.mjs
  *   node install-system-auxiliary.mjs --profile general
- *   node install-system-auxiliary.mjs --profile all
  *   node install-system-auxiliary.mjs --profile will
  */
 
@@ -37,12 +36,11 @@ const AGENTS = [
   { home: '.cursor', skillFilter: () => true, docs: ['AGENTS.md'] },
 ];
 
-const TIER_RANK = { minimal: 0, general: 1, all: 2, will: 2 };
+const TIER_RANK = { minimal: 0, general: 1, will: 2 };
 const DEFAULT_PROFILE = 'general';
 const PROFILE_ALIASES = {
   minimal: 'minimal',
   general: 'general',
-  all: 'all',
   will: 'will',
 };
 
@@ -62,7 +60,7 @@ export const SKILL_TIER = {
   'project-status': 'minimal',
   'project-hub-maintain': 'minimal',
   'debug-mode': 'general',
-  'acceptance-campaign': 'general',
+  'acceptance-campaign': 'will',
   'resolve-vcs-conflicts': 'general',
   'cleanup-project-residue': 'general',
   'html-communication': 'general',
@@ -74,10 +72,10 @@ export const SKILL_TIER = {
   'codex-review': 'general',
   'codex-computer-use': 'general',
   wizard: 'general',
-  'write-prompt': 'all',
-  'sensitive-ops': 'all',
-  'sync-db-from-prisma': 'all',
-  'manage-llm-config': 'all',
+  'write-prompt': 'will',
+  'sensitive-ops': 'will',
+  'sync-db-from-prisma': 'will',
+  'manage-llm-config': 'will',
   'aliyun-ops': 'will',
 };
 
@@ -85,7 +83,6 @@ export const SKILL_TIER = {
 export const PROFILE_EXCLUSIONS = {
   minimal: new Set(),
   general: new Set(),
-  all: new Set(['wizard', 'aliyun-ops']),
   will: new Set([
     'wizard',
     'cpp-code-style',
@@ -117,17 +114,17 @@ Usage:
 Sync system/skills and global instruction docs into ~/.claude, ~/.codex, and ~/.cursor.
 
 Options:
-  --profile <name>  minimal | general | all | will
+  --profile <name>  minimal | general | will
                     Default: general. Higher profiles build on lower ones,
                     with documented replacements.
   -h, --help        Show this help
 
 Profiles:
   minimal   task-* / project-* plus C++, PowerShell (Windows), review, research, and tdd
-  general   minimal plus everyday debug, UI, HTML, cleanup, acceptance campaigns, Codex, and wizard
-  all       general with wizard replaced by sensitive-ops, plus write-prompt,
-            Prisma, and .ai/llm
-  will      personal: same as all, without C++, PowerShell, or the UML skills, plus Aliyun ops
+  general   minimal plus everyday debug, UI, HTML, cleanup, Codex, and wizard
+  will      personal: general with sensitive-ops instead of wizard, without C++,
+            PowerShell, or the UML skills, plus write-prompt, Prisma, .ai/llm,
+            Aliyun ops, and acceptance campaigns
 
 ~/.codex never receives the three codex-* skills.
 Library skills outside the selected profile are removed from the target.
@@ -154,7 +151,7 @@ function parseArgs(argv) {
     if (!value || value.startsWith('--')) fail('Option --profile requires a value.');
     const resolved = PROFILE_ALIASES[value];
     if (!resolved) {
-      fail(`Unknown profile: "${value}". Use minimal, general, all, or will.`);
+      fail(`Unknown profile: "${value}". Use minimal, general, or will.`);
     }
     profile = resolved;
   }

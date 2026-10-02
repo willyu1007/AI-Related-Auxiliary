@@ -152,16 +152,14 @@ function runStatic() {
   const allSkillNames = [...skillByDir.keys()];
   const minimalSkills = new Set(skillsForProfile(allSkillNames, 'minimal'));
   const generalSkills = new Set(skillsForProfile(allSkillNames, 'general'));
-  const fullSkills = new Set(skillsForProfile(allSkillNames, 'all'));
   const willSkills = new Set(skillsForProfile(allSkillNames, 'will'));
   if (!generalSkills.has('wizard') || generalSkills.has('sensitive-ops')) {
     fail('skill-profile', 'general must install wizard without sensitive-ops');
   }
-  if (fullSkills.has('wizard') || !fullSkills.has('sensitive-ops')) {
-    fail('skill-profile', 'all must replace wizard with sensitive-ops');
-  }
-  if (fullSkills.has('aliyun-ops')) {
-    fail('skill-profile', 'all must not install aliyun-ops');
+  for (const name of ['write-prompt', 'sensitive-ops', 'sync-db-from-prisma', 'manage-llm-config', 'aliyun-ops', 'acceptance-campaign']) {
+    if (minimalSkills.has(name) || generalSkills.has(name)) {
+      fail('skill-profile', `${name} installs only on will`);
+    }
   }
   if (willSkills.has('wizard') || !willSkills.has('sensitive-ops')) {
     fail('skill-profile', 'will must replace wizard with sensitive-ops');
@@ -169,13 +167,12 @@ function runStatic() {
   for (const name of ['cpp-code-style', 'cpp-code-style-manager', 'using-powershell', 'uml-diagrams', 'uml-diagrams-new']) {
     if (willSkills.has(name)) fail('skill-profile', `will must not install ${name}`);
   }
-  for (const name of ['write-prompt', 'sync-db-from-prisma', 'manage-llm-config', 'aliyun-ops']) {
+  for (const name of ['write-prompt', 'sync-db-from-prisma', 'manage-llm-config', 'aliyun-ops', 'acceptance-campaign']) {
     if (!willSkills.has(name)) fail('skill-profile', `will must install ${name}`);
   }
 
   const minimalRemovals = new Set(managedSkillsToRemove(allSkillNames, minimalSkills));
   const generalRemovals = new Set(managedSkillsToRemove(allSkillNames, generalSkills));
-  const fullRemovals = new Set(managedSkillsToRemove(allSkillNames, fullSkills));
   const willRemovals = new Set(managedSkillsToRemove(allSkillNames, willSkills));
   if (!minimalRemovals.has('wizard') || !minimalRemovals.has('sensitive-ops')) {
     fail('skill-profile', 'minimal must remove wizard and sensitive-ops');
@@ -183,11 +180,10 @@ function runStatic() {
   if (!generalRemovals.has('sensitive-ops') || generalRemovals.has('wizard')) {
     fail('skill-profile', 'general must remove sensitive-ops and retain wizard');
   }
-  if (!fullRemovals.has('wizard') || fullRemovals.has('sensitive-ops')) {
-    fail('skill-profile', 'all must remove wizard and retain sensitive-ops');
-  }
-  if (!fullRemovals.has('aliyun-ops')) {
-    fail('skill-profile', 'all must remove aliyun-ops');
+  for (const removals of [minimalRemovals, generalRemovals]) {
+    for (const name of ['write-prompt', 'sensitive-ops', 'sync-db-from-prisma', 'manage-llm-config', 'aliyun-ops', 'acceptance-campaign']) {
+      if (!removals.has(name)) fail('skill-profile', `minimal and general must remove ${name}`);
+    }
   }
   if (!willRemovals.has('wizard') || willRemovals.has('sensitive-ops')) {
     fail('skill-profile', 'will must remove wizard and retain sensitive-ops');
@@ -195,10 +191,13 @@ function runStatic() {
   if (willRemovals.has('aliyun-ops')) {
     fail('skill-profile', 'will must retain aliyun-ops');
   }
+  if (willRemovals.has('acceptance-campaign')) {
+    fail('skill-profile', 'will must retain acceptance-campaign');
+  }
   for (const name of ['cpp-code-style', 'cpp-code-style-manager', 'using-powershell', 'uml-diagrams', 'uml-diagrams-new']) {
     if (!willRemovals.has(name)) fail('skill-profile', `will must remove ${name}`);
   }
-  for (const removals of [minimalRemovals, generalRemovals, fullRemovals, willRemovals]) {
+  for (const removals of [minimalRemovals, generalRemovals, willRemovals]) {
     for (const retired of ['get-sensitive-info', 'test-campaign']) {
       if (!removals.has(retired)) {
         fail('skill-profile', `every profile must remove the retired ${retired} skill`);
