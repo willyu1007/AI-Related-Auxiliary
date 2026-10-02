@@ -61,7 +61,9 @@ slots.
    operator complete it.
 5. Schedule time-gated rows (next-day due items, opening hours, expiry) now. Before creating,
    seeding, or consuming test data, read [references/test-data.md](references/test-data.md).
-6. Put work that unblocks other rows first.
+6. Plan the first candidate: the fixes it will carry, the formal artifacts and permissions it
+   needs, its main blocker, and the rows to retest once it loads. Write it as the first item of
+   Next, and order the rest so work that unblocks the candidate or other rows comes first.
 7. After every change to `progress.md`, run
    `node <skill-dir>/scripts/render-progress.mjs <campaign-dir>/progress.md`, where `<skill-dir>`
    is the directory of this file. Fix every error and rewrite every warned cell before telling the
@@ -84,9 +86,10 @@ slots.
    placeholder: find a missing fact in the records, by a read-only check, or by asking the user.
 3. Re-read `progress.md` and check resources. Dispatch a test batch only when every slot and
    partition it needs is free, with any time gate as its Not-before time. Give fix units disjoint
-   modules, and reassign ownership before one changes code outside its modules. Treat a resource
-   as held until its unit actually hands back, and leave a running unit's slot, partitions, and
-   worktree alone.
+   modules, and reassign ownership before one changes code outside its modules. Dispatch fix units
+   only for the current or next candidate; while handed-back code waits for sync, assemble and load
+   it before dispatching new fix work. Treat a resource as held until its unit actually hands back,
+   and leave a running unit's slot, partitions, and worktree alone.
 4. Record the unit under Units with the resources it reserves and the state `dispatching`, then
    dispatch it, then add its agent and set it `running`. Keep the entry, with its state, branch or
    head, verification evidence, and next step, until its work is adopted: a test batch once its
@@ -96,7 +99,9 @@ slots.
 
 ## 4. Receive and judge
 
-After each handback, judge its rows, update `progress.md`, re-render, and tell the user the delta.
+After each handback, judge its rows, update `progress.md` and its Summary, re-render, and tell the
+user the delta. For every code handback, decide at once: into the candidate, back to its fix unit
+with what to fix, or waiting on whom for what; record the decision as the unit's next step.
 
 - Judge with the statuses defined in progress-format.md. Pass only what a result established, per
   platform, under the identity and data it used; never pass a device row on source, unit tests,
@@ -143,7 +148,8 @@ Make every lane change through one entry: record the lane closed, dispatch no te
 until every running test batch has actually handed back, have the lane operator do the work, run
 the final smoke check with the load proofs, and record the lane open. If the smoke check fails,
 keep the lane closed until it is repaired or returned to the previous baseline. Record the new
-loaded baseline and its load proofs under Loaded.
+loaded baseline and its load proofs under Loaded, and write the next candidate as the first item of
+Next.
 
 - **Code**: bring code onto the lane only as a candidate head that passed the repository gates. A
   branch that contains the current lane head and passed the gates is its own candidate; otherwise
@@ -162,9 +168,10 @@ loaded baseline and its load proofs under Loaded.
   affected by this lane change, add the rows reached through contracts, permissions, or shared
   logic, and retest that set. Turn its `passed` rows to `partial`, keeping their evidence and
   baseline, and leave `failed` rows `failed` until their failed qualification is retested; set each
-  row's Remaining to the retest and list the retest in Next. If the retest needs consumed samples,
-  seed replacements first (references/test-data.md). After a restart without a code or
-  configuration change, run only the smoke check.
+  row's Remaining to the retest and list the retest in Next. For a row whose change crosses layers,
+  take the evidence on the reader side. If the retest needs consumed samples, seed replacements
+  first (references/test-data.md). After a restart without a code or configuration change, run
+  only the smoke check.
 - **Configuration and seeding**: run them as lane operations, after code and migrations and before
   the final smoke check.
 - **Window**: run exclusive work (fault injection, data resets, switching device time zones for a

@@ -109,7 +109,8 @@ Leave the lane, main checkouts, and other worktrees untouched, and do not bypass
 Regenerate the generated files your gates require, and follow the repository's rules for locks and
 pins.
 Verify the exact commit in a clean tree and read exit codes: <typecheck, tests, and repository
-gates such as routing tables, contracts, or generated counts>.
+gates such as routing tables, contracts, or generated counts>. Verify a cross-layer change through
+the reader as well as the writer.
 Done: <condition>. Return:
 - the branch, head, and checks you ran with their exit codes;
 - the rows and components the fix directly affects;

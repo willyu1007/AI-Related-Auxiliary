@@ -99,8 +99,13 @@ Card payment passes on both platforms; the iOS refund check waits for the 09:00 
   handoff to the Handoff table. **Severity**: `P1`, `P2`, `P3`, or `-`.
 - **Rows columns** in Blockers, Findings, Handoff, and Rulings list row ids separated by commas, or
   `-`. Every id must exist in some ledger.
-- **Next**: the coming units in order, each with its slots, time gate, and hand-back time, or `set
-  at dispatch` when it is not yet known.
+- **Summary**: after each adopted result, state in two to five lines the candidate's stage
+  (assembling, in gates, ready to load), its formal gates, whether the lane is open, and the next
+  acceptance target.
+- **Next**: first the next candidate, with the fixes it carries, the formal artifacts and
+  permissions it needs, its main blocker, and the rows to retest once it loads; then the coming
+  units in order, each with its slots, time gate, and hand-back time, or `set at dispatch` when it
+  is not yet known.
 - **Lane**: `-` bullets starting with each of the labels below, all required, complete enough to
   resume from without asking. Write `none` where a list is empty.
   - `Runbook:` its path.
