@@ -2,7 +2,8 @@
 
 Paste the unit's template into its brief, keep only the lines its task needs, and append the
 common ending. Fill every `<placeholder>` before dispatch; never send a gap the unit would have to
-guess. The unit sees nothing else from the campaign, so the brief must stand alone.
+guess. A line may say "per runbook <path>" when the runbook holds the fact. The unit sees nothing
+else from the campaign, so the brief must stand alone.
 
 ## Common ending
 
@@ -26,8 +27,10 @@ Hand back:
 Role: lane operator for <campaign>. Only you change the lane.
 Lane: runbook <path>; environment file <path>; slots <slot: device or URL, app id>.
 Off limits: <devices, checkouts, services the campaign does not own>.
+Constraints: <project rules every unit follows, from the runbook>.
 Work dir: <path>. Hand back by: <time and zone>.
-Task: <start | sync to <branch@head> | smoke | restore | window for <purpose>>.
+Task: <start | sync to <branch@head> | change <configuration or allow-list> | seed <fixture
+command> | smoke | restore | window for <purpose>>.
 Sync: fast-forward only. Report dependency, schema, or migration changes; migrate only when this
 brief says so, and after a dump. Rebuild every built artifact the lane consumes, restart only the
 affected services, and reload the clients.
@@ -38,7 +41,7 @@ whole smoke, and report the restart.
 - invariants: <store names, registration or schema hashes>
 - allow-lists: <list and its expected entries or snapshot path>
 - switches on the running processes: <name=value list>
-- device time zones: <zone>
+- device time zones: <zone>; set them if they differ
 - read routes for the rows the next batches test: <routes>
 - loaded marker in each client: <markers>
 Keep the runbook able to rebuild the lane from files alone, covering the worktrees, stores, and
@@ -50,18 +53,21 @@ Done: <condition>. Return the loaded baseline, changed processes and ports, and 
 ## Test batch
 
 ```text
-Role: test batch. Slots, held only by you until handback: <slot: device or URL, app id, client>.
+Role: test batch. Slots, held only by you until handback: <slot: device or URL, app id, client,
+sign-in>.
 Rows: <id: acceptance condition; remaining work>.
 Known: <rulings, design decisions, handoff items, and open findings that bear on these rows>.
 Expect: loaded marker <marker>; identities <identity per client or step>; business date <date>
 in <time zone>.
 Partitions you may write: <partitions>. Destructive flows use <disposable identities or objects>.
 Off limits: <other slots, devices, checkouts, services>.
-Work dir: <path>. Not before: <time and zone, or none>. Hand back by: <time and zone>.
-Preflight the marker, switches <switches>, identities, and date and time zone; a mismatch is a
-blocker.
+Constraints: <project rules every unit follows, from the runbook>.
+Work dir: <path>. Not before: <time and zone, or none>. Hand back by: <time and zone>; if you
+cannot finish by then, stop at a safe point and hand back what you have.
+Preflight the loaded marker, identities, and date and time zone; a mismatch is a blocker.
 Leave the lane, the code, and device clocks unchanged. Upload only synthetic media or public
-sample images, never private photos of real people unless this brief supplies consented ones.
+sample images, and only into your partitions; never private photos of real people unless this
+brief supplies consented ones.
 Log every business write with its object and purpose. If a write's outcome is unknown, do not
 resend it as a new operation; check it and report it as pending.
 Before reporting a defect, rule out tool artifacts, input typed by automation tools, other

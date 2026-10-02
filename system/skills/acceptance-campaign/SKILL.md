@@ -23,8 +23,9 @@ slots. A fix joins the campaign baseline once it lands on the lane.
 - Change the lane only through the lane operator and only while no test batch runs. Record the
   lane closed while a change or resume is under way, and open again once the operator's smoke
   check passes.
-- Run exclusive work (fault injection, data resets, device time-zone switches) in a window recorded
-  in `progress.md`, with every test batch stopped, ending with a verified restore.
+- Run exclusive work (fault injection, data resets, switching device time zones for a test) in a
+  window recorded in `progress.md`, with every test batch stopped, ending with a verified restore.
+  Setting device time zones to the business time zone is part of the smoke check.
 - To run more batches at once, have the lane operator add slots. Work that needs a second running
   environment is a separate campaign.
 
@@ -35,7 +36,8 @@ from its template in [references/units.md](references/units.md) and fill every p
 dispatch: find a missing fact in the records, by a read-only check, or by asking the user, because
 the unit cannot.
 
-- **Lane operator** starts, syncs, smoke-checks, and restores the lane, and owns the runbook.
+- **Lane operator** starts, syncs, changes configuration, seeds data, smoke-checks, and restores
+  the lane, and owns the runbook.
 - **Test batch** runs checks on the slots and partitions it holds.
 - **Fix unit** fixes and verifies in its own worktree from the lane head.
 - **Integrator** prepares the main-line landing in fresh worktrees and returns push commands.
@@ -49,7 +51,8 @@ that needs no slot yourself, such as a read-only check or a records update.
    version or registration hash; a git ref does not prove what runs.
 2. Keep switches with wide side effects (automatic moderation, background processing of shared data,
    real model calls, real outbound messages) on only during their window or where a ruling keeps
-   them on, and record their state in the Lane section of `progress.md`.
+   them on, and record their state in the Lane section of `progress.md`. If one is on without a
+   ruling, ask the user and leave it as it is meanwhile.
 3. Keep a write whose outcome is unknown pending under its original operation (command id,
    request, or draft); check its result instead of resending it as a new operation.
 4. Surface an action refused by a permission check to the user; no other agent retries it.
@@ -73,7 +76,11 @@ project has none of its own.
 - After each change, run `node <skill-dir>/scripts/render-progress.mjs <campaign-dir>/progress.md`.
   Fix every error and rewrite every warned cell before telling the user the page is current; never
   edit `index.html`.
-- Keep screenshots, recordings, logs, and API captures under `evidence/`.
+- Keep the lane's current state in the Lane section and how to operate it in the runbook:
+  environment file, ports and processes, health routes, allow-list entries, read routes, where
+  client markers show, sign-in per slot, and the project constraints every unit follows.
+- Keep screenshots, recordings, logs, and API captures under `evidence/`. Leave adopted evidence
+  where it is and link to it.
 - At each landing, sync decisive results, rulings, handoff items, and gaps into the mapped
   repository task records through the repository's task workflow.
 - Write a requested handoff document as a current snapshot of state, next steps, and constraints,
@@ -99,7 +106,7 @@ project has none of its own.
    state for second-channel checks; and known traps. If the project has no runbook, have the lane
    operator write one in the campaign directory.
 5. Schedule time-gated rows (next-day due items, opening hours, expiry) now, seed their samples in
-   advance, and record them with the business time zone in the Lane section. Use real time: never
+   advance, and record them under Objects with the business time zone. Use real time: never
    change device clocks, and have the lane operator set device time zones to the business time
    zone unless a row needs another.
 6. Put work that unblocks other rows first. Write `progress.md` and render it before the first
@@ -111,6 +118,27 @@ project has none of its own.
   what it holds and any time gate as its Not-before time. Run fix units in parallel with disjoint
   file ownership, each from the current lane head.
 - Leave a running unit's slot, partitions, and worktree alone.
+
+### Test data
+
+- Create data only through the product or the project's fixture scripts, never by writing stores
+  directly. Build a fixture script as a fix unit with an integration test on a disposable
+  database; it requires a confirm word, is idempotent, names every object as synthetic, and prints
+  what it created. The lane operator seeds it between batches.
+- Give each data set its own partition and record it under Objects. If the set needs lane
+  configuration (allow-lists, gates), seeding includes that lane change.
+- Use the existing sign-in identities; new ones come from the user. Destructive flows use up
+  disposable identities, so plan one per destructive case and record which are spent.
+- Upload only synthetic media or public sample images, and only into the batch's partitions:
+  background jobs such as matching or moderation process everything they can reach.
+- Keep fixture timestamps on real time when a row checks time behavior; seed time-gated samples
+  ahead instead of backdating them.
+- Data a fixture created does not count as evidence for the flow that normally creates it; tag such
+  results `fixture` in the qualification.
+- A lane stand-in for an external service (automatic moderation, a fake push gateway) is a switch
+  with wide side effects: it needs a ruling, and what it replaces goes to the handoff package.
+  Mocks below the lane (unit and contract tests) never pass a row.
+- Record leftover data under Partitions; whether it is removed is decided when the lane retires.
 
 ### Triage
 
@@ -154,7 +182,8 @@ when the user agrees.
   API check do not pass a device row.
 - Move what the development environment cannot close (real identity providers, production content
   moderation, real push credentials, external services) into the handoff package with what it needs
-  and its release gate. A partial row lists only the remainder the lane can obtain.
+  and its release gate. A partial row lists only the remainder the lane can obtain; once that is
+  established, pass the row and leave the handed-off part in the handoff package.
 - Judge after each test batch hands back: flip rows with their evidence, re-render, and tell the
   user the delta.
 - When the loaded baseline changes, retest before they pass again the rows the incoming fixes name
@@ -178,7 +207,8 @@ unit worktrees and branches.
 - Pause: dispatch nothing new, collect the running handbacks, and record running state, pending
   operations, and resume steps in `progress.md`. Keep the lane up.
 - Resume: read `progress.md`, record the lane closed, re-check pending operations, and have the
-  lane operator run the smoke check; earlier readiness claims do not carry over.
+  lane operator check the runbook against the lane and run the smoke check; earlier readiness
+  claims do not carry over.
 
 ### Close
 

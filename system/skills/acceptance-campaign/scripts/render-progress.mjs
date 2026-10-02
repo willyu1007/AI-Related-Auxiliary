@@ -30,7 +30,7 @@ const COLUMNS = {
 };
 const TEXT_SECTIONS = ['Summary', 'Lane', 'Next'];
 /** Lane facts a fresh coordinator needs to resume; each is a required `- Label:` bullet. */
-const LANE_FACTS = ['Runbook', 'Loaded', 'Slots', 'Partitions', 'Switches', 'Time zone', 'Samples', 'Pending', 'Off limits'];
+const LANE_FACTS = ['Runbook', 'Loaded', 'Slots', 'Partitions', 'Switches', 'Time zone', 'Objects', 'Pending', 'Off limits'];
 const UPDATED_RE = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}( [+-]\d{2}:\d{2})?$/;
 const COUNT_IN_NAME_RE = /\d+\s*(项|行|条|rows?\b|items?\b)/i;
 const QUALIFICATION_TAGS = 4;
@@ -205,6 +205,9 @@ function validate(doc, errors) {
       rowIds.add(row.ID);
       if (!STATUSES.includes(row.Status)) {
         errors.push(`line ${row.line}: status "${row.Status}" is not one of ${STATUSES.join(', ')}`);
+      }
+      if (!row.Acceptance || row.Acceptance === '-') {
+        errors.push(`line ${row.line}: "${row.ID}" needs an Acceptance condition`);
       }
       if (row.Status !== 'passed' && (!row.Remaining || row.Remaining === '-')) {
         errors.push(`line ${row.line}: "${row.ID}" is ${row.Status}, so Remaining must say what is left`);

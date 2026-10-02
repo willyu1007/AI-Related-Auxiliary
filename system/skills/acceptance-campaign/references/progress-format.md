@@ -63,11 +63,11 @@ Card payment passes on both platforms; the iOS refund check waits for the 09:00 
 
 - Runbook: docs/runbook.md
 - Loaded: app@1a2b3c4, api@5d6e7f8; api ready line "api ready"; client marker "build 3c4" on the About screen; lane open
-- Slots: ios-1 = simulator 0A1B, app com.example.shop, UTC, free; android-1 = emulator-5554, app com.example.shop, UTC, free; web-1 = http://localhost:3000/admin, free
+- Slots: ios-1 = simulator 0A1B, app com.example.shop, UTC, test-account picker, free; android-1 = emulator-5554, app com.example.shop, UTC, test-account picker, free; web-1 = http://localhost:3000/admin, admin login from the runbook, free
 - Partitions: store-a with buyer-1, free; store-b with buyer-2, free, holds 3 leftover test orders
 - Switches: PAYMENTS_SANDBOX=true; REFUNDS_ENABLED=true; EMAIL_SEND=false
 - Time zone: business dates and gates use UTC
-- Samples: refund order 1042 in store-a, owned by buyer-1, due 2026-03-15 09:00 +00:00
+- Objects: refund order 1042 in store-a, owned by buyer-1, due 2026-03-15 09:00 +00:00, seeded for PAY-02
 - Pending: none
 - Off limits: the staging database; other simulators
 ```
@@ -85,7 +85,8 @@ Card payment passes on both platforms; the iOS refund check waits for the 09:00 
   Each cell is one line; separate several facts with `; `.
 - **IDs**: unique across all tables, so two ledgers never share an id. Suggested prefixes: `R` for
   rulings, `HO-` for handoff items, `F-` for findings, `B-` for blockers.
-- **Acceptance**: the condition to verify, including the evidence qualification it requires.
+- **Acceptance**: required; the condition to verify, including the evidence qualification it
+  requires.
 - **Status**: one of `not-tested`, `partial`, `passed`, `failed`, `blocked`. `Remaining` is required
   unless the status is `passed`: the next check, or for an interrupted chain the step to resume
   from.
@@ -102,13 +103,14 @@ Card payment passes on both platforms; the iOS refund check waits for the 09:00 
 - **Next**: the coming units in order, each with its slots, time gate, and hand-back time.
 - **Lane**: `-` bullets starting with each of the labels below, all required, so a fresh coordinator
   can resume without asking. Write `none` where a list is empty.
-  - `Runbook:` its path.
+  - `Runbook:` its path. The runbook holds how to operate the lane; this section holds its state.
   - `Loaded:` the loaded baseline with its runtime markers, and whether the lane is open or closed.
-  - `Slots:` each slot's device or URL, app id, device time zone, and holder.
+  - `Slots:` each slot's device or URL, app id, device time zone, sign-in, and holder.
   - `Partitions:` each partition's identities, holder, and leftover data.
   - `Switches:` every required switch as `name=value`, with its window or ruling.
   - `Time zone:` the business time zone that dates, due times, and gates use.
-  - `Samples:` each seeded sample's object, partition, owning identity, and due time with zone.
+  - `Objects:` seeded samples and the objects of an interrupted chain: object, partition,
+    identities, due time with zone, and the report of the last run.
   - `Pending:` operations with an unknown outcome, under their original operation.
   - `Off limits:` devices, checkouts, and services the campaign does not own.
 - **Inline formatting**: links `[text](href)`, code spans, and `**bold**`. Relative links resolve
