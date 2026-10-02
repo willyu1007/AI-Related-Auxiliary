@@ -85,9 +85,11 @@ Card payment passes on both platforms; the iOS refund check waits for the 09:00 
 - **Status**: one of `not-tested`, `partial`, `passed`, `failed`, `blocked`; statuses record
   judgments only, and work in progress goes under Units. `passed`: the lane scope is established.
   `partial`: some required check or qualification is still unverified. `failed`: a required check
-  has an unresolved failure. `blocked`: a missing implementation, account, or decision; a time gate
-  goes to Blockers and leaves the status alone. `Remaining` is required unless the status is
-  `passed`: the next check, or for an interrupted chain the step to resume from.
+  failed and the failure is unresolved, including before its cause is confirmed; keep `failed`
+  while its fix waits on a decision. `blocked`: the row's check cannot run because of a missing
+  implementation, account, or decision; a time gate goes to Blockers and leaves the status alone.
+  `Remaining` is required unless the status is `passed`: the next check, or for an interrupted
+  chain the step to resume from.
 - **Qualification**: the evidence qualification established so far, never the required one: the
   evidence level (contract, unit, API, simulator or emulator on a named platform, physical device,
   cross-system journey) and the identity and data, as at most 4 tags separated by `;`, each at
@@ -100,10 +102,11 @@ Card payment passes on both platforms; the iOS refund check waits for the 09:00 
 - **Rows columns** in Blockers, Findings, Handoff, and Rulings list row ids separated by commas, or
   `-`. Every id must exist in some ledger.
 - **Summary**: after each adopted result, state in two to five lines the candidate's stage
-  (assembling, in gates, ready to load), its formal gates, whether the lane is open, and the next
-  acceptance target.
-- **Next**: first the next candidate, with the fixes it carries, the formal artifacts and
-  permissions it needs, its main blocker, and the rows to retest once it loads; then the coming
+  (assembling, in gates, ready to load), its formal gates, whether the lane is open, the next
+  acceptance target, and the fixes verified in source but not yet on the lane, noting that
+  acceptance moves only after they load and are retested.
+- **Next**: first the next candidate, with the fixes it carries, the formal gates and permissions
+  it needs, its main blocker, and the rows to retest once it loads; then the coming
   units in order, each with its slots, time gate, and hand-back time, or `set at dispatch` when it
   is not yet known.
 - **Lane**: `-` bullets starting with each of the labels below, all required, complete enough to
@@ -119,9 +122,10 @@ Card payment passes on both platforms; the iOS refund check waits for the 09:00 
   - `Objects:` seeded samples and the objects of an interrupted chain: object, partition,
     identities, due time with zone, and the report of the last run.
   - `Pending:` operations with an unknown outcome, under their original operation.
-  - `Units:` each unit's role, agent, state (`dispatching`, `running`, `handed back`, `on lane`),
-    work dir or worktree, branch or head, verification evidence, what it holds, hand-back time when
-    one applies, and next step. Keep an entry until its work is adopted (SKILL.md section 3).
+  - `Units:` each unit's role, agent, state (`dispatching`, `running`, `handed back`, `on lane`,
+    `stopped`), work dir or worktree, branch or head, verification evidence, what it holds,
+    hand-back time when one applies, and next step. Keep an entry until its work is adopted
+    (SKILL.md section 3).
   - `Off limits:` devices, checkouts, and services the campaign does not own.
 - **Inline formatting**: links `[text](href)`, code spans, and `**bold**`. Write relative links from
   the directory of `progress.md`, to files that exist.

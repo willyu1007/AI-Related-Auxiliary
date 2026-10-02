@@ -100,17 +100,21 @@ partitions.
 ```text
 Role: fix unit. Rows or findings: <ids>. Goal: <observable behavior after the fix>.
 Evidence: <finding, reproduction, evidence paths, and suspected cause marked as inference>.
-Worktree <path>, branch <branch> from lane head <head>. Own modules: <modules>. Read any module;
-before changing code outside your modules, ask the coordinator to reassign ownership.
+Depends on: <unit and branch whose change this fix needs, or none>.
+Worktree <path>, branch <branch> from <lane head, or the prerequisite's handed-back head> <head>.
+Own modules: <modules>. Read any module; before changing code outside your modules, ask the
+coordinator to reassign ownership.
 Work dir: <path outside the worktree>. Disposable database: <per runbook <section>, or none>.
 Constraints: <applicable project rules and user instructions, including this task's constraints>.
 Hand back by: <time and zone, only for an integration slot or resource reservation, or none>.
 Leave the lane, main checkouts, and other worktrees untouched, and do not bypass hooks.
 Regenerate the generated files your gates require, and follow the repository's rules for locks and
 pins.
-Verify the exact commit in a clean tree and read exit codes: <typecheck, tests, and repository
+Verify the exact commit in a clean tree and read exit codes: <typecheck, tests, and the formal
 gates such as routing tables, contracts, or generated counts>. Verify a cross-layer change through
 the reader as well as the writer.
+Stop: on a stop instruction, leave unfinished changes uncommitted in your worktree and return the
+changed files, the failing tests, and the step to resume from.
 Done: <condition>. Return:
 - the branch, head, and checks you ran with their exit codes;
 - the rows and components the fix directly affects;
@@ -130,14 +134,14 @@ or none>.
 Task: <assemble a candidate lane head from <fix branches> | land the lane on the main line>.
 Assemble: in a fresh worktree per repository, branch from the current lane head, merge the fix
 branches, rebuild the shared generated files, update locks and pins by the repository's rules, and
-run the full gates on the head in a clean tree. Check the candidates' dependencies across
+run the formal gates on the head in a clean tree. Check the candidates' dependencies across
 repositories. Return the candidate heads, the merged branches, their combined migration,
 dependency, manifest, and contract changes, and the fix units' load proofs; leave the lane to its
 operator.
 Land: in a fresh worktree per repository, branch from its lane head and confirm the main line is
 an ancestor. Write the task records for <tasks>: decisive results, rulings <ids>, handoff items,
 and gaps. Then update repository-required artifacts in the repository's order: <locks, pins,
-generated files>. Finish the depended-on repository first. Run the full gates on each final head
+generated files>. Finish the depended-on repository first. Run the formal gates on each final head
 in a clean tree. Return the final heads and push commands that check ancestry and push without
 touching main checkouts, in landing order.
 Return the checks you ran and their exit codes. Do not push and do not bypass hooks.

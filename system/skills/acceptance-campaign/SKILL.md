@@ -61,8 +61,8 @@ slots.
    operator complete it.
 5. Schedule time-gated rows (next-day due items, opening hours, expiry) now. Before creating,
    seeding, or consuming test data, read [references/test-data.md](references/test-data.md).
-6. Plan the first candidate: the fixes it will carry, the formal artifacts and permissions it
-   needs, its main blocker, and the rows to retest once it loads. Write it as the first item of
+6. Plan the first candidate: the fixes it will carry, the formal gates and permissions it needs,
+   its main blocker, and the rows to retest once it loads. Write it as the first item of
    Next, and order the rest so work that unblocks the candidate or other rows comes first.
 7. After every change to `progress.md`, run
    `node <skill-dir>/scripts/render-progress.mjs <campaign-dir>/progress.md`, where `<skill-dir>`
@@ -86,27 +86,38 @@ slots.
    placeholder: find a missing fact in the records, by a read-only check, or by asking the user.
 3. Re-read `progress.md` and check resources. Dispatch a test batch only when every slot and
    partition it needs is free, with any time gate as its Not-before time. Give fix units disjoint
-   modules, and reassign ownership before one changes code outside its modules. Dispatch fix units
-   only for the current or next candidate; while handed-back code waits for sync, assemble and load
-   it before dispatching new fix work. Treat a resource as held until its unit actually hands back,
-   and leave a running unit's slot, partitions, and worktree alone.
+   modules, and reassign ownership before one changes code outside its modules. Treat a resource as
+   held until its unit actually hands back, and leave a running unit's slot, partitions, and
+   worktree alone.
+   - Keep one candidate in flight, and dispatch fix units only for it or the next one. While
+     handed-back code waits for sync, assemble and load it before dispatching new fix work. When a
+     fix's blocker has no near unlock, take that fix and the fixes that depend on it out of the
+     candidate, mark them `stopped`, and load the rest.
+   - Dispatch a fix that depends on another unit's change only after that change is handed back,
+     branched from its head and named in the brief's Depends on line. When a prerequisite stops,
+     tell the units that depend on it.
 4. Record the unit under Units with the resources it reserves and the state `dispatching`, then
    dispatch it, then add its agent and set it `running`. Keep the entry, with its state, branch or
    head, verification evidence, and next step, until its work is adopted: a test batch once its
    results are judged into `progress.md`, a lane operation once it is recorded under Loaded, and a
    fix unit or integrator once its code lands on the main line or is discarded. Mark code awaiting
-   sync `handed back` and code on the lane awaiting landing `on lane`.
+   sync `handed back`, code on the lane awaiting landing `on lane`, and code that is unfinished,
+   blocked, or rejected `stopped`; never take `stopped` code into a candidate or a landing.
 
 ## 4. Receive and judge
 
 After each handback, judge its rows, update `progress.md` and its Summary, re-render, and tell the
 user the delta. For every code handback, decide at once: into the candidate, back to its fix unit
-with what to fix, or waiting on whom for what; record the decision as the unit's next step.
+with what to fix, or waiting on whom for what; record the decision as the unit's next step. Admit
+code into the candidate only when it returns every Return item of its brief, including the
+reader-side verification of a cross-layer change.
 
 - Judge with the statuses defined in progress-format.md. Pass only what a result established, per
   platform, under the identity and data it used; never pass a device row on source, unit tests,
   mocks, or an API check. Name hardware `physical device` and virtual targets `simulator` or
   `emulator`.
+- Mark a row `failed` as soon as a required check fails, before its cause is confirmed, with
+  Remaining naming the confirmation; file the finding once it is classified.
 - Keep acceptance conditions to the lane's scope. Move what the development environment cannot
   close (physical devices, real identity providers, production content moderation, real push
   credentials, external services) into the handoff package with what it needs and its release
@@ -151,11 +162,12 @@ keep the lane closed until it is repaired or returned to the previous baseline. 
 loaded baseline and its load proofs under Loaded, and write the next candidate as the first item of
 Next.
 
-- **Code**: bring code onto the lane only as a candidate head that passed the repository gates. A
-  branch that contains the current lane head and passed the gates is its own candidate; otherwise
-  have the integrator merge from the current lane head. Across repositories, settle one candidate
-  per repository and check their dependencies on each other. Assemble candidates off the lane
-  before taking the entry; test batches may run meanwhile. The lane operator fast-forwards and
+- **Code**: bring code onto the lane only as a candidate head that passed the formal gates: the
+  checks and artifacts (locks, pins, generated files) the repository requires before code loads or
+  lands. A branch that contains the current lane head and passed them is its own candidate;
+  otherwise have the integrator merge from the current lane head. Across repositories, settle one
+  candidate per repository and check their dependencies on each other. Assemble candidates off the
+  lane before taking the entry; test batches may run meanwhile. The lane operator fast-forwards and
   migrates only as its brief authorizes.
 - **Load proofs**: prove what is loaded for each changed service and client with existing version
   information (a version string in a bundle or log line, a version field, a registration hash) or
@@ -177,27 +189,34 @@ Next.
 - **Window**: run exclusive work (fault injection, data resets, switching device time zones for a
   test) inside the entry, record the window as the lane operator's entry under Units, and end it
   with a verified restore.
-- **Fault**: when a unit reports a lane-level fault, take the entry at once, have the lane operator
-  repair the lane, and re-judge the evidence taken during the fault.
+- **Bad data after load**: when a retest shows that loaded code writes wrong data or breaks rows
+  that passed, close the affected partitions, then either return to the previous baseline through
+  the entry or load a forward fix as the next candidate; record the choice.
+- **Fault**: when a unit reports a lane-level fault, send running test batches a stop instruction,
+  take the entry, have the lane operator repair the lane, and re-judge the evidence taken during
+  the fault.
 - **Slots**: to run more batches at once, have the lane operator add slots. Run work that needs a
   second running environment as a separate campaign.
 
 ## 6. Pause, resume, land, and close
 
 - **Pause**: dispatch nothing new, send running units a stop instruction, wait for their actual
-  handbacks, and record running state, pending operations, and resume steps in `progress.md`. Keep
-  the lane up, and dispatch the remaining work later as new briefs.
+  handbacks, and record running state, pending operations, and resume steps in `progress.md`.
+  Reserve the partitions of an interrupted chain, note any due time that falls inside the pause,
+  and dispatch no checks. Keep the lane up, and dispatch the remaining work later as new briefs.
 - **Resume**, including a new session on the same campaign: read the `Coordinator` header and
   Units in `progress.md`; if another coordinator is still active, ask the user before acting.
   Otherwise set `Coordinator` to this session, read the handoff document if there is one, record
   the lane closed, re-check pending operations and Units, check the runbook as in section 2, have
   the lane operator run the smoke check, and record the lane open once it passes; never reuse
   earlier readiness claims.
-- **Land**: when the user asks to land the lane on the main line, have the integrator prepare it
-  from the lane head, with the depended-on repository first, and sync decisive results, rulings,
-  handoff items, and gaps into the mapped repository task records through the repository's task
-  workflow. After the push, move the evidence the records cite into `evidence/`, then remove the
-  merged unit worktrees, branches, and Units entries.
+- **Land**: when the user asks to land the lane on the main line, first list the failed rows and
+  open P1 and P2 findings caused by lane code, and leave that code out or get the user's
+  agreement. Have the integrator prepare the landing from the lane head, with the depended-on
+  repository first, and sync decisive results, rulings, handoff items, and gaps into the mapped
+  repository task records through the repository's task workflow. After the push, move the
+  evidence the records cite into `evidence/`, then remove the merged unit worktrees, branches, and
+  Units entries.
 - **Handoff**: write a requested handoff document as a current snapshot of state, next steps, and
   constraints, and point it to `progress.md`.
 - **Close** execution when every row has a current judgment with evidence or a stated reason it
