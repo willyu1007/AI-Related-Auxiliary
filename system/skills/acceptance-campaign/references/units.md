@@ -36,8 +36,8 @@ command> | smoke | repair | restore | window for <purpose>>.
 Sync: fast-forward only. Migrate only when this brief says so: <migrations or none>, after a dump.
 Rebuild every built artifact the lane consumes, restart only the affected services, and reload the
 clients.
-Seed: after sync and migration, check the health of the services the fixture needs, run it, and
-record what it created.
+Seed: after sync and migration and before the final smoke, check the health of the services the
+fixture needs, run it, and record what it created.
 Window: every test batch has handed back; run, restore, verify the restore, and close.
 Smoke, last before opening the lane. If a lane process is down, restart it from the runbook, rerun
 the whole smoke, and report the restart.
@@ -45,11 +45,15 @@ the whole smoke, and report the restart.
 - invariants: <store names, registration or schema hashes>
 - allow-lists: <list and its expected entries or snapshot path>
 - switches on the running processes: <name=value list>
-- device time zones: set to <zone> if they differ
+- device time zones: set to <business time zone, unless a row needs another>
 - read routes for the rows the next batches test: <routes>
 - load proofs for each changed service and client: <method and expected result>
-Keep the runbook able to rebuild the lane from files alone, covering the worktrees, stores, and
-ports the campaign owns, and add the traps you hit. If there is no runbook, write it at <path>.
+Runbook: keep it able to rebuild the lane from files alone, covering the worktrees, stores, and
+ports the campaign owns; the environment file; start and sync steps; smoke checks (health routes,
+invariants, allow-list entries, read routes, load proofs, device time zones); sign-in per slot; how
+to read server state for second-channel checks; the authorized business write APIs and their
+tools; how fix units get, isolate, and clean up disposable databases; project constraints; and the
+traps you hit. If there is no runbook, write it at <path>.
 Check free disk before builds and installs.
 Done: <condition>. Return the loaded baseline with its load proofs, changed processes and ports,
 and smoke results.

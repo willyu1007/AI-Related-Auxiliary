@@ -81,22 +81,26 @@ Card payment passes on both platforms; the iOS refund check waits for the 09:00 
 - **Acceptance**: required; the condition to verify within the lane's scope, including the evidence
   qualification it requires. Name hardware `physical device` and virtual targets `simulator` or
   `emulator`. Put release-level requirements in a linked Handoff item.
-- **Status**: one of `not-tested`, `partial`, `passed`, `failed`, `blocked`. `Remaining` is required
-  unless the status is `passed`: the next check, or for an interrupted chain the step to resume
-  from.
-- **Qualification**: the evidence qualification established so far, never the required one, as at
-  most 4 tags separated by `;`, each at most 16 characters: platform, evidence level, identity, or
-  a phase such as `joint check`. Required for `partial` and `passed` rows, `-` for `not-tested`
-  rows, and optional for `failed` and `blocked` rows. Put narratives of what was verified in the
-  task's verification record.
+- **Status**: one of `not-tested`, `partial`, `passed`, `failed`, `blocked`; statuses record
+  judgments only, and work in progress goes under Units. `passed`: the lane scope is established.
+  `partial`: some required check or qualification is still unverified. `failed`: a required check
+  has an unresolved failure. `blocked`: a missing implementation, account, or decision; a time gate
+  goes to Blockers and leaves the status alone. `Remaining` is required unless the status is
+  `passed`: the next check, or for an interrupted chain the step to resume from.
+- **Qualification**: the evidence qualification established so far, never the required one: the
+  evidence level (contract, unit, API, simulator or emulator on a named platform, physical device,
+  cross-system journey) and the identity and data, as at most 4 tags separated by `;`, each at
+  most 16 characters, or a phase such as `joint check`. Required for `partial` and `passed` rows,
+  `-` for `not-tested` rows, and optional for `failed` and `blocked` rows. Put narratives of what
+  was verified in the task's verification record.
 - **Evidence**: links to the row's evidence, or `-`.
 - **Kind**: one of `defect`, `design`, `gap`, `environment`, `ruling`. Move a finding triaged as
   handoff to the Handoff table. **Severity**: `P1`, `P2`, `P3`, or `-`.
 - **Rows columns** in Blockers, Findings, Handoff, and Rulings list row ids separated by commas, or
   `-`. Every id must exist in some ledger.
 - **Next**: the coming units in order, each with its slots, time gate, and hand-back time.
-- **Lane**: `-` bullets starting with each of the labels below, all required. Write `none` where a
-  list is empty.
+- **Lane**: `-` bullets starting with each of the labels below, all required, complete enough to
+  resume from without asking. Write `none` where a list is empty.
   - `Runbook:` its path.
   - `Loaded:` the loaded baseline with its load proofs, the last smoke result with its evidence
     path, and whether the lane is open or closed.

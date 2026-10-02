@@ -4,8 +4,8 @@
   directly. Build a fixture script as a fix unit with an integration test on a disposable
   database; it requires a confirm word, is idempotent, names every object as synthetic, and prints
   what it created.
-- Have the lane operator seed it as a lane change while no test batch runs, in this order: sync
-  and migrate, seed, final smoke check, open. If seeding needs running services, check their
+- Have the lane operator seed it through the lane entry in SKILL.md section 5, after code and
+  migrations and before the final smoke check. If seeding needs running services, check their
   health first.
 - Give each data set its own partition, recorded under Partitions, with its objects under Objects.
   If the set needs lane configuration (allow-lists, gates), seeding includes that lane change.
