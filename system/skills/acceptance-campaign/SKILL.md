@@ -85,8 +85,9 @@ slots.
    modules, and reassign ownership before one changes code outside its modules. Treat a resource
    as held until its unit actually hands back, and leave a running unit's slot, partitions, and
    worktree alone.
-4. Dispatch, and record the unit under Units with what it holds. Keep the entry, with its state,
-   branch or head, verification evidence, and next step, until its work is adopted or discarded.
+4. Record the unit under Units with the resources it reserves and the state `dispatching`, then
+   dispatch it, then add its agent and set it `running`. Keep the entry, with its state, branch or
+   head, verification evidence, and next step, until its work is adopted or discarded.
 
 ## 4. Receive and judge
 
@@ -118,13 +119,15 @@ After each handback, judge its rows, update `progress.md`, re-render, and tell t
   (lost or wrong data, security, a blocked main user flow), P2 (a broken flow with a workaround),
   or P3 (polish); fix P1 and P2 in the campaign and P3 when the user agrees. Never lower an
   acceptance condition or widen scope by classifying.
-- Ask the user with options, a recommended default, and the rows each option affects, batching the
-  questions: every open ruling, and whether to fix a defect now or defer it, but only when the fix
-  needs a new product decision, a breaking contract change, or work beyond the authorized scope.
-  Record a fix-now or defer answer in the finding's Disposition. Number as a ruling every decision
-  that changes scope, an acceptance basis, a business policy, or a switch with side effects, and
-  update the affected acceptance conditions. Hold only the affected rows while a question is
-  pending, and never treat elapsed time as consent.
+- Ask the user about every open ruling.
+- Ask whether to fix a defect now or defer it only when the fix needs a new product decision, a
+  breaking contract change, or work beyond the authorized scope. Record the answer in the
+  finding's Disposition.
+- Ask with options, a recommended default, and the rows each option affects, batching the
+  questions. Hold only the affected rows while a question is pending, and never treat elapsed time
+  as consent.
+- Number as a ruling every decision that changes scope, an acceptance basis, a business policy, or
+  a switch with side effects, and update the affected acceptance conditions.
 - Pass the rows of a fix that changes user-facing design only after the user confirms screenshots
   from the lane.
 
@@ -145,8 +148,9 @@ loaded baseline, its load proofs, and the retest set.
   string in a bundle or log line, a version field, a registration hash, or a probe whose result
   differs between the old and new code. Never accept a ready line or a git ref, and count a probe
   only for the service and path it covers.
-- **Retest**: take the rows and components the fix units name as directly affected, add the rows
-  reached through contracts, permissions, or shared logic, and retest that set. Turn its `passed`
+- **Retest**: take the rows and components that the fix units or the lane operator name as directly
+  affected by this lane change, add the rows reached through contracts, permissions, or shared
+  logic, and retest that set. Turn its `passed`
   rows to `partial`, keeping their evidence and baseline; leave `failed` rows `failed` until their
   failed qualification is retested. A restart without a code or configuration change needs only
   the smoke check.

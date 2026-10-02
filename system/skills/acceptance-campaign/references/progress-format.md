@@ -112,9 +112,9 @@ Card payment passes on both platforms; the iOS refund check waits for the 09:00 
   - `Objects:` seeded samples and the objects of an interrupted chain: object, partition,
     identities, due time with zone, and the report of the last run.
   - `Pending:` operations with an unknown outcome, under their original operation.
-  - `Units:` each unit's role, agent, state (running, handed back, awaiting sync), work dir or
-    worktree, branch or head, verification evidence, what it holds, hand-back time, and next step.
-    Keep an entry until its work is adopted or discarded.
+  - `Units:` each unit's role, agent, state (dispatching, running, handed back, awaiting sync),
+    work dir or worktree, branch or head, verification evidence, what it holds, hand-back time, and
+    next step. Keep an entry until its work is adopted or discarded.
   - `Off limits:` devices, checkouts, and services the campaign does not own.
 - **Inline formatting**: links `[text](href)`, code spans, and `**bold**`. Write relative links from
   the directory of `progress.md`, to files that exist.

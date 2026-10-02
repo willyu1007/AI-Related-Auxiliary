@@ -56,7 +56,7 @@ tools; how fix units get, isolate, and clean up disposable databases; project co
 traps you hit. If there is no runbook, write it at <path>.
 Check free disk before builds and installs.
 Done: <condition>. Return the loaded baseline with its load proofs, changed processes and ports,
-and smoke results.
+smoke results, and the rows and components a configuration or seeding change directly affects.
 ```
 
 ## Test batch
