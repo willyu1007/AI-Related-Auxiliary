@@ -12,7 +12,7 @@ You are the coordinator. If you received a unit brief instead, follow the brief 
 ## Lane
 
 Run every check against one lane: the running services, data stores, configuration, and client
-slots. A fix joins the campaign baseline once it lands on the lane.
+slots.
 
 - Run test batches in parallel only across slots and data partitions; each slot and each
   partition belongs to one batch at a time. A batch may hold several slots for a cross-system
@@ -34,8 +34,7 @@ slots. A fix joins the campaign baseline once it lands on the lane.
 
 Dispatch bounded units and judge their handbacks; to stop, dispatch nothing new. Write each brief
 from its template in [references/units.md](references/units.md) and fill every placeholder before
-dispatch: find a missing fact in the records, by a read-only check, or by asking the user, because
-the unit cannot.
+dispatch: find a missing fact in the records, by a read-only check, or by asking the user.
 
 - **Lane operator** starts, syncs, changes configuration, seeds data, smoke-checks, and restores
   the lane, and owns the runbook.
@@ -49,7 +48,7 @@ that needs no slot yourself, such as a read-only check or a records update.
 ## Rules
 
 1. Prove the loaded baseline with a runtime marker such as a bundle string, a ready line, or a
-   version or registration hash; a git ref does not prove what runs.
+   version or registration hash, never with a git ref.
 2. Keep switches with wide side effects (automatic moderation, background processing of shared data,
    real model calls, real outbound messages) on only during their window or where a ruling keeps
    them on, and record their state in the Lane section of `progress.md`. If one is on without a
@@ -69,8 +68,8 @@ that needs no slot yourself, such as a read-only check or a records update.
 
 Keep the campaign directory outside every worktree: use the location the user's instructions name
 for presentation artifacts, otherwise `<Desktop>/acceptance-campaign/<slug>/`, with a kebab-case
-slug. It holds `progress.md`, the rendered `index.html`, `evidence/`, and the runbook when the
-project has none of its own.
+slug. Put `progress.md`, the rendered `index.html`, `evidence/`, and, if the project has none, the
+runbook there.
 
 - Write `progress.md` yourself, as one current snapshot, in the format of
   [references/progress-format.md](references/progress-format.md). Its Lane section must let a fresh
@@ -120,7 +119,7 @@ project has none of its own.
   holds. Dispatch a test batch only when every slot and partition it needs is free, and name in its
   brief what it holds and any time gate as its Not-before time. Run fix units in parallel with
   disjoint file ownership, each from the current lane head.
-- Before a window, stop every test batch yourself; the lane operator cannot see them.
+- Before a window, stop every test batch yourself.
 - Leave a running unit's slot, partitions, and worktree alone.
 
 ### Test data
@@ -131,18 +130,16 @@ project has none of its own.
   what it created. The lane operator seeds it as a lane change, while no test batch runs.
 - Give each data set its own partition, recorded under Partitions, with its objects under Objects.
   If the set needs lane configuration (allow-lists, gates), seeding includes that lane change.
-- Use the existing sign-in identities; new ones come from the user. Destructive flows use up
-  disposable identities, so plan one per destructive case and record which are spent.
-- Upload only synthetic media or public sample images, and only into the batch's partitions:
-  background jobs such as matching or moderation process everything they can reach.
+- Use the existing sign-in identities and ask the user for new ones. Plan one disposable identity
+  per destructive case and record which are spent.
+- Upload only synthetic media or public sample images, and only into the batch's partitions.
 - Keep fixture timestamps on real time when a row checks time behavior; seed time-gated samples
   ahead instead of backdating them.
 - Data a fixture created does not count as evidence for the flow that normally creates it; tag such
   results `fixture` in the qualification.
-- A lane stand-in for an external service (automatic moderation, a fake push gateway) is a switch
-  with wide side effects: it needs a ruling, and what it replaces goes to the handoff package.
-  Mocks below the lane (unit and contract tests) never pass a row.
-- Record leftover data under Partitions; whether it is removed is decided when the lane retires.
+- Treat a lane stand-in for an external service (automatic moderation, a fake push gateway) as a
+  switch with wide side effects: get a ruling and move what it replaces to the handoff package.
+- Record leftover data under Partitions and decide its removal when the lane retires.
 
 ### Triage
 
@@ -169,21 +166,21 @@ when the user agrees.
 - Ask with options, a recommended default, and the rows each option affects. Batch the questions.
 - Number each accepted ruling, update the affected acceptance conditions, and carry it to the
   task's decision record at the next landing.
-- Hold only the affected rows while a ruling is pending; elapsed time is not consent.
+- Hold only the affected rows while a ruling is pending, and never treat elapsed time as consent.
 - Pass the rows of a fix that changes user-facing design only after the user confirms screenshots
   from the lane.
 
 ### Judge
 
-- Use the statuses `not-tested`, `partial`, `passed`, `failed`, and `blocked`; they record
-  judgments only, and work in progress shows under Units. An unresolved failure
-  of a required check makes a row `failed`. `blocked` means a missing implementation, account, or
+- Use the statuses `not-tested`, `partial`, `passed`, `failed`, and `blocked` for judgments only,
+  and track work in progress under Units. An unresolved failure of a required check makes a row
+  `failed`. `blocked` means a missing implementation, account, or
   decision; a time gate goes to the Blockers table and leaves the status alone. `partial` means
   some required check or qualification is still unverified.
 - Record the evidence qualification each result established: what it proves (contract, unit, API,
   emulator or simulator on a named platform, physical device, cross-system journey) and under
-  which identity and data. Pass only what was established, per platform; source, unit tests, or an
-  API check do not pass a device row.
+  which identity and data. Pass only what was established, per platform; never pass a device row
+  on source, unit tests, mocks, or an API check.
 - Move what the development environment cannot close (real identity providers, production content
   moderation, real push credentials, external services) into the handoff package with what it needs
   and its release gate. A partial row lists only the remainder the lane can obtain; once that is
@@ -211,8 +208,8 @@ unit worktrees and branches.
 - Pause: dispatch nothing new, collect the running handbacks, and record running state, pending
   operations, and resume steps in `progress.md`. Keep the lane up.
 - Resume: read `progress.md`, record the lane closed, re-check pending operations, and have the
-  lane operator check the runbook against the lane and run the smoke check; earlier readiness
-  claims do not carry over.
+  lane operator check the runbook against the lane and run the smoke check; never reuse earlier
+  readiness claims.
 
 ### Close
 

@@ -1,18 +1,10 @@
 # progress.md format
 
-`scripts/render-progress.mjs` turns `progress.md` into `index.html` and rejects anything that does
-not follow this format. It computes every count from the rows; never write counts by hand. The page
-uses Chinese labels when the title contains Chinese, otherwise English; status and kind values stay
-in English in `progress.md`.
-
-The page is for people. It shows only `Updated` from the header and leaves out the Lane section and
-the Evidence column, which serve agents. Write every cell the page shows as plain prose: commit
-hashes, ports, paths, and process ids go in the header, Lane, or Evidence. The renderer warns when a
-shown cell looks like a commit hash.
+Follow this layout and these rules exactly. Never write counts. Write status and kind values in
+English. Write every cell outside the header, Lane, and Evidence as plain prose for people, and put
+commit hashes, ports, paths, and process ids only in the header, Lane, or Evidence.
 
 ## Layout
-
-The example below is fictional.
 
 ```markdown
 # Shop app acceptance
@@ -80,11 +72,10 @@ Card payment passes on both platforms; the iOS refund check waits for the 09:00 
   required.
 - **Sections**: `##` headings are limited to `Summary`, `Next`, `Blockers`, `Rows: <ledger name>`,
   `Findings`, `Handoff`, `Rulings`, and `Lane`. At least one `Rows:` section and the `Lane` section
-  are required; every other section appears at most once. Ledgers render in file order, and their
-  names carry no counts.
+  are required; every other section appears at most once. Ledger names carry no counts.
 - **Tables**: use exactly the columns shown, in that order. Escape a literal pipe in a cell as `\|`.
   Each cell is one line; separate several facts with `; `.
-- **IDs**: unique across all tables, so two ledgers never share an id. Suggested prefixes: `R` for
+- **IDs**: unique across all tables, including across ledgers. Suggested prefixes: `R` for
   rulings, `HO-` for handoff items, `F-` for findings, `B-` for blockers.
 - **Acceptance**: required; the condition to verify, including the evidence qualification it
   requires.
@@ -94,17 +85,17 @@ Card payment passes on both platforms; the iOS refund check waits for the 09:00 
 - **Qualification**: the evidence qualification established so far, never the required one, as at
   most 4 tags separated by `;`, each at most 16 characters: platform, evidence level, identity, or
   a phase such as `joint check`. Required for `partial` and `passed` rows, `-` for `not-tested`
-  rows, and optional for `failed` and `blocked` rows. Narratives of what was verified belong in the
+  rows, and optional for `failed` and `blocked` rows. Put narratives of what was verified in the
   task's verification record.
-- **Evidence**: links for agents re-judging a row; the page does not show them. Use `-` when none.
-- **Kind**: one of `defect`, `design`, `gap`, `environment`, `ruling`. A finding triaged as handoff
-  moves to the Handoff table. **Severity**: `P1`, `P2`, `P3`, or `-`.
+- **Evidence**: links to the row's evidence, or `-`.
+- **Kind**: one of `defect`, `design`, `gap`, `environment`, `ruling`. Move a finding triaged as
+  handoff to the Handoff table. **Severity**: `P1`, `P2`, `P3`, or `-`.
 - **Rows columns** in Blockers, Findings, Handoff, and Rulings list row ids separated by commas, or
   `-`. Every id must exist in some ledger.
 - **Next**: the coming units in order, each with its slots, time gate, and hand-back time.
-- **Lane**: `-` bullets starting with each of the labels below, all required, so a fresh coordinator
-  can resume without asking. Write `none` where a list is empty.
-  - `Runbook:` its path. The runbook holds how to operate the lane; this section holds its state.
+- **Lane**: `-` bullets starting with each of the labels below, all required. Write `none` where a
+  list is empty.
+  - `Runbook:` its path.
   - `Loaded:` the loaded baseline with its runtime markers, the last smoke result with its evidence
     path, and whether the lane is open or closed.
   - `Slots:` each slot's device or URL, app id, device time zone, sign-in, and holder.
@@ -118,8 +109,8 @@ Card payment passes on both platforms; the iOS refund check waits for the 09:00 
   - `Units:` each running unit's role, agent, work dir or worktree, what it holds, and its hand-back
     time.
   - `Off limits:` devices, checkouts, and services the campaign does not own.
-- **Inline formatting**: links `[text](href)`, code spans, and `**bold**`. Relative links resolve
-  from the directory of `progress.md` and must exist.
+- **Inline formatting**: links `[text](href)`, code spans, and `**bold**`. Write relative links from
+  the directory of `progress.md`, to files that exist.
 - **Free text**: Summary and Next take paragraphs, `-` bullets, and `1.` numbered lists.
 - Keep one current snapshot. Remove a resolved blocker, and a finding once its disposition is in
-  the task records; the task records keep the history.
+  the task records.

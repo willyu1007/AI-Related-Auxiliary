@@ -2,8 +2,8 @@
 
 Paste the unit's template into its brief, keep only the lines its task needs, and append the
 common ending. Fill every `<placeholder>` before dispatch; never send a gap the unit would have to
-guess. A line may say "per runbook <path>" when the runbook holds the fact. The unit sees nothing
-else from the campaign, so the brief must stand alone.
+guess. A line may say "per runbook <path>" when the runbook holds the fact. Make the brief stand
+alone.
 
 ## Common ending
 
@@ -102,7 +102,7 @@ In a fresh worktree per repository, branch from its lane head and confirm the ma
 ancestor.
 Write the task records for <tasks>: decisive results, rulings <ids>, handoff items, and gaps.
 Then update repository-required artifacts in the repository's order: <locks, pins, generated
-files>. Finish the depended-on repository first so the dependent one can pin its head.
+files>. Finish the depended-on repository first.
 Run the full gates on each final head in a clean tree.
 Return the final heads and push commands that check ancestry and push without touching main
 checkouts, in landing order, with the checks you ran and their exit codes. Do not push and do not
