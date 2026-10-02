@@ -34,7 +34,7 @@ command> | smoke | restore | window for <purpose>>.
 Sync: fast-forward only. Report dependency, schema, or migration changes; migrate only when this
 brief says so, and after a dump. Rebuild every built artifact the lane consumes, restart only the
 affected services, and reload the clients.
-Window: confirm the other batches stopped, run, restore, verify the restore, and close.
+Window: the coordinator has stopped every test batch; run, restore, verify the restore, and close.
 Smoke before opening the lane. If a lane process is down, restart it from the runbook, rerun the
 whole smoke, and report the restart.
 - health: <routes>
@@ -60,14 +60,15 @@ Known: <rulings, design decisions, handoff items, and open findings that bear on
 Expect: loaded marker <marker>; identities <identity per client or step>; business date <date>
 in <time zone>.
 Partitions you may write: <partitions>. Destructive flows use <disposable identities or objects>.
+Objects: <ids of the records, invitations, or samples you act on>.
 Off limits: <other slots, devices, checkouts, services>.
 Constraints: <project rules every unit follows, from the runbook>.
 Work dir: <path>. Not before: <time and zone, or none>. Hand back by: <time and zone>; if you
 cannot finish by then, stop at a safe point and hand back what you have.
 Preflight the loaded marker, identities, and date and time zone; a mismatch is a blocker.
-Leave the lane, the code, and device clocks unchanged. Upload only synthetic media or public
-sample images, and only into your partitions; never private photos of real people unless this
-brief supplies consented ones.
+Leave the lane's services, configuration, and code, and device clocks, unchanged. Upload only
+synthetic media or public sample images, and only into your partitions; never private photos of
+real people unless this brief supplies consented ones.
 Log every business write with its object and purpose. If a write's outcome is unknown, do not
 resend it as a new operation; check it and report it as pending.
 Before reporting a defect, rule out tool artifacts, input typed by automation tools, other

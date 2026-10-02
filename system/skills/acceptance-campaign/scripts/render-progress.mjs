@@ -30,7 +30,7 @@ const COLUMNS = {
 };
 const TEXT_SECTIONS = ['Summary', 'Lane', 'Next'];
 /** Lane facts a fresh coordinator needs to resume; each is a required `- Label:` bullet. */
-const LANE_FACTS = ['Runbook', 'Loaded', 'Slots', 'Partitions', 'Switches', 'Time zone', 'Objects', 'Pending', 'Off limits'];
+const LANE_FACTS = ['Runbook', 'Loaded', 'Slots', 'Partitions', 'Switches', 'Time zone', 'Objects', 'Pending', 'Units', 'Off limits'];
 const UPDATED_RE = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}( [+-]\d{2}:\d{2})?$/;
 const COUNT_IN_NAME_RE = /\d+\s*(项|行|条|rows?\b|items?\b)/i;
 const QUALIFICATION_TAGS = 4;

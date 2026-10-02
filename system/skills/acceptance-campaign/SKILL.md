@@ -16,10 +16,11 @@ slots. A fix joins the campaign baseline once it lands on the lane.
 
 - Run test batches in parallel only across slots and data partitions; each slot and each
   partition belongs to one batch at a time. A batch may hold several slots for a cross-system
-  journey. If a batch must change something other partitions also read (an organization-wide
-  setting, a shared catalog, a global flag), make that shared object a partition held by that
-  batch. Run fix and integration work off the lane, in worktrees, disposable databases, and local
-  test runs.
+  journey. Partitions never overlap: when a write affects a whole group (attendance affects a
+  class), the group is the partition, and when a batch must change something other partitions
+  also read (an organization-wide setting, a shared catalog, a global flag), that shared object is
+  a partition held by that batch. Run fix and integration work off the lane, in worktrees,
+  disposable databases, and local test runs.
 - Change the lane only through the lane operator and only while no test batch runs. Record the
   lane closed while a change or resume is under way, and open again once the operator's smoke
   check passes.
@@ -62,6 +63,7 @@ that needs no slot yourself, such as a read-only check or a records update.
    including unit work dirs, in a scratch directory. Before removing anything, resolve real paths
    and skip symlinks.
 7. Verify a mechanism before explaining it to the user, and label anything inferred.
+8. Take every time you record from the system clock.
 
 ## Records
 
@@ -114,9 +116,11 @@ project has none of its own.
 
 ### Dispatch
 
-- Dispatch a test batch only when every slot and partition it needs is free, and name in its brief
-  what it holds and any time gate as its Not-before time. Run fix units in parallel with disjoint
-  file ownership, each from the current lane head.
+- Before each dispatch, re-read `progress.md`, then record the unit under Units with what it
+  holds. Dispatch a test batch only when every slot and partition it needs is free, and name in its
+  brief what it holds and any time gate as its Not-before time. Run fix units in parallel with
+  disjoint file ownership, each from the current lane head.
+- Before a window, stop every test batch yourself; the lane operator cannot see them.
 - Leave a running unit's slot, partitions, and worktree alone.
 
 ### Test data
@@ -124,9 +128,9 @@ project has none of its own.
 - Create data only through the product or the project's fixture scripts, never by writing stores
   directly. Build a fixture script as a fix unit with an integration test on a disposable
   database; it requires a confirm word, is idempotent, names every object as synthetic, and prints
-  what it created. The lane operator seeds it between batches.
-- Give each data set its own partition and record it under Objects. If the set needs lane
-  configuration (allow-lists, gates), seeding includes that lane change.
+  what it created. The lane operator seeds it as a lane change, while no test batch runs.
+- Give each data set its own partition, recorded under Partitions, with its objects under Objects.
+  If the set needs lane configuration (allow-lists, gates), seeding includes that lane change.
 - Use the existing sign-in identities; new ones come from the user. Destructive flows use up
   disposable identities, so plan one per destructive case and record which are spent.
 - Upload only synthetic media or public sample images, and only into the batch's partitions:
@@ -172,7 +176,7 @@ when the user agrees.
 ### Judge
 
 - Use the statuses `not-tested`, `partial`, `passed`, `failed`, and `blocked`; they record
-  judgments only, and work in progress shows in Next and the Lane holders. An unresolved failure
+  judgments only, and work in progress shows under Units. An unresolved failure
   of a required check makes a row `failed`. `blocked` means a missing implementation, account, or
   decision; a time gate goes to the Blockers table and leaves the status alone. `partial` means
   some required check or qualification is still unverified.

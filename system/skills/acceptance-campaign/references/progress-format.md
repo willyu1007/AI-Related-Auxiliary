@@ -62,13 +62,14 @@ Card payment passes on both platforms; the iOS refund check waits for the 09:00 
 ## Lane
 
 - Runbook: docs/runbook.md
-- Loaded: app@1a2b3c4, api@5d6e7f8; api ready line "api ready"; client marker "build 3c4" on the About screen; lane open
+- Loaded: app@1a2b3c4, api@5d6e7f8; api ready line "api ready"; client marker "build 3c4" on the About screen; smoke passed 2026-03-14 08:40 (evidence/smoke-0314.txt); lane open
 - Slots: ios-1 = simulator 0A1B, app com.example.shop, UTC, test-account picker, free; android-1 = emulator-5554, app com.example.shop, UTC, test-account picker, free; web-1 = http://localhost:3000/admin, admin login from the runbook, free
 - Partitions: store-a with buyer-1, free; store-b with buyer-2, free, holds 3 leftover test orders
 - Switches: PAYMENTS_SANDBOX=true; REFUNDS_ENABLED=true; EMAIL_SEND=false
 - Time zone: business dates and gates use UTC
 - Objects: refund order 1042 in store-a, owned by buyer-1, due 2026-03-15 09:00 +00:00, seeded for PAY-02
 - Pending: none
+- Units: none running
 - Off limits: the staging database; other simulators
 ```
 
@@ -104,14 +105,18 @@ Card payment passes on both platforms; the iOS refund check waits for the 09:00 
 - **Lane**: `-` bullets starting with each of the labels below, all required, so a fresh coordinator
   can resume without asking. Write `none` where a list is empty.
   - `Runbook:` its path. The runbook holds how to operate the lane; this section holds its state.
-  - `Loaded:` the loaded baseline with its runtime markers, and whether the lane is open or closed.
+  - `Loaded:` the loaded baseline with its runtime markers, the last smoke result with its evidence
+    path, and whether the lane is open or closed.
   - `Slots:` each slot's device or URL, app id, device time zone, sign-in, and holder.
   - `Partitions:` each partition's identities, holder, and leftover data.
-  - `Switches:` every required switch as `name=value`, with its window or ruling.
+  - `Switches:` as `name=value`, every switch a row depends on or that has wide side effects, with
+    its window or ruling; plain feature gates stay in the runbook.
   - `Time zone:` the business time zone that dates, due times, and gates use.
   - `Objects:` seeded samples and the objects of an interrupted chain: object, partition,
     identities, due time with zone, and the report of the last run.
   - `Pending:` operations with an unknown outcome, under their original operation.
+  - `Units:` each running unit's role, agent, work dir or worktree, what it holds, and its hand-back
+    time.
   - `Off limits:` devices, checkouts, and services the campaign does not own.
 - **Inline formatting**: links `[text](href)`, code spans, and `**bold**`. Relative links resolve
   from the directory of `progress.md` and must exist.
