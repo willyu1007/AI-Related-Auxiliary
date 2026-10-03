@@ -152,6 +152,7 @@ reader-side verification of a cross-layer change.
   a switch with side effects, and update the affected acceptance conditions.
 - Pass the rows of a fix that changes user-facing design only after the user confirms screenshots
   from the lane.
+- Update each finding's State after every dispatch, retest, and ruling that touches it.
 
 ## 5. Update the lane
 

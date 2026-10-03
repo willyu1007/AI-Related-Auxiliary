@@ -20,12 +20,14 @@ import path from 'node:path';
 
 const STATUSES = ['passed', 'partial', 'failed', 'blocked', 'not-tested'];
 const KINDS = ['defect', 'design', 'gap', 'environment', 'ruling'];
+const FINDING_STATES = ['open', 'fixing', 'verified', 'deferred'];
+const LEGACY_FINDINGS = ['ID', 'Severity', 'Kind', 'Summary', 'Disposition', 'Rows'];
 const SEVERITIES = ['P1', 'P2', 'P3', '-'];
 const COLUMNS = {
   Rows: ['ID', 'Group', 'Item', 'Acceptance', 'Status', 'Qualification', 'Remaining', 'Evidence'],
   Rulings: ['ID', 'Date', 'Decision', 'Rows'],
   Handoff: ['ID', 'Item', 'Needs', 'Gate', 'Rows'],
-  Findings: ['ID', 'Severity', 'Kind', 'Summary', 'Disposition', 'Rows'],
+  Findings: ['ID', 'Severity', 'Kind', 'State', 'Summary', 'Disposition', 'Rows'],
   Blockers: ['ID', 'Item', 'Unlock', 'Owner', 'Since', 'Rows'],
 };
 const TEXT_SECTIONS = ['Summary', 'Lane', 'Next'];
@@ -50,6 +52,7 @@ const LABELS = {
     passed: 'passed', partial: 'partial', failed: 'failed', blocked: 'blocked',
     'not-tested': 'not tested', defect: 'defect', design: 'design', gap: 'gap',
     environment: 'environment', ruling: 'ruling', ungrouped: 'Ungrouped', Content: 'Summary', of: (n, t) => `${n} / ${t} passed`,
+    open: 'open', fixing: 'fixing', verified: 'verified', deferred: 'deferred',
   },
   zh: {
     passed: '通过', partial: '部分通过', failed: '失败', blocked: '阻塞', 'not-tested': '未测',
@@ -59,7 +62,8 @@ const LABELS = {
     Blockers: '阻塞', ID: '编号', Item: '项目', Status: '状态', Qualification: '证据资格', Remaining: '余项',
     Date: '日期', Decision: '裁定', Rows: '涉及行', Needs: '需要', Gate: '上线门禁', Severity: '级别',
     Kind: '归属', Disposition: '去向', Unlock: '解锁条件', Owner: '负责方', Since: '起始',
-    Updated: '更新', Baseline: '基线', Content: '内容',
+    Updated: '更新', Baseline: '基线', Content: '内容', State: '状态',
+    open: '待处理', fixing: '修复中', verified: '已复验', deferred: '延后',
   },
 };
 
@@ -85,6 +89,12 @@ function parseArgs(argv) {
 function splitRow(line) {
   const inner = line.trim().replace(/^\|/, '').replace(/(?<!\\)\|$/, '');
   return inner.split(/(?<!\\)\|/).map((cell) => cell.replace(/\\\|/g, '|').trim());
+}
+
+/** Lower-cased header cells of a section's first table line, joined by `|`. */
+function headerOf(section) {
+  const first = section.body.find((l) => l.text.trim());
+  return first ? splitRow(first.text).join('|').toLowerCase() : '';
 }
 
 /** Parse a section body as one table with the expected columns; records keep their line. */
@@ -122,7 +132,7 @@ function parseTable(section, columns, errors) {
 function parse(source) {
   const errors = [];
   const lines = source.replace(/\r\n?/g, '\n').split('\n');
-  const doc = { title: '', meta: [], ledgers: [], tables: {}, text: {} };
+  const doc = { title: '', meta: [], ledgers: [], tables: {}, text: {}, notes: [] };
   let i = 0;
   while (i < lines.length && !lines[i].trim()) i++;
   const title = lines[i]?.match(/^# (.+)$/);
@@ -161,6 +171,9 @@ function parse(source) {
     seen.add(key);
     if (ledger) {
       doc.ledgers.push({ name: ledger[1].trim(), rows: parseTable(section, COLUMNS.Rows, errors) });
+    } else if (section.name === 'Findings' && headerOf(section) === LEGACY_FINDINGS.join('|').toLowerCase()) {
+      doc.tables.Findings = parseTable(section, LEGACY_FINDINGS, errors).map((r) => ({ ...r, State: 'open' }));
+      doc.notes.push(`"## Findings" (line ${section.line}) has no State column; every finding shows as open until you add it`);
     } else if (COLUMNS[section.name] && section.name !== 'Rows') {
       doc.tables[section.name] = parseTable(section, COLUMNS[section.name], errors);
     } else if (TEXT_SECTIONS.includes(section.name)) {
@@ -240,6 +253,7 @@ function validate(doc, errors) {
       if (name === 'Findings') {
         if (!KINDS.includes(record.Kind)) errors.push(`line ${record.line}: kind "${record.Kind}" is not one of ${KINDS.join(', ')}`);
         if (!SEVERITIES.includes(record.Severity)) errors.push(`line ${record.line}: severity "${record.Severity}" is not one of ${SEVERITIES.join(', ')}`);
+        if (!FINDING_STATES.includes(record.State)) errors.push(`line ${record.line}: state "${record.State}" is not one of ${FINDING_STATES.join(', ')}`);
       }
       if ('Rows' in record && record.Rows !== '-') {
         for (const ref of record.Rows.split(',').map((s) => s.trim())) {
@@ -369,9 +383,35 @@ function render(doc, inline, lang) {
     return `<section id="ledger-${index}"><h2>${escapeHtml(ledger.name)}</h2>${body.join('\n')}</section>`;
   };
 
+  const findingsSection = (list) => {
+    const columns = COLUMNS.Findings;
+    const label = (c) => (c === 'Summary' ? t('Content') : t(c));
+    const head = `<thead><tr>${columns.map((c) => `<th>${label(c)}</th>`).join('')}</tr></thead>`;
+    const row = (rec) => `<tr id="${anchor(rec.ID)}">${columns.map((c) => {
+      const value = rec[c];
+      let html;
+      if (c === 'Rows') html = refLinks(value);
+      else if (c === 'State') html = `<span class="chip f-${value}">${escapeHtml(t(value))}</span>`;
+      else if (c === 'Severity' || c === 'Kind') {
+        const cls = rec.State === 'open' ? `k-${escapeHtml(value)}` : 'k-muted';
+        html = value === '-' ? '—' : `<span class="chip ${cls}">${escapeHtml(t(value))}</span>`;
+      } else html = inline(value, rec.line);
+      const cls = c === 'ID' || c === 'Severity' || c === 'Kind' || c === 'State' ? ' class="id"' : '';
+      return `<td data-label="${label(c)}"${cls}>${html}</td>`;
+    }).join('')}</tr>`;
+    const groups = FINDING_STATES.map((s) => [s, list.filter((r) => r.State === s)]).filter(([, rows]) => rows.length);
+    const body = groups.map(([s, rows]) => {
+      const open = s === 'open' || s === 'fixing' ? ' open' : '';
+      return `<details id="findings-${s}"${open}><summary>${escapeHtml(t(s))} <span class="muted">${rows.length}</span></summary>
+<table class="rows">${head}<tbody>${rows.map(row).join('\n')}</tbody></table></details>`;
+    });
+    return `<section id="findings"><h2>${t('Findings')}</h2>${body.join('\n')}</section>`;
+  };
+
   const records = (name) => {
     const list = doc.tables[name];
     if (!list) return '';
+    if (name === 'Findings') return findingsSection(list);
     const columns = COLUMNS[name];
     const label = (c) => (c === 'Summary' ? t('Content') : t(c));
     const head = columns.map((c) => `<th>${label(c)}</th>`).join('');
@@ -393,7 +433,13 @@ function render(doc, inline, lang) {
   const meta = doc.meta.filter(([k]) => k === 'Updated').map(([k, v]) => `<span>${escapeHtml(t(k))}: ${inline(v, 0)}</span>`).join('');
   const tallies = ['Blockers', 'Findings', 'Handoff', 'Rulings']
     .filter((name) => doc.tables[name])
-    .map((name) => `<a class="chip" href="#${name.toLowerCase()}">${t(name)} ${doc.tables[name].length}</a>`)
+    .map((name) => {
+      if (name !== 'Findings') return `<a class="chip" href="#${name.toLowerCase()}">${t(name)} ${doc.tables[name].length}</a>`;
+      return FINDING_STATES.map((s) => [s, doc.tables.Findings.filter((r) => r.State === s).length])
+        .filter(([, n]) => n)
+        .map(([s, n]) => `<a class="chip f-${s}" href="#findings-${s}">${t('Findings')} · ${escapeHtml(t(s))} ${n}</a>`)
+        .join('');
+    })
     .join('');
 
   return `<!doctype html>
@@ -427,7 +473,8 @@ a{color:var(--link)}.muted{color:var(--muted);font-size:12px}.meta{display:flex;
 .s-passed{color:var(--passed);background:var(--passed)}.s-partial{color:var(--partial);background:var(--partial)}
 .s-failed{color:var(--failed);background:var(--failed)}.s-blocked{color:var(--blocked);background:var(--blocked)}.s-not-tested{color:var(--not-tested);background:var(--not-tested)}
 .chip.s-passed,.chip.s-partial,.chip.s-failed,.chip.s-blocked,.chip.s-not-tested{background:none}
-.k-P1,.k-defect{color:var(--failed)}.k-P2,.k-gap{color:var(--partial)}.k-P3,.k-design,.k-environment,.k-ruling{color:var(--muted)}
+.k-P1,.k-defect{color:var(--failed)}.k-P2,.k-gap{color:var(--partial)}.k-P3,.k-design,.k-environment,.k-ruling,.k-muted{color:var(--muted)}
+.f-open{color:var(--failed)}.f-fixing{color:var(--link)}.f-verified,.f-deferred{color:var(--muted)}
 details{border:1px solid var(--line);border-radius:8px;background:var(--card);margin:8px 0}summary{padding:8px 12px;cursor:pointer;font-weight:600}
 table{width:100%;border-collapse:collapse}th,td{text-align:left;vertical-align:top;padding:6px 10px;border-top:1px solid var(--line);overflow-wrap:break-word}
 th{font-size:12px;color:var(--muted);font-weight:500;white-space:nowrap}td.id{white-space:nowrap;font-weight:600}td.item{min-width:200px;width:30%}td.remaining{width:35%}
@@ -454,7 +501,7 @@ if (errors.length) {
   console.error('Format: references/progress-format.md');
   process.exit(1);
 }
-for (const w of lintForPeople(doc)) console.error(`warning: ${w}`);
+for (const w of [...doc.notes, ...lintForPeople(doc)]) console.error(`warning: ${w}`);
 const out = path.resolve(args.out || path.join(path.dirname(input), 'index.html'));
 fs.writeFileSync(out, html);
 const tally = doc.ledgers.map((l) => {

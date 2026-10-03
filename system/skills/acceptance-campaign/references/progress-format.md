@@ -37,9 +37,9 @@ Card payment passes on both platforms; the iOS refund check waits for the 09:00 
 
 ## Findings
 
-| ID | Severity | Kind | Summary | Disposition | Rows |
-| --- | --- | --- | --- | --- | --- |
-| F-1 | P2 | defect | The receipt shows the wrong currency after a refund | Fixed; iOS retest pending | PAY-02 |
+| ID | Severity | Kind | State | Summary | Disposition | Rows |
+| --- | --- | --- | --- | --- | --- | --- |
+| F-1 | P2 | defect | fixing | The receipt shows the wrong currency after a refund | Fixed; iOS retest pending | PAY-02 |
 
 ## Handoff
 
@@ -99,6 +99,9 @@ Card payment passes on both platforms; the iOS refund check waits for the 09:00 
 - **Evidence**: links to the row's evidence, or `-`.
 - **Kind**: one of `defect`, `design`, `gap`, `environment`, `ruling`. Move a finding triaged as
   handoff to the Handoff table. **Severity**: `P1`, `P2`, `P3`, or `-`.
+- **State**: `open` until a fix is under way; `fixing` while a fix is in progress or awaits its
+  retest; `verified` once its retest passes on the lane; `deferred` once ruled out of this
+  campaign or registered as a gap.
 - **Rows columns** in Blockers, Findings, Handoff, and Rulings list row ids separated by commas, or
   `-`. Every id must exist in some ledger.
 - **Summary**: after each adopted result, state in two to five lines the candidate's stage
@@ -130,5 +133,5 @@ Card payment passes on both platforms; the iOS refund check waits for the 09:00 
 - **Inline formatting**: links `[text](href)`, code spans, and `**bold**`. Write relative links from
   the directory of `progress.md`, to files that exist.
 - **Free text**: Summary and Next take paragraphs, `-` bullets, and `1.` numbered lists.
-- Keep one current snapshot. Remove a resolved blocker, and a finding once its disposition is in
-  the task records.
+- Keep one current snapshot. Remove a resolved blocker; remove a `verified` or `deferred` finding
+  once the task records hold its disposition.
