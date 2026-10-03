@@ -393,7 +393,8 @@ function render(doc, inline, lang) {
       if (c === 'Rows') html = refLinks(value);
       else if (c === 'State') html = `<span class="chip f-${value}">${escapeHtml(t(value))}</span>`;
       else if (c === 'Severity' || c === 'Kind') {
-        const cls = rec.State === 'open' ? `k-${escapeHtml(value)}` : 'k-muted';
+        const live = rec.State === 'open' || rec.State === 'fixing';
+        const cls = c === 'Severity' && live ? `k-${escapeHtml(value)}` : 'k-muted';
         html = value === '-' ? '—' : `<span class="chip ${cls}">${escapeHtml(t(value))}</span>`;
       } else html = inline(value, rec.line);
       const cls = c === 'ID' || c === 'Severity' || c === 'Kind' || c === 'State' ? ' class="id"' : '';
@@ -473,7 +474,7 @@ a{color:var(--link)}.muted{color:var(--muted);font-size:12px}.meta{display:flex;
 .s-passed{color:var(--passed);background:var(--passed)}.s-partial{color:var(--partial);background:var(--partial)}
 .s-failed{color:var(--failed);background:var(--failed)}.s-blocked{color:var(--blocked);background:var(--blocked)}.s-not-tested{color:var(--not-tested);background:var(--not-tested)}
 .chip.s-passed,.chip.s-partial,.chip.s-failed,.chip.s-blocked,.chip.s-not-tested{background:none}
-.k-P1,.k-defect{color:var(--failed)}.k-P2,.k-gap{color:var(--partial)}.k-P3,.k-design,.k-environment,.k-ruling,.k-muted{color:var(--muted)}
+.k-P1{color:var(--failed)}.k-P2{color:var(--partial)}.k-P3,.k-muted{color:var(--muted)}
 .f-open{color:var(--failed)}.f-fixing{color:var(--link)}.f-verified,.f-deferred{color:var(--muted)}
 details{border:1px solid var(--line);border-radius:8px;background:var(--card);margin:8px 0}summary{padding:8px 12px;cursor:pointer;font-weight:600}
 table{width:100%;border-collapse:collapse}th,td{text-align:left;vertical-align:top;padding:6px 10px;border-top:1px solid var(--line);overflow-wrap:break-word}
