@@ -66,6 +66,8 @@ smoke results, and the rows and components a configuration or seeding change dir
 Role: test batch. Slots, held only by you until handback: <slot: device or URL, app id, client,
 sign-in>.
 Rows: <id: acceptance condition; remaining work>.
+Risk: <for a retest, the change it covers and what it must prove>. Reuse: <evidence kept without
+rerunning, or none>.
 Steps: <optional for a multi-identity or multi-client chain: ordered steps, each with identity,
 client, action, expected result, and check>.
 Known: <rulings, design decisions, handoff items, and open findings that bear on these rows>.
@@ -111,8 +113,8 @@ Leave the lane, main checkouts, and other worktrees untouched, and do not bypass
 Regenerate the generated files your gates require, and follow the repository's rules for locks and
 pins.
 Verify the exact commit in a clean tree and read exit codes: <typecheck, tests, and the formal
-gates such as routing tables, contracts, or generated counts>. Verify a cross-layer change through
-the reader as well as the writer.
+gates your change can affect, such as routing tables, contracts, or generated counts>. Verify a
+cross-layer change through the reader as well as the writer.
 Stop: on a stop instruction, leave unfinished changes uncommitted in your worktree and return the
 changed files, the failing tests, and the step to resume from.
 Done: <condition>. Return:

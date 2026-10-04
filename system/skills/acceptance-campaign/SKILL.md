@@ -61,9 +61,12 @@ slots.
    operator complete it.
 5. Schedule time-gated rows (next-day due items, opening hours, expiry) now. Before creating,
    seeding, or consuming test data, read [references/test-data.md](references/test-data.md).
-6. Plan the first candidate: the fixes it will carry, the formal gates and permissions it needs,
-   its main blocker, and the rows to retest once it loads. Write it as the first item of
-   Next, and order the rest so work that unblocks the candidate or other rows comes first.
+6. Before planning fixes for a chain, have a test batch walk its user path once on a device slot
+   to surface missing native entries, permissions, clients, and outside prerequisites; record what
+   it finds as findings and blockers, never as passes. Then plan the first candidate: the fixes it
+   will carry, the formal gates and permissions it needs, its main blocker, and the rows to retest
+   once it loads. Write it as the first item of Next, and order the rest so work that unblocks the
+   candidate or other rows comes first.
 7. After every change to `progress.md`, run
    `node <skill-dir>/scripts/render-progress.mjs <campaign-dir>/progress.md`, where `<skill-dir>`
    is the directory of this file. Fix every error and rewrite every warned cell before telling the
@@ -149,10 +152,16 @@ reader-side verification of a cross-layer change.
   again after new evidence or a change of scope. Hold only the affected rows while a question is
   pending, and never treat elapsed time as consent.
 - Number as a ruling every decision that changes scope, an acceptance basis, a business policy, or
-  a switch with side effects, and update the affected acceptance conditions.
+  a switch with side effects, and every standing authorization for an operation (what, scope,
+  until when); update the affected acceptance conditions, and never ask again within an active
+  authorization.
 - Pass the rows of a fix that changes user-facing design only after the user confirms screenshots
   from the lane.
-- Update each finding's State after every dispatch, retest, and ruling that touches it.
+- Update each finding's State after every dispatch, retest, and ruling that touches it. Set
+  `verified` only after the user chain its rows require passes on the lane; source checks and load
+  proofs move it at most to `loaded`.
+- When a fix keeps a compatibility path, file a `deferred` finding with its exit condition and
+  owner, and register it in the task's gap list.
 
 ## 5. Update the lane
 
@@ -168,8 +177,9 @@ Next.
   lands. A branch that contains the current lane head and passed them is its own candidate;
   otherwise have the integrator merge from the current lane head. Across repositories, settle one
   candidate per repository and check their dependencies on each other. Assemble candidates off the
-  lane before taking the entry; test batches may run meanwhile. The lane operator fast-forwards and
-  migrates only as its brief authorizes.
+  lane before taking the entry; test batches may run meanwhile. Run the full formal gates once per
+  candidate head and once per landing head. The lane operator fast-forwards and migrates only as
+  its brief authorizes.
 - **Load proofs**: prove what is loaded for each changed service and client with existing version
   information (a version string in a bundle or log line, a version field, a registration hash) or
   a read-only probe whose result differs between the old and new code. Where neither exists, have

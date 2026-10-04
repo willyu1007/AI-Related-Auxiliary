@@ -20,7 +20,7 @@ import path from 'node:path';
 
 const STATUSES = ['passed', 'partial', 'failed', 'blocked', 'not-tested'];
 const KINDS = ['defect', 'design', 'gap', 'environment', 'ruling'];
-const FINDING_STATES = ['open', 'fixing', 'verified', 'deferred'];
+const FINDING_STATES = ['open', 'fixing', 'loaded', 'verified', 'deferred'];
 const LEGACY_FINDINGS = ['ID', 'Severity', 'Kind', 'Summary', 'Disposition', 'Rows'];
 const SEVERITIES = ['P1', 'P2', 'P3', '-'];
 const COLUMNS = {
@@ -52,7 +52,7 @@ const LABELS = {
     passed: 'passed', partial: 'partial', failed: 'failed', blocked: 'blocked',
     'not-tested': 'not tested', defect: 'defect', design: 'design', gap: 'gap',
     environment: 'environment', ruling: 'ruling', ungrouped: 'Ungrouped', Content: 'Summary', of: (n, t) => `${n} / ${t} passed`,
-    open: 'open', fixing: 'fixing', verified: 'verified', deferred: 'deferred',
+    open: 'open', fixing: 'fixing', loaded: 'loaded', verified: 'verified', deferred: 'deferred',
   },
   zh: {
     passed: '通过', partial: '部分通过', failed: '失败', blocked: '阻塞', 'not-tested': '未测',
@@ -63,7 +63,7 @@ const LABELS = {
     Date: '日期', Decision: '裁定', Rows: '涉及行', Needs: '需要', Gate: '上线门禁', Severity: '级别',
     Kind: '归属', Disposition: '去向', Unlock: '解锁条件', Owner: '负责方', Since: '起始',
     Updated: '更新', Baseline: '基线', Content: '内容', State: '状态',
-    open: '待处理', fixing: '修复中', verified: '已复验', deferred: '延后',
+    open: '待处理', fixing: '修复中', loaded: '已装载', verified: '已复验', deferred: '延后',
   },
 };
 
@@ -393,7 +393,7 @@ function render(doc, inline, lang) {
       if (c === 'Rows') html = refLinks(value);
       else if (c === 'State') html = `<span class="chip f-${value}">${escapeHtml(t(value))}</span>`;
       else if (c === 'Severity' || c === 'Kind') {
-        const live = rec.State === 'open' || rec.State === 'fixing';
+        const live = rec.State === 'open' || rec.State === 'fixing' || rec.State === 'loaded';
         const cls = c === 'Severity' && live ? `k-${escapeHtml(value)}` : 'k-muted';
         html = value === '-' ? '—' : `<span class="chip ${cls}">${escapeHtml(t(value))}</span>`;
       } else html = inline(value, rec.line);
@@ -402,7 +402,7 @@ function render(doc, inline, lang) {
     }).join('')}</tr>`;
     const groups = FINDING_STATES.map((s) => [s, list.filter((r) => r.State === s)]).filter(([, rows]) => rows.length);
     const body = groups.map(([s, rows]) => {
-      const open = s === 'open' || s === 'fixing' ? ' open' : '';
+      const open = s === 'open' || s === 'fixing' || s === 'loaded' ? ' open' : '';
       return `<details id="findings-${s}"${open}><summary>${escapeHtml(t(s))} <span class="muted">${rows.length}</span></summary>
 <table class="rows">${head}<tbody>${rows.map(row).join('\n')}</tbody></table></details>`;
     });
@@ -475,7 +475,7 @@ a{color:var(--link)}.muted{color:var(--muted);font-size:12px}.meta{display:flex;
 .s-failed{color:var(--failed);background:var(--failed)}.s-blocked{color:var(--blocked);background:var(--blocked)}.s-not-tested{color:var(--not-tested);background:var(--not-tested)}
 .chip.s-passed,.chip.s-partial,.chip.s-failed,.chip.s-blocked,.chip.s-not-tested{background:none}
 .k-P1{color:var(--failed)}.k-P2{color:var(--partial)}.k-P3,.k-muted{color:var(--muted)}
-.f-open{color:var(--failed)}.f-fixing{color:var(--link)}.f-verified,.f-deferred{color:var(--muted)}
+.f-open{color:var(--failed)}.f-fixing,.f-loaded{color:var(--link)}.f-verified,.f-deferred{color:var(--muted)}
 details{border:1px solid var(--line);border-radius:8px;background:var(--card);margin:8px 0}summary{padding:8px 12px;cursor:pointer;font-weight:600}
 table{width:100%;border-collapse:collapse}th,td{text-align:left;vertical-align:top;padding:6px 10px;border-top:1px solid var(--line);overflow-wrap:break-word}
 th{font-size:12px;color:var(--muted);font-weight:500;white-space:nowrap}td.id{white-space:nowrap;font-weight:600}td.item{min-width:200px;width:30%}td.remaining{width:35%}
