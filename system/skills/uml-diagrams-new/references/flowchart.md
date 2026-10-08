@@ -1,12 +1,12 @@
 # 流程图
 
 - Mermaid：`flowchart TD`（主链竖排）
-- 示例：`examples/fig-control-flow.mmd`
-- 布局 preset：[flowchart-default.json](../layouts/flowchart-default.json)
+- 示例：`examples/flowchart-order-confirm.mmd`
+- 可选成品修复 preset：[flowchart-default.json](../layouts/flowchart-default.json)
 
 ## 语义
 
-> 修改边界见 [SKILL.md](../SKILL.md)「三层与修改边界」：本节仅小幅调整；**拆图、折返双列、增删步骤、合并主链**属于**布局**，须在布局步骤改 `.mmd` 并重跑转换，不得在转换后/MCP 硬凑。
+> 修改边界见 [SKILL.md](../SKILL.md)「修改边界」：节点、关系及步骤含义变化回 `.mmd`；局部端口、标签、位置和路由可在成品修复。不得为尺寸删除步骤或合并不同含义步骤。
 
 - 起止：`([开始])`、`([结束])` 扁圆；不用 `(( ))` 实心圆
 - 判断：`{是否…}` 菱形；**一步一框**
@@ -18,15 +18,15 @@
 
 ## 布局
 
-本节的拆图、折返双列、合并步骤、增删框与 `subgraph` 分栏均属**布局层**；改完后须重新 CLI → Ungroup，再执行「转换后」。
+拆图、折返双列及 `subgraph` 分栏应同步 `.mmd`；改完后重新 CLI 转换，再执行「转换后」。
 
 - Mermaid 一步转换通常**不再**跑 `--layout`
-- Ungroup 后若间距/平行边问题：`flowchart-default.json`（含 `mxParallelEdgeLayout`）
+- 转换后若间距/平行边问题：`flowchart-default.json`（含 `mxParallelEdgeLayout`）
 - 竖长单栏导致贴 Word 超高时：优先评估 **折返双列**（见下）或 **拆图**（见下），不要删 ELK 指望压矮
 
 ## 拆图规范
 
-**何时拆**：主链 **>8** 步、满版心宽贴入后 `H_doc > 22–24 cm`，且折返双列仍超高或分支过重。
+**何时拆**：按实际放置宽度计算后超出可用高度或最小实际字号，且方向/间距/折返调整后仍不满足要求。主链 >8 步时优先检查，步数不是硬限制。
 
 **切分位置**
 
@@ -47,7 +47,7 @@
 
 - 两张图各写一套「开始…结束」却无语义接续；
 - 上图末尾写子程序形 `[[某步骤名]]` 但下图入口不是该步骤的**直接后继**；
-- 为压高度而拆图，却仍在每张短子图里让多条「否」汇到**上方**同一 `结束`（布局会乱，参见折返/拆图后的 Ungroup 微调）。
+- 为压高度而拆图，却仍在每张短子图里让多条「否」汇到**上方**同一 `结束`（布局会乱，参见折返/拆图后的 局部微调）。
 
 **拆图后 QA**
 
@@ -93,7 +93,7 @@ flowchart TD
 
 **转换后（折返边）**
 
-Mermaid 转换器未必自动「下→横→上」。Ungroup 后检查 `bridgeL → bridgeR`：
+Mermaid 转换器未必自动「下→横→上」。转换后检查 `bridgeL → bridgeR`：
 
 - 出口：左栏末节点 `exitX=0.5;exitY=1`（或 `exitX=1;exitY=0.5` 若从右侧折出）；
 - 入口：右栏首节点 `entryX=0.5;entryY=0`；
@@ -105,7 +105,7 @@ Mermaid 转换器未必自动「下→横→上」。Ungroup 后检查 `bridgeL 
 |------|------|
 | 要同一图号、主链长、分支轻 | **折返双列** |
 | 两段语义相对独立、分支重 | **拆图**（遵守上一节） |
-| 折返后 `H/W` 仍 > ~1.6 | 合并步骤或改为拆图 |
+| 折返后仍超实际尺寸或字号要求 | 按语义拆图，保留全部步骤 |
 
 ## 样式
 
@@ -116,11 +116,11 @@ Mermaid 转换器未必自动「下→横→上」。Ungroup 后检查 `bridgeL 
 | 边 | `edgeStyle=orthogonalEdgeStyle;rounded=0;endArrow=block;endFill=1` |
 | 边标签 | `labelBackgroundColor=#ffffff` |
 
-Ungroup 后批量检查：边的 `rounded=1` → `rounded=0`。
+转换后批量检查：边的 `rounded=1` → `rounded=0`。
 
 ## 转换后
 
-Mermaid 无法声明菱形端口；**Ungroup 后**用 draw.io 或 MCP：
+Mermaid 无法声明菱形端口；**转换后**用 draw.io 或 MCP：
 
 | 问题 | 处理 |
 |------|------|
@@ -139,27 +139,30 @@ $drawio = & powershell -NoProfile -File scripts/find-drawio.ps1
 & $drawio -x -f png -e -b 10 -s 3 --crop -o name.drawio.png name.drawio
 ```
 
-导出前 **Fit Page to Content**；画布宽度目标 **700–1200 px**。
+导出前 **Fit Page to Content**；画布宽度按最终尺寸要求确定。
 
 ### 宽高比：优先改图
 
 竖排主链易 **H/W > 2**。Word 等比缩放：`H_doc = W_doc × (H/W)`。
 
-**在布局层改 `.mmd` 拓扑/排版**（见 SKILL「三层与修改边界」），不在 Word 里只压宽度，也不在 draw.io 里只拖节点：
+适配顺序以 [尺寸适配与几何验收](size-and-geometry.md) 为准；局部位置可修复，拆图/折返更新 `.mmd`：
 
 | 优先级 | 做法 | 见 |
 |--------|------|-----|
-| 1 | **折返双列**（单图、左右栏 + 下→横→上折返边） | 上文「折返双列」 |
-| 2 | **拆图**（两张、语义接续） | 上文「拆图规范」 |
-| 3 | **合并步骤** / 子流程节点压缩主链 | 语义节 |
-| 4 | **略减间距** | `flowchart-default.json` |
+| 1 | 裁空白、评估等比放置和实际字号 | 共享尺寸规则 |
+| 2 | 调整方向、间距、标签换行 | `.mmd` 与局部修复 |
+| 3 | **折返双列**（单图、左右栏 + 折返边） | 上文「折返双列」 |
+| 4 | **拆图**（语义接续，保留全部内容） | 上文「拆图规范」 |
 
-主链 **>8** 步：必须先估算 `H/W`，在折返双列与拆图之间二选一（或组合：折返仍超高再拆）。
+有尺寸约束时先估算 `H/W`；短主链也可能因长标签超限，满足要求时无需折返或拆分。
 
 **不推荐**：删 ELK 但不改拓扑；Word 只设最小宽度不算高度。
 
 ### 贴文档前 QA
 
-1. 估算满宽贴入后高度是否 ≤ 一页（约 22–24 cm）
+1. 估算实际放置后高度是否 ≤ 可用高度，并满足最小实际字号
 2. 菱形端口、标签贴靠、无圆弧边
 3. 在 Word **实际显示 cm** 下字可读
+
+
+生成配置在 `generation/`，本节的 `layouts/` 仅用于明确的成品修复；无需默认取消组合。最终尺寸、横向/竖向拆分与重新测量要求见 [尺寸适配与几何验收](size-and-geometry.md)。

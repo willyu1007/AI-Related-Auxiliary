@@ -1,11 +1,11 @@
 # 时序图
 
 - Mermaid：`sequenceDiagram`
-- 布局 preset：`layouts/sequence-default.json`；仅用于分开重叠的平行消息边，不得重排参与者或生命线
+- 可选成品修复 preset：`layouts/sequence-default.json`；仅用于分开重叠的平行消息边，不得重排参与者或生命线
 
 ## 语义
 
-> 修改边界见 [SKILL.md](../SKILL.md)「三层与修改边界」：本节改消息/别名/片段；**增删参与者、拆时序图**回布局层改 `.mmd` 并重跑转换。
+> 修改边界见 [SKILL.md](../SKILL.md)「修改边界」：本节改消息/别名/片段；**增删参与者、拆时序图**回布局层改 `.mmd` 并重跑转换。
 
 - 参与者：`participant Alias as 显示名`
 - **默认禁用 activation**：不用 `activate`/`deactivate`；消息用 `->>` / `-->>`，不用 `->>+` / `-->>-`
@@ -29,13 +29,13 @@
 | 回传 | 可用 `dashed=1` |
 | 文字 | Microsoft YaHei，`fontSize≥14` |
 
-Ungroup 后：生命线实线 → 改为上表虚线样式。
+转换后：生命线实线 → 改为上表虚线样式。
 
 ## 转换后
 
 | 问题 | 处理 |
 |------|------|
-| 顶栏 + 底栏双矩形 | 删源中 activation；Ungroup 后删 activation 形 |
+| 顶栏 + 底栏双矩形 | 删源中 activation；转换后删 activation 形 |
 | 生命线非虚线 | 改生命线 style（见上表） |
 | 自调用文字越过生命线 | 移标签/offset；文字左缘 ≤ 该对象生命线 x |
 
@@ -50,10 +50,13 @@ $drawio = & powershell -NoProfile -File scripts/find-drawio.ps1
 & $drawio -x -f png -e -b 10 -s 3 --crop -o name.drawio.png name.drawio
 ```
 
-画布宽度 **700–1200 px**。按文档版心宽度估算放置高度：`H_doc = W_doc × 图的高度 / 图的宽度`。消息过多时**优先拆图**，勿靠缩小 Word 宽度。
+画布宽度按最终尺寸要求确定。按文档版心宽度估算放置高度：`H_doc = W_doc × 图的高度 / 图的宽度`。消息过多时**优先拆图**，勿靠缩小 Word 宽度。
 
 ### 贴文档前 QA
 
 1. 仅顶栏 + 虚线生命线
 2. 自调用标签不越过生命线
 3. Word 显示尺寸下字可读
+
+
+生成配置在 `generation/`，本节的 `layouts/` 仅用于明确的成品修复；无需默认取消组合。最终尺寸、横向/竖向拆分与重新测量要求见 [尺寸适配与几何验收](size-and-geometry.md)。

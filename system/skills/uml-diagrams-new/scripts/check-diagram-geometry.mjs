@@ -1,11 +1,17 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import { parseArgs } from 'node:util';
+import { resolve } from 'node:path';
 import { measureSvg } from './measure-svg.mjs';
 import { checkGeometry } from './geometry-rules.mjs';
 
 try {
   const { values } = parseArgs({ options: Object.fromEntries(['drawio', 'svg', 'report', 'preview', 'browser'].map(key => [key, { type: 'string' }])) });
   if (!values.drawio || !values.svg) throw new Error('Required: --drawio file.drawio --svg freshly-exported.svg [--browser executable]');
+  const normalize = path => process.platform === 'win32' ? resolve(path).toLowerCase() : resolve(path);
+  const inputs = [values.drawio, values.svg].map(normalize);
+  const outputs = [values.report, values.preview].filter(Boolean).map(normalize);
+  if (outputs.some(path => inputs.includes(path)) || new Set(outputs).size !== outputs.length)
+    throw new Error('Report/preview paths must be distinct and must not overwrite either input.');
   const measured = await measureSvg(values.svg, values.drawio, values);
   const findings = checkGeometry(measured).map(f => ({ page: measured.page, ...f }));
   const report = { schemaVersion: 1, page: measured.page, coverage: measured.gaps.length ? 'incomplete' : 'complete',

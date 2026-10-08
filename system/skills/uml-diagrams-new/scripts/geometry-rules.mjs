@@ -43,9 +43,20 @@ function inside(point, polygon) {
 const corners = r => [{ x: r.x, y: r.y }, { x: r.x + r.width, y: r.y },
   { x: r.x + r.width, y: r.y + r.height }, { x: r.x, y: r.y + r.height }];
 function polygonsOverlap(a, b) {
+  if (!intersectionRect(polygonBounds(a), polygonBounds(b))) return false;
   return a.some(p => inside(p, b)) || b.some(p => inside(p, a)) ||
+    sides(a).some(([p, q]) => inside({ x: (p.x + q.x) / 2, y: (p.y + q.y) / 2 }, b)) ||
+    sides(b).some(([p, q]) => inside({ x: (p.x + q.x) / 2, y: (p.y + q.y) / 2 }, a)) ||
     sides(a).some(sa => sides(b).some(sb => crossing(sa, sb))) ||
     inside({ x: a.reduce((n, p) => n + p.x, 0) / a.length, y: a.reduce((n, p) => n + p.y, 0) / a.length }, b);
+}
+function onBoundary(point, polygon) {
+  return sides(polygon).some(([a, b]) => {
+    const dx = b.x - a.x, dy = b.y - a.y, lengthSquared = dx * dx + dy * dy;
+    if (!lengthSquared) return Math.hypot(point.x - a.x, point.y - a.y) <= EPS;
+    const t = Math.max(0, Math.min(1, ((point.x - a.x) * dx + (point.y - a.y) * dy) / lengthSquared));
+    return Math.hypot(point.x - a.x - t * dx, point.y - a.y - t * dy) <= EPS;
+  });
 }
 const related = (a, b) => a.cellId === b.cellId || (a.ancestors ?? []).includes(b.cellId) || (b.ancestors ?? []).includes(a.cellId);
 const polygonBounds = p => ({ x: Math.min(...p.map(v => v.x)), y: Math.min(...p.map(v => v.y)),
@@ -80,7 +91,8 @@ export function checkGeometry({ labels, nodes, edges, canvas }) {
         if (label.cellId === node.cellId && label.contained !== false) {
           const box = polygonBounds(node.polygon);
           const r = label.bounds;
-          if (exceeds(r, box)) add('text-overflow', label, node, r);
+          if (exceeds(r, box) || corners(r).some(p => !inside(p, node.polygon) && !onBoundary(p, node.polygon)))
+            add('text-overflow', label, node, r);
         }
       } else if (polygonsOverlap(corners(label.bounds), node.polygon)) add('label-node', label, node, label.bounds);
     }
@@ -93,6 +105,7 @@ export function checkGeometry({ labels, nodes, edges, canvas }) {
   }
   for (let i = 0; i < nodes.length; i++) {
     const node = nodes[i];
+    if (canvas && exceeds(polygonBounds(node.polygon), canvas)) add('canvas-overflow', node, null, polygonBounds(node.polygon));
     for (const other of nodes.slice(i + 1)) if (!related(node, other) && polygonsOverlap(node.polygon, other.polygon))
       add('node-node', node, other, intersectionRect(polygonBounds(node.polygon), polygonBounds(other.polygon)));
     for (const edge of edges) if (!related(node, edge) && !(edge.terminalAncestors ?? []).includes(node.cellId) && edge.source !== node.cellId && edge.target !== node.cellId &&
@@ -101,6 +114,7 @@ export function checkGeometry({ labels, nodes, edges, canvas }) {
   }
   for (let i = 0; i < edges.length; i++) for (const other of edges.slice(i + 1)) {
     const edge = edges[i];
+    if (edge.kind === 'lifeline' || other.kind === 'lifeline') continue;
     const point = edge.segments.flatMap(a => other.segments.map(b => channelContact(a, b))).find(Boolean);
     if (point) add('edge-crossing', edge, other, point, 'warning');
   }

@@ -1,11 +1,11 @@
 # 类图
 
 - Mermaid：`classDiagram`
-- 布局 preset：[class-default.json](../layouts/class-default.json)
+- 可选成品修复 preset：[class-default.json](../layouts/class-default.json)
 
 ## 语义
 
-> 修改边界见 [SKILL.md](../SKILL.md)「三层与修改边界」：本节改文案/可见性/关系类型；**增删类、改继承拓扑、拆图**回布局层改 `.mmd` 并重跑转换。
+> 修改边界见 [SKILL.md](../SKILL.md)「修改边界」：本节改文案/可见性/关系类型；**增删类、改继承拓扑、拆图**回布局层改 `.mmd` 并重跑转换。
 
 - 类名 / 属性 / 操作分栏；一步一类
 - **可见性（draw.io 原样渲染）**：
@@ -27,7 +27,7 @@
 
 ## 布局
 
-- 关联线偏短、类框过密：Ungroup 后 `class-default.json`
+- 关联线偏短、类框过密：转换后 `class-default.json`
 - 仍不够：手移类框或增大 preset 中 `elk.spacing.nodeNode`
 
 ## 样式
@@ -59,10 +59,13 @@ $drawio = & powershell -NoProfile -File scripts/find-drawio.ps1
 & $drawio -x -f png -e -b 10 -s 3 --crop -o name.drawio.png name.drawio
 ```
 
-画布宽度 **700–1200 px**；Fit Page to Content。按版心宽度估算放置高度：`H_doc = W_doc × 图的高度 / 图的宽度`。类过多时**优先拆图**或减类数。
+画布宽度按最终尺寸要求确定；Fit Page to Content。按版心宽度估算放置高度：`H_doc = W_doc × 图的高度 / 图的宽度`。类过多时**优先拆图**，保留全部类与关系。
 
 ### 贴文档前 QA
 
 1. 框内文字不溢出；关联线可辨认
 2. 公开成员为 `+`，无多余 `#`
 3. Word 显示尺寸下字可读
+
+
+生成配置在 `generation/`，本节的 `layouts/` 仅用于明确的成品修复；无需默认取消组合。最终尺寸、横向/竖向拆分与重新测量要求见 [尺寸适配与几何验收](size-and-geometry.md)。

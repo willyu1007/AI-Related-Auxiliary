@@ -35,3 +35,27 @@ test('diamond empty corners are not obstacles; text overflow is detected', () =>
   assert.deepEqual(check([{ ...label('corner', 0, 0), bounds: rect(0, 0, 4, 4) }], [diamond]), []);
   assert.ok(check([label('box', 20, 10)], [node('box', 0, 0)]).some(f => f.rule === 'text-overflow'));
 });
+test('clipping, canvas overflow and shared channels have explicit results', () => {
+  assert.ok(check([{ ...label('text', 0, 0), clipBounds: [rect(0, 0, 20, 10)] }]).some(f => f.rule === 'text-clipping'));
+  assert.ok(checkGeometry({ labels: [label('text', -10, 0)], nodes: [], edges: [], canvas: rect(0, 0, 100, 100) })
+    .some(f => f.rule === 'canvas-overflow'));
+  const a = { cellId: 'a', segments: [[{ x: 0, y: 0 }, { x: 40, y: 0 }]] };
+  const b = { cellId: 'b', segments: [[{ x: 10, y: 0 }, { x: 60, y: 0 }]] };
+  assert.equal(check([], [], [a, b])[0]?.severity, 'warning');
+});
+test('endpoint ancestors are legitimate containers, while unrelated nodes remain obstacles', () => {
+  const edge = { cellId: 'edge', terminalAncestors: ['container'], segments: [[{ x: 0, y: 20 }, { x: 60, y: 20 }]] };
+  assert.deepEqual(check([], [node('container', -10, 0)], [edge]), []);
+});
+test('aligned nodes with a narrow shared interior collide in either order', () => {
+  const a = node('a', 0, 0), b = node('b', 30, 0);
+  assert.ok(check([], [a, b]).some(f => f.rule === 'node-node'));
+  assert.ok(check([], [b, a]).some(f => f.rule === 'node-node'));
+  assert.deepEqual(check([], [a, node('touching', 40, 0)]), []);
+});
+test('sequence messages may cross lifelines but their text must stay clear', () => {
+  const lifeline = { cellId: 'actor', kind: 'lifeline', segments: [[{ x: 20, y: 0 }, { x: 20, y: 100 }]] };
+  const message = { cellId: 'message', segments: [[{ x: 0, y: 40 }, { x: 60, y: 40 }]] };
+  assert.deepEqual(check([], [], [lifeline, message]), []);
+  assert.ok(check([label('message', 5, 20)], [], [lifeline, message]).some(f => f.rule === 'edge-label'));
+});

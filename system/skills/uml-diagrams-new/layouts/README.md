@@ -1,7 +1,7 @@
 # 布局预设（draw.io）
 
-JSON 格式与 [draw.io 规范](https://www.drawio.com/docs/reference/json-layout-specification/) 一致。已有 preset 是当前约定的布局偏好，应直接选用，不要改写来适配单张图。
-ELK 分层布局应在 Mermaid 容器 Ungroup 后使用；时序图 preset 仅处理平行消息边，不改变参与者顺序或生命线。
+本目录是**转换后的明确布局修复**，不是 Mermaid 生成配置。JSON 格式与 [draw.io 规范](https://www.drawio.com/docs/reference/json-layout-specification/) 一致。
+默认生成使用 `../generation/<类型>.json`，在 Mermaid→draw.io 时请求布局，不追加第二次布局。只有确需修复现有图才使用本目录；Ungroup 仅在实际组合妨碍操作时使用。时序 preset 不改变参与者顺序或生命线。
 
 | 文件 | 图类 | 说明 |
 |------|------|------|
@@ -23,4 +23,4 @@ $drawio = & powershell -NoProfile -File ../scripts/find-drawio.ps1
 
 ## 与各类型文档的关系
 
-每种图的全部规则（含语义、样式、贴进文档）在 `references/<类型>.md` 单文件内；本目录放 draw.io 布局 preset JSON。
+每种图的规则在 `references/<类型>.md`；最终尺寸和几何闭环见 `../references/size-and-geometry.md`。修复后重新应用样式、导出 SVG、运行检测。

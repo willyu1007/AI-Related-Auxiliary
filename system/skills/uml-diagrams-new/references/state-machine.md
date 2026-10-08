@@ -1,11 +1,11 @@
 # 状态机图
 
 - Mermaid：`stateDiagram-v2`
-- 布局 preset：`layouts/state-machine-default.json`
+- 可选成品修复 preset：`layouts/state-machine-default.json`
 
 ## 语义
 
-> 修改边界见 [SKILL.md](../SKILL.md)「三层与修改边界」：本节改状态名/转换条件；**增删状态、拆图、改主路径拓扑**回布局层改 `.mmd` 并重跑转换。
+> 修改边界见 [SKILL.md](../SKILL.md)「修改边界」：本节改状态名/转换条件；**增删状态、拆图、改主路径拓扑**回布局层改 `.mmd` 并重跑转换。
 
 - 开始：`[*] --> 初始状态`
 - 终态：`--> [*]` 或显式「结束」状态
@@ -15,7 +15,7 @@
 
 ## 布局
 
-- 默认使用自上而下的布局；Ungroup 后状态间距或平行边仍不合适时，使用 `state-machine-default.json`
+- 默认使用自上而下的布局；转换后状态间距或平行边仍不合适时，使用 `state-machine-default.json`
 - 贴文档时若图过高，先调整 Mermaid 方向或拆图，再重新转换；不要把多条长连线挤到同一终点
 
 ## 样式
@@ -46,10 +46,13 @@ $drawio = & powershell -NoProfile -File scripts/find-drawio.ps1
 & $drawio -x -f png -e -b 10 -s 3 --crop -o name.drawio.png name.drawio
 ```
 
-画布 **700–1200 px** 宽。按文档版心宽度估算放置高度：`H_doc = W_doc × 图的高度 / 图的宽度`。若超出可用页面高度，先将方向调整为 `TB` 或拆图，再检查箭头。状态 **>10** 时优先拆图或合并状态。
+画布宽度按最终尺寸要求确定。按文档版心宽度估算放置高度：`H_doc = W_doc × 图的高度 / 图的宽度`。若超出可用页面高度，先评估 `TB`/`LR` 方向、间距或拆图，再检查箭头。状态 **>10** 时优先拆图，保留全部状态和转换。
 
 ### 贴文档前 QA
 
 1. 宽高比是否适合一页（竖长时改图拆图）
 2. 起止符、标签、线宽符合样式节
 3. Word 显示尺寸下字可读
+
+
+生成配置在 `generation/`，本节的 `layouts/` 仅用于明确的成品修复；无需默认取消组合。最终尺寸、横向/竖向拆分与重新测量要求见 [尺寸适配与几何验收](size-and-geometry.md)。

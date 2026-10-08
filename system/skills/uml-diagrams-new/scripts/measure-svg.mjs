@@ -70,6 +70,35 @@ export async function measureSvg(svgPath, drawioPath, { browser: executablePath 
         return ids;
       };
       const labels = [], nodes = [], edges = [], seen = new Set();
+      const fonts = new Map();
+      const registerFont = (element, cellId) => {
+        const family = getComputedStyle(element).fontFamily.split(',')[0].trim().replace(/^["']|["']$/g, '');
+        if (!fonts.has(family)) fonts.set(family, []);
+        fonts.get(family).push(cellId);
+      };
+      // draw.io class members use SVG rectangular clipPaths; other clips stay gaps.
+      const clippingBounds = (element, cellId) => {
+        const result = [];
+        for (let ancestor = element; ancestor && ancestor !== document.body; ancestor = ancestor.parentElement) {
+          const style = getComputedStyle(ancestor);
+          if (style.maskImage !== 'none' || style.filter !== 'none')
+            gaps.push({ cellId, reason: 'unsupported-svg-clipping-or-filter' });
+          if (style.clipPath === 'none') continue;
+          const id = style.clipPath.match(/#([^"')]+)["']?\)$/)?.[1];
+          const clip = id ? document.getElementById(id) : null;
+          const shape = clip?.children[0];
+          const transform = typeof ancestor.getScreenCTM === 'function' ? matrix.multiply(ancestor.getScreenCTM()) : null;
+          if (clip?.localName === 'clipPath' && clip.children.length === 1 && shape.localName === 'rect' &&
+            !clip.hasAttribute('transform') && !shape.hasAttribute('transform') && !shape.hasAttribute('rx') &&
+            (!clip.hasAttribute('clipPathUnits') || clip.getAttribute('clipPathUnits') === 'userSpaceOnUse') &&
+            transform && Math.abs(transform.b) < 1e-9 && Math.abs(transform.c) < 1e-9) {
+            const a = new DOMPoint(shape.x.baseVal.value, shape.y.baseVal.value).matrixTransform(transform);
+            const b = new DOMPoint(shape.x.baseVal.value + shape.width.baseVal.value, shape.y.baseVal.value + shape.height.baseVal.value).matrixTransform(transform);
+            result.push({ x: Math.min(a.x, b.x), y: Math.min(a.y, b.y), width: Math.abs(b.x - a.x), height: Math.abs(b.y - a.y) });
+          } else gaps.push({ cellId, reason: 'unsupported-svg-clipping-or-filter', detail: style.clipPath });
+        }
+        return result;
+      };
       // SVGGeometryElement exposes the actual exported outlines, including curves.
       const outline = shape => {
         const transform = matrix.multiply(shape.getScreenCTM());
@@ -91,6 +120,9 @@ export async function measureSvg(svgPath, drawioPath, { browser: executablePath 
         const id = group.getAttribute('data-cell-id'), cell = cells.get(id);
         if (!cell || (!cell.edge && !cell.vertex)) continue;
         seen.add(id);
+        const groupClips = clippingBounds(group, id);
+        if (groupClips.length && (cell.edge || cell.style.text !== '1'))
+          gaps.push({ cellId: id, reason: 'clipped-shape-or-edge', detail: 'Text clipping is supported; clipped paths/outlines are not.' });
         const base = { cellId: id, ancestors: ancestors(cell), text: cell.text, source: cell.source, target: cell.target,
           terminalAncestors: [cell.source, cell.target].flatMap(terminal => cells.has(terminal) ? ancestors(cells.get(terminal)) : []) };
         const owned = el => el.closest('[data-cell-id]') === group;
@@ -99,10 +131,14 @@ export async function measureSvg(svgPath, drawioPath, { browser: executablePath 
           while (walker.nextNode()) {
             const text = walker.currentNode;
             if (!text.textContent.trim()) continue;
+            registerFont(text.parentElement, id);
             const range = document.createRange(); range.selectNodeContents(text);
-            const clipBounds = [];
-            for (let ancestor = text.parentElement; ancestor && ancestor !== foreign; ancestor = ancestor.parentElement)
-              if (['hidden', 'clip'].includes(getComputedStyle(ancestor).overflow)) clipBounds.push(bounds(ancestor.getBoundingClientRect()));
+            const clipBounds = clippingBounds(text.parentElement, id);
+            for (let ancestor = text.parentElement; ancestor; ancestor = ancestor.parentElement) {
+              const style = getComputedStyle(ancestor);
+              if (ancestor === foreign) break;
+              if (['hidden', 'clip'].includes(style.overflow)) clipBounds.push(bounds(ancestor.getBoundingClientRect()));
+            }
             for (const rect of range.getClientRects()) if (rect.width > 0 && rect.height > 0)
               labels.push({ ...base, text: text.textContent.trim(), bounds: bounds(rect), clipBounds,
                 contained: cell.vertex && cell.style.labelPosition === undefined });
@@ -111,16 +147,28 @@ export async function measureSvg(svgPath, drawioPath, { browser: executablePath 
         for (const text of [...group.querySelectorAll('text')].filter(owned)) {
           if (text.closest('foreignObject') || text.closest('switch')?.querySelector('foreignObject')) continue;
           const rect = text.getBoundingClientRect();
-          if (rect.width && rect.height) labels.push({ ...base, text: text.textContent.trim(), bounds: bounds(rect), contained: cell.vertex });
+          if (rect.width && rect.height) {
+            const walker = document.createTreeWalker(text, NodeFilter.SHOW_TEXT);
+            while (walker.nextNode()) if (walker.currentNode.textContent.trim()) registerFont(walker.currentNode.parentElement, id);
+            labels.push({ ...base, text: text.textContent.trim(), bounds: bounds(rect), clipBounds: clippingBounds(text, id), contained: cell.vertex });
+          }
         }
         const shapes = [...group.querySelectorAll('path,rect,ellipse,circle,polygon,polyline')].filter(owned)
           .filter(s => !s.closest('foreignObject') && typeof s.getTotalLength === 'function');
+        for (const shape of shapes) if (clippingBounds(shape, id).length)
+          gaps.push({ cellId: id, reason: 'clipped-shape-or-edge' });
         if (cell.edge) {
           const paths = shapes.filter(s => getComputedStyle(s).fill === 'none' && getComputedStyle(s).stroke !== 'none');
           const segments = paths.flatMap(s => { const p = outline(s); return p.slice(1).map((v, i) => [p[i], v]); });
           if (!segments.length) gaps.push({ cellId: id, reason: 'missing-edge-path' });
           else edges.push({ ...base, segments });
         } else {
+          if (cell.style.shape === 'umlLifeline') {
+            const segments = shapes.filter(s => getComputedStyle(s).fill === 'none' && getComputedStyle(s).stroke !== 'none')
+              .flatMap(s => { const p = outline(s); return p.slice(1).map((v, i) => [p[i], v]); });
+            if (segments.length) edges.push({ ...base, kind: 'lifeline', segments });
+            else gaps.push({ cellId: id, reason: 'missing-lifeline-path' });
+          }
           const supported = !cell.style.shape || ['rectangle', 'rhombus', 'ellipse', 'swimlane', 'umlLifeline', 'group',
             'cylinder3', 'mxgraph.flowchart.start_1', 'mxgraph.flowchart.on-page_reference'].includes(cell.style.shape);
           if (!supported) gaps.push({ cellId: id, reason: 'unsupported-shape', detail: cell.style.shape });
@@ -145,10 +193,17 @@ export async function measureSvg(svgPath, drawioPath, { browser: executablePath 
       }
       for (const cell of cells.values()) if ((cell.edge || cell.vertex) && !seen.has(cell.cellId))
         gaps.push({ cellId: cell.cellId, reason: 'missing-svg-cell' });
+      const genericFonts = ['serif', 'sans-serif', 'monospace', 'cursive', 'fantasy', 'system-ui', 'ui-serif', 'ui-sans-serif', 'ui-monospace'];
+      for (const [family, ids] of fonts) {
+        if (genericFonts.includes(family.toLowerCase())) continue;
+        try { await new FontFace('__geometry_font_probe', `local(${JSON.stringify(family)})`).load(); }
+        catch { gaps.push({ reason: 'unavailable-font', cellIds: [...new Set(ids)], detail: family }); }
+      }
       const view = svg.viewBox.baseVal;
       return { page: diagrams[0]?.getAttribute('name') ?? '1', labels, nodes, edges, gaps,
         canvas: { x: view.x, y: view.y, width: view.width, height: view.height },
-        measurement: { text: 'browser Range/client rectangles after fonts.ready', outlineStep: 0.5 } };
+        measurement: { text: 'browser Range/client rectangles after fonts.ready', fonts: [...fonts.keys()],
+          fontAvailability: 'local FontFace load', outlineStep: 0.5 } };
     }, { svgSource, drawioSource });
   } finally { await browser.close(); }
 }
