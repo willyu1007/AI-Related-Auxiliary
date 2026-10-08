@@ -5,7 +5,7 @@
 - Slug: `uml-diagrams-new-upgrade`
 - State: complete (repository source)
 - Current phase: 源码升级、专项检查、实际样例验收及独立审查已完成。
-- Next step: 用户选择分支集成方式；全局已安装 skill 的同步为独立后续操作。
+- Next step: 已按用户选择本地合并到 main；全局已安装 skill 的同步为独立后续操作。
 - Blocker: none
 - User approval: 已确认整体流程、尺寸适配规则，以及参考开源实现的第一版几何检测范围。
 - Record: 本文件保存范围、设计、验收及决定；对应实施计划保存执行步骤与检查点。
