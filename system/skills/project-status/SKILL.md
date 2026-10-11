@@ -3,7 +3,8 @@ name: project-status
 description: >-
   Use when a user or workflow needs a read-only view of tracked tasks,
   Features, Milestones, or the project hub for status, progress, blockers,
-  evidence-backed next actions, archive readiness, or consistency.
+  evidence-backed next actions, outstanding verification, archive readiness, or
+  consistency.
 ---
 
 ## Working model
@@ -23,6 +24,7 @@ Load only the views relevant to the request; combine them when the request spans
 - **Semantic or project focus** — [semantic-focus.md](references/semantic-focus.md)
 - **Archive readiness** — [archive-readiness.md](references/archive-readiness.md)
 - **Hub consistency** — [hub-drift.md](references/hub-drift.md)
+- **Outstanding verification, deployment changes, or target-environment acceptance** — [verification-gaps.md](references/verification-gaps.md)
 
 ## Workflow
 

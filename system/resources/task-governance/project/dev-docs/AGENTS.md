@@ -56,8 +56,9 @@ mistaken for the live system.
   `Done when` acceptance references.
 - **`02-architecture.md`** — Current settled technical design and contracts, without alternatives
   or decision history.
-- **`verification.md`** — Planned checks and the latest decisive evidence for relevant claims,
-  acceptance references, phase outcomes, and material limitations.
+- **`verification.md`** — Planned checks and the latest decisive evidence, with its baseline, for
+  relevant claims, acceptance references, phase outcomes, and material limitations, plus the task's
+  deployment changes.
 - **`implementation.md`** *(optional)* — Current realization map when architecture alone is not
   enough to resume safely.
 - **`pitfalls.md`** *(optional)* — Current anti-error register for recurring, evidenced hazards.
@@ -98,7 +99,9 @@ Mark a task `done` only when all three claims hold at the task boundary:
   the project hub agree on the accepted result; no unintended parallel old/new paths, duplicated
   behavior, or competing authority remains.
 
-Ground each claim in decisive evidence and obtain any required user acceptance. For non-code
+Ground each claim in decisive evidence and obtain any required user acceptance. A check that only
+the target environment can run does not block completion once a named task or release record has
+taken it over; name that owner under Outstanding verification. For non-code
 tasks, apply the quality claim to the delivered artifacts. An explicit transitional dual track may
 remain while work is in progress only when its purpose, recovery boundary, and exit are recorded.
 Before completion, remove the superseded path unless permanent compatibility is part of the

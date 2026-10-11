@@ -6,8 +6,9 @@
  * is defined in ../references/progress-format.md; anything outside it is an error, and nothing is
  * written until the file is clean. Counts are always computed from the rows. Page labels are
  * Chinese when the title contains Chinese, otherwise English. The page is for people: it shows only
- * `Updated` from the header and omits the Lane section and the Evidence column, and it warns when a
- * cell it shows carries something that looks like a commit hash.
+ * `Updated` from the header and omits the Lane section and the Evidence column. It warns when a
+ * cell it shows carries something that looks like a commit hash, when any cell or line runs past
+ * CELL_LIMIT characters, and when verified findings pile up past VERIFIED_LIMIT.
  *
  * Usage:
  *   node render-progress.mjs <progress.md> [--out <file.html>]
@@ -38,6 +39,8 @@ const COUNT_IN_NAME_RE = /\d+\s*(项|行|条|rows?\b|items?\b)/i;
 const QUALIFICATION_TAGS = 4;
 const QUALIFICATION_TAG_LENGTH = 16;
 const HASH_RE = /\b(?=[0-9a-f]*\d)(?=[0-9a-f]*[a-f])[0-9a-f]{7,40}\b/;
+const CELL_LIMIT = 600;
+const VERIFIED_LIMIT = 30;
 /** Cells and sections the page shows, per table; hashes there are flagged for people-first wording. */
 const SHOWN = {
   Rows: ['Item', 'Acceptance', 'Qualification', 'Remaining'],
@@ -202,6 +205,22 @@ function lintForPeople(doc) {
   for (const ledger of doc.ledgers) {
     if (COUNT_IN_NAME_RE.test(ledger.name)) warnings.push(`ledger "${ledger.name}" carries a count in its name; the page computes counts`);
   }
+  return warnings;
+}
+
+/** Warn where progress.md outgrows a current snapshot: an overlong cell or line, or piled-up verified findings. */
+function lintSize(doc) {
+  const warnings = [];
+  const check = (value, line, column) => {
+    const n = [...value].length;
+    if (n > CELL_LIMIT) warnings.push(`line ${line}${column ? ` (${column})` : ''}: ${n} characters; keep the current judgment and move history to evidence/`);
+  };
+  for (const rec of [...doc.ledgers.flatMap((l) => l.rows), ...Object.values(doc.tables).flat()]) {
+    for (const [c, v] of Object.entries(rec)) if (c !== 'line') check(v, rec.line, c);
+  }
+  for (const lines of Object.values(doc.text)) for (const l of lines) check(l.text, l.line);
+  const verified = (doc.tables.Findings ?? []).filter((r) => r.State === 'verified').length;
+  if (verified > VERIFIED_LIMIT) warnings.push(`${verified} verified findings; remove each one whose disposition the task records hold, and move the rest to evidence/verified-findings.md linked from the Summary`);
   return warnings;
 }
 
@@ -481,6 +500,9 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;vertical-align:t
 th{font-size:12px;color:var(--muted);font-weight:500;white-space:nowrap}td.id{white-space:nowrap;font-weight:600}td.item{min-width:200px;width:30%}td.remaining{width:35%}
 tr.r-failed td:first-child{box-shadow:inset 3px 0 var(--failed)}tr.r-blocked td:first-child{box-shadow:inset 3px 0 var(--blocked)}
 section>table{background:var(--card);border:1px solid var(--line);border-radius:8px}code{font-size:12px}
+#blockers table{table-layout:fixed}
+#blockers th:nth-child(1){width:7%}#blockers th:nth-child(2){width:19%}#blockers th:nth-child(3){width:46%}
+#blockers th:nth-child(4){width:9%}#blockers th:nth-child(5){width:11%}#blockers th:nth-child(6){width:8%}
 @media (max-width:640px){table.rows,table.rows tbody{display:block}table.rows thead{display:none}table.rows tr{display:block;border-top:1px solid var(--line);padding:6px 0}
 table.rows td{display:block;border:0;padding:2px 12px;width:auto;min-width:0;overflow-wrap:anywhere;white-space:normal}
 table.rows td::before{content:attr(data-label);display:block;font-size:11px;font-weight:400;color:var(--muted)}table.rows td:empty{display:none}}
@@ -502,7 +524,7 @@ if (errors.length) {
   console.error('Format: references/progress-format.md');
   process.exit(1);
 }
-for (const w of [...doc.notes, ...lintForPeople(doc)]) console.error(`warning: ${w}`);
+for (const w of [...doc.notes, ...lintForPeople(doc), ...lintSize(doc)]) console.error(`warning: ${w}`);
 const out = path.resolve(args.out || path.join(path.dirname(input), 'index.html'));
 fs.writeFileSync(out, html);
 const tally = doc.ledgers.map((l) => {

@@ -34,7 +34,8 @@ git -C <worktree_path> log --grep="^Task: T-###"
 - A clean, aligned closeout means the checkpoint is committed, the active bundle matches repository
   reality and the project hub, and unrelated worktree changes are identified.
 - Every material deferred outcome needs a durable disposition that will survive archive.
-- Environmental limitations are missing evidence, not a pass. Use `unknown` when the available
+- Environmental limitations are missing evidence, not a pass, unless another task or release record
+  has taken over the check under the completion contract. Use `unknown` when the available
   evidence cannot establish readiness.
 
 ## Include

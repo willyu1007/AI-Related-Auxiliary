@@ -146,5 +146,6 @@ and gaps. Then update repository-required artifacts in the repository's order: <
 generated files>. Finish the depended-on repository first. Run the formal gates on each final head
 in a clean tree. Return the final heads and push commands that check ancestry and push without
 touching main checkouts, in landing order.
+When a replay, rebase, or merge did not trigger the repository's hooks, run their checks by hand.
 Return the checks you ran and their exit codes. Do not push and do not bypass hooks.
 ```

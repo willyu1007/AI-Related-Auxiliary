@@ -55,22 +55,29 @@ slots.
    [references/progress-format.md](references/progress-format.md): each row with its acceptance
    condition for the lane's scope and any existing result with its baseline (reuse valid results),
    each ledger mapped to its repository task in the `Tasks` header, and this session named in the
-   `Coordinator` header. Record missing mappings instead of creating tasks or widening scope.
+   `Coordinator` header. Record missing mappings instead of creating tasks or widening scope. Draw
+   rows from the scope the user names and from the mapped tasks' outstanding verification and
+   deployment changes in their `verification.md`.
 4. Check the runbook against the lane operator's runbook duty in
    [references/units.md](references/units.md); if it is missing or incomplete, have the lane
    operator complete it.
-5. Schedule time-gated rows (next-day due items, opening hours, expiry) now. Before creating,
+5. For each capability the lane has on, have the lane operator check that the project's
+   environment contract gives every configuration it needs a source and an injection path into the
+   process that consumes it, and prove it ready with the smallest real business chain it serves,
+   writing only to a disposable sample; never take a health check as readiness. Do the same inside the entry
+   (section 5) whenever a lane change turns a capability on.
+6. Schedule time-gated rows (next-day due items, opening hours, expiry) now. Before creating,
    seeding, or consuming test data, read [references/test-data.md](references/test-data.md).
-6. Before planning fixes for a chain, have a test batch walk its user path once on a device slot
+7. Before planning fixes for a chain, have a test batch walk its user path once on a device slot
    to surface missing native entries, permissions, clients, and outside prerequisites; record what
    it finds as findings and blockers, never as passes. Then plan the first candidate: the fixes it
    will carry, the formal gates and permissions it needs, its main blocker, and the rows to retest
    once it loads. Write it as the first item of Next, and order the rest so work that unblocks the
    candidate or other rows comes first.
-7. After every change to `progress.md`, run
+8. After every change to `progress.md`, run
    `node <skill-dir>/scripts/render-progress.mjs <campaign-dir>/progress.md`, where `<skill-dir>`
-   is the directory of this file. Fix every error and rewrite every warned cell before telling the
-   user the page is current; never edit `index.html`.
+   is the directory of this file. Fix every error and act on every warning before telling the user
+   the page is current; never edit `index.html`.
 
 ## 3. Dispatch
 
@@ -117,8 +124,9 @@ reader-side verification of a cross-layer change.
 
 - Judge with the statuses defined in progress-format.md. Pass only what a result established, per
   platform, under the identity and data it used; never pass a device row on source, unit tests,
-  mocks, or an API check. Name hardware `physical device` and virtual targets `simulator` or
-  `emulator`.
+  mocks, or an API check. Record each result's source: a tool observation or a user report, never
+  restating a report as a tool check; `physical device`, `simulator`, or `emulator`; and a
+  development or release build.
 - Mark a row `failed` as soon as a required check fails, before its cause is confirmed, with
   Remaining naming the confirmation; file the finding once it is classified.
 - Keep acceptance conditions to the lane's scope. Move what the development environment cannot
@@ -160,6 +168,8 @@ reader-side verification of a cross-layer change.
 - Update each finding's State after every dispatch, retest, and ruling that touches it. Set
   `verified` only after the user chain its rows require passes on the lane; source checks and load
   proofs move it at most to `loaded`.
+- When a fix resolves a related defect but the originally reported symptom was never reproduced,
+  keep that symptom as its own `open` finding; never close it with the fix.
 - When a fix keeps a compatibility path, file a `deferred` finding with its exit condition and
   owner, and register it in the task's gap list.
 
@@ -193,8 +203,9 @@ Next.
   baseline, and leave `failed` rows `failed` until their failed qualification is retested; set each
   row's Remaining to the retest and list the retest in Next. For a row whose change crosses layers,
   take the evidence on the reader side. If the retest needs consumed samples, seed replacements
-  first (references/test-data.md). After a restart without a code or configuration change, run
-  only the smoke check.
+  first (references/test-data.md). For a candidate that will be released, also retest a small
+  fixed set of main-path rows, recorded as a ruling, whatever the change touched. After a restart
+  without a code or configuration change, run only the smoke check.
 - **Configuration and seeding**: run them as lane operations, after code and migrations and before
   the final smoke check.
 - **Window**: run exclusive work (fault injection, data resets, switching device time zones for a
@@ -224,14 +235,15 @@ Next.
 - **Land**: when the user asks to land the lane on the main line, first list the failed rows and
   open P1 and P2 findings caused by lane code, and leave that code out or get the user's
   agreement. Have the integrator prepare the landing from the lane head, with the depended-on
-  repository first, and sync decisive results, rulings, handoff items, and gaps into the mapped
-  repository task records through the repository's task workflow. After the push, move the
-  evidence the records cite into `evidence/`, then remove the merged unit worktrees, branches, and
-  Units entries.
+  repository first, and sync decisive results with their baselines, rulings, handoff items, and
+  gaps into the mapped repository task records through the repository's task workflow, citing the
+  evidence instead of copying judgments. After the push, move the evidence the records cite into
+  `evidence/`, then remove the merged unit worktrees, branches, and Units entries.
 - **Handoff**: write a requested handoff document as a current snapshot of state, next steps, and
   constraints, and point it to `progress.md`.
 - **Close** execution when every row has a current judgment with evidence or a stated reason it
   has none, every row not passed has a disposition (fixed, ruled, handed off, or deferred by the
-  user), and nothing is pending. Report tested and untested scope, the handoff package with its
-  release gates, and the verified baseline, and say that execution closure is not release
-  readiness unless those gates are verified. Retire the lane only with the user's agreement.
+  user), and nothing is pending. Sync what no landing has synced into the task records as in Land.
+  Report tested and untested scope, the handoff package with its release gates, and the verified
+  baseline, and say that execution closure is not release readiness unless those gates are
+  verified. Retire the lane only with the user's agreement.
