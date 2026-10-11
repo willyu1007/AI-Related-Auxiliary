@@ -16,8 +16,7 @@ node .ai/scripts/ctl-project-governance.mjs resume --repo-root <worktree_path> -
 ```
 
 Use packet warnings and `truncated_fields` to decide whether the underlying Git or task evidence
-needs selective expansion. Read a task's `verification.md` when one of its Outstanding verification
-items may have become runnable.
+needs selective expansion. Read each active task's Outstanding verification in `verification.md`.
 
 ## Interpretation
 
@@ -28,7 +27,7 @@ items may have become runnable.
 | An Outstanding verification item whose recorded condition evidence shows to hold, on any active task | Run that check |
 | `blocked` | Investigate the named blocker or required external input |
 | `planned` | Continue planning toward kickoff |
-| All tasks terminal and no Outstanding verification item runnable | Report completion or suggest selecting new work |
+| All tasks `done` or archived and no Outstanding verification item runnable | Report completion or suggest selecting new work |
 
 - When several tasks are eligible, rank them only from documented deadlines, dependencies, blockers,
   project focus, or an explicit user priority. If no evidence distinguishes them, present the choices

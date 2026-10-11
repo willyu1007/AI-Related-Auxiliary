@@ -37,9 +37,10 @@ contract. When completion holds, bring a stale bundle or hub to an aligned
 `done` state before continuing.
 
 Before the final closeout, move live product, interface, operational, or migration knowledge into
-its code or formal documentation. Remove all task-owned test code, artifacts, and test-only content
-while preserving unrelated existing tests, and resolve new tasks, Ideas, or Feature semantics
-separately. Synchronize and commit these changes as one aligned closeout. Archive only when that
+its code or formal documentation. Remove task-owned temporary test scaffolding, artifacts, and
+test-only content; keep tests that guard delivered behavior and unrelated existing tests. Resolve
+new tasks, Ideas, or Feature semantics separately. Synchronize and commit these changes as one
+aligned closeout. Archive only when that
 checkpoint has no task-owned uncommitted work and the task has one checked-out occurrence.
 
 ## Distill the archive record

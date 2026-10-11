@@ -56,9 +56,9 @@ mistaken for the live system.
   `Done when` acceptance references.
 - **`02-architecture.md`** — Current settled technical design and contracts, without alternatives
   or decision history.
-- **`verification.md`** — Planned checks and the latest decisive evidence, with its baseline, for
-  relevant claims, acceptance references, phase outcomes, and material limitations, plus the task's
-  deployment changes: build configuration and switches, secret references and their injection
+- **`verification.md`** — The latest decisive results, with their baselines, for relevant claims,
+  acceptance references, phase outcomes, and material limitations; the checks still open; and the
+  task's deployment changes: build configuration and switches, secret references and their injection
   path, migrations and initialization steps, contract pairing and required client upgrades, and
   rollback limits.
 - **`implementation.md`** *(optional)* — Current realization map when architecture alone is not
@@ -72,11 +72,19 @@ mistaken for the live system.
 Update these as current snapshots. Git history retains superseded states; avoid chronological
 journals and repeated raw logs in the main documents.
 
-A verification result holds for its recorded baseline: commit or build, configuration, platform,
-and sample. Count it for a newer baseline only after rerunning the check there or showing that the
-changes since cannot reach it; otherwise mark it as needing a rerun. Each Outstanding verification
-item names the condition to run it and its owner: this task, or another task that has taken it
-over.
+Evidence holds results. A result holds for its recorded baseline: commit or build, configuration,
+platform, and sample. Count it for a newer baseline only after rerunning the check there or showing
+that the changes since cannot reach it.
+
+Every required check without a passing result that holds for the current baseline, including one
+that needs a rerun, is an Outstanding verification item; a phase's Verification names these items
+instead of restating them. Each item names its condition to run, including business-time gates,
+another task's work it waits on, and how it reaches a shared environment, and one owner task,
+named with its repository when it lives in another one. Other tasks that need the same check
+reference that owner instead of keeping their own copy. Another task has taken an item over only
+when its own Outstanding verification lists it, and that task's result closes the item. When the
+task has deployment changes, keep one item for confirming them in the target environment, owned by
+this task until a task that deploys them takes it over.
 
 `Done when` holds the task's current acceptance references. They help planning, review, and
 verification, but do not independently prove completion or override confirmed requirements,
@@ -109,22 +117,21 @@ Mark a task `done` only when all three claims hold at the task boundary:
 
 Ground each claim in decisive evidence and obtain any required user acceptance. For non-code
 tasks, apply the quality claim to the delivered artifacts. An explicit transitional dual track may
-remain while work is in progress only when its purpose and recovery boundary are recorded and its
-exit condition is an Outstanding verification item: a fact the task can establish, or a fact
-outside the repository that a later environment shows, never an intention such as "later". Before
-completion, remove the superseded path unless permanent compatibility is part of the confirmed
-outcome or another task has taken over its exit condition.
+remain while work is in progress only when its purpose and recovery boundary are recorded in
+`02-architecture.md` and its exit condition is an Outstanding verification item: a fact the task
+can establish, or a fact outside the repository that a later environment shows, never an
+intention such as "later". Before completion, remove the superseded path unless permanent
+compatibility is part of the confirmed outcome or another task has taken over its exit condition.
 
 A later environment is one this task cannot use yet: an environment, release channel, device, or
-data set that does not exist or is not available to it. An existing shared test environment where
-the check can be scheduled is not later; this task keeps the checks that run there and completes
-them before `done`. A check that only a later environment can run, including such an exit
-condition, does not block completion once another task has taken it over and Outstanding
-verification names that task and the condition to run the check. Without such a task, the check
-stays and blocks completion.
+data set that does not exist or is not available to it. An existing shared test environment is
+not later; this task keeps the checks that run there and completes them before `done`. A check
+that only a later environment can run, including such an exit condition, does not block
+completion once another task has taken it over and Outstanding verification names that task and
+the condition to run the check. Without such a task, the check stays and blocks completion.
 
-A task that deploys other tasks' work to an environment lists their deployment changes, and the
-checks they hand to it, under its own Outstanding verification until each is confirmed there.
+A task that deploys other tasks' work to an environment takes over their deployment-confirmation
+items, and the checks they hand to it, by listing them in its own Outstanding verification.
 
 Implementation readiness lives separately in the roadmap kickoff gate:
 

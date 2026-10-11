@@ -53,23 +53,25 @@ slots.
    evidence where it is and link to it.
 3. Take the scope the user names, and read only its tasks' `verification.md`. Write `progress.md`
    yourself, as one current snapshot, in the format of
-   [references/progress-format.md](references/progress-format.md): a row for each acceptance
-   condition in scope and each Outstanding verification item the lane can check, each ledger
-   mapped to its repository task in the `Tasks` header, and this session named in the
-   `Coordinator` header. Carry an existing result with its baseline: `passed` only when that
-   baseline is the current Loaded, otherwise `partial` with the retest in Remaining. When you come
-   across another task's outstanding check, report it to the user as unmapped; record missing
-   mappings; never create tasks or widen scope.
+   [references/progress-format.md](references/progress-format.md): a row for each Outstanding
+   verification item the lane can check, and for an acceptance condition only when the user names
+   it for the lane, each ledger mapped to its repository task in the `Tasks` header, and this
+   session named in the `Coordinator` header. Carry an existing result with its baseline, as
+   `passed` only when it holds for the current Loaded under `<repo-root>/dev-docs/AGENTS.md`,
+   otherwise `partial` with the retest in Remaining. When you come across another task's
+   outstanding check, report it to the user as unmapped; record missing mappings; never create
+   tasks or widen scope.
 4. Check the runbook against the lane operator's runbook duty in
    [references/units.md](references/units.md); if it is missing or incomplete, have the lane
    operator complete it.
 5. Bring the named tasks' deployment changes onto the lane as lane operations (section 5),
    recording switches under `Switches` and the rest under `Loaded`; make one a row only when its
-   user-visible behavior is itself an acceptance condition. For each capability the lane has on, have the lane operator check that
-   the project's environment contract gives every configuration it needs a source and an injection
-   path into the process that consumes it, and prove it ready with the smallest real business
-   chain it serves, writing only to a disposable sample; never take a health check as readiness.
-   Do the same inside the entry whenever a lane change turns a capability on.
+   user-visible behavior is itself an acceptance condition. For each capability the lane has on,
+   have the lane operator check that every configuration it needs has the source and injection
+   path its task's Deployment changes record and reaches the process that consumes it, and prove
+   it ready with the smallest real business chain it serves, writing only to a disposable sample;
+   never take a health check as readiness. Do the same inside the entry whenever a lane change
+   turns a capability on.
 6. Schedule time-gated rows (next-day due items, opening hours, expiry) now. Before creating,
    seeding, or consuming test data, read [references/test-data.md](references/test-data.md).
 7. Before planning fixes for a chain, have a test batch walk its user path once on a device slot
@@ -185,8 +187,9 @@ until every running test batch has actually handed back, have the lane operator 
 the final smoke check with the load proofs, and record the lane open. If the smoke check fails,
 keep the lane closed until it is repaired or returned to the previous baseline. Record the new
 loaded baseline and its load proofs under Loaded, and write the next candidate as the first item of
-Next. When the change loads new code, re-read the named tasks' `verification.md` and add a row for
-each new Outstanding verification item the lane can check.
+Next. Before a change loads new code, read the named tasks' `verification.md` at the candidate
+heads: bring their new deployment changes on in the same entry, and afterwards add a row for each
+new Outstanding verification item the lane can check.
 
 - **Code**: bring code onto the lane only as a candidate head that passed the formal gates: the
   checks and artifacts (locks, pins, generated files) the repository requires before code loads or
@@ -250,11 +253,15 @@ each new Outstanding verification item the lane can check.
   - row results → Evidence, with the Loaded baseline and the source, removing the Outstanding
     verification item each passed row closes;
   - lane-scope work still open → Outstanding verification;
-  - handoff items and deferred compatibility findings → Outstanding verification, with the
-    condition and the task that takes each over, or this task when none has;
+  - handoff items and deferred compatibility findings → Outstanding verification with their
+    conditions, owned by this task unless another task's Outstanding verification already lists
+    them;
   - rulings that change scope or an acceptance basis → the roadmap's decisions, and `Done when` or
     Out of scope when the scope changed;
   - out-of-scope gaps → Out of scope.
+
+  Report, instead of writing, results for a task already archived. After the push, tell the user
+  which tasks have other worktrees that must merge the main line.
 - **Handoff**: write a requested handoff document as a current snapshot of state, next steps, and
   constraints, and point it to `progress.md`.
 - **Close** execution when every row has a current judgment with evidence or a stated reason it
