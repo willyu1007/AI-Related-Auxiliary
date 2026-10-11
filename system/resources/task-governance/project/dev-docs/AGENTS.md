@@ -76,17 +76,20 @@ Every required check without a passing result that holds for the current baselin
 that needs a rerun, is an Outstanding verification item. Each item gives a short label, the
 behavior to prove with the evidence qualification it needs (platform, build, identity), its
 condition to run (business-time gates, another task's work it waits on, and how it reaches a shared
-environment), and one owner task, named with its repository when it lives in another one. Phases,
-other tasks, and campaign rows cite items by label. When several tasks need the same check, the
-first to record it owns it; the others list it under that owner, and the owner's result closes it
-for all of them. Another task has taken an item over only when its own Outstanding verification
-lists it, and that task's result closes the item. When the task has deployment changes, keep one
-confirmation item per target environment, owned by this task until a task that deploys them there
-takes it over.
+environment), one owner task named with its repository when it lives in another one, and, for a
+check only a later environment can run, the task expected to take it over once one is known.
+Phases and campaign rows cite items by label. A check several tasks need belongs to one of them;
+the others record a depends-on relationship to that task in the roadmap instead of an item.
+Another task takes an item over by listing it with itself as owner, and its result closes the
+item. When the task has deployment changes, keep one confirmation item per target environment
+named in Deployment changes, owned by this task until a task that deploys them there takes it
+over. A shared test environment is not a target environment.
 
-A phase's Verification names by label the items the phase must close. A phase closes when each
-named item has a passing result or, when only a later environment can run it, stays an Outstanding
-verification item with its condition and owner.
+A phase's Verification names by label the items the phase must close. Schedule each item in the
+first phase where its condition can hold: a check waiting on another task's work goes in the first
+phase after that work can be available, and a check only a later environment can run goes in no
+phase. A phase closes when each item it names has a passing result; move an item that turns out to
+need a later environment out of the phase. Begin the next phase only after the current one closes.
 
 `Done when` holds the task's current acceptance references. They do not independently prove
 completion or override confirmed requirements, repository reality, verification evidence, or
@@ -127,15 +130,15 @@ compatibility is part of the confirmed outcome or another task has taken over it
 
 A later environment is one this task cannot use yet: an environment, release channel, device, or
 data set that does not exist or is not available to it, including a target environment this task
-does not deploy to. An existing shared test environment is not later, and neither is a build with
-the shipping configuration that this task can produce; only its distribution channel is. This task
-keeps the checks that run in environments that are not later and completes them before `done`. A
-check that only a later environment can run, including such an exit condition and a deployment
-confirmation, does not block completion once another task has taken it over. Without such a task,
-the check stays and blocks completion.
+does not deploy to. An existing shared test environment is not later, even when only a campaign can
+load it, and neither is a build with the shipping configuration that this task can produce; only
+its distribution channel is. This task keeps the checks that run in environments that are not
+later and completes them before `done`. A check that only a later environment can run, including
+such an exit condition and a deployment confirmation, does not block completion once another task
+has taken it over. Without such a task, the check stays and blocks completion.
 
-A task that deploys other tasks' work to an environment takes over their deployment-confirmation
-items, and the checks they hand to it, by listing them in its own Outstanding verification.
+A task that deploys other tasks' work takes over their confirmation items for the environments it
+deploys to, and the later-environment checks that name it as the expected taker.
 
 Implementation readiness lives separately in the roadmap kickoff gate:
 

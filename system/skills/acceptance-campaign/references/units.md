@@ -138,8 +138,8 @@ Assemble: in a fresh worktree per repository, branch from the current lane head,
 branches, rebuild the shared generated files, update locks and pins by the repository's rules, and
 run the formal gates on the head in a clean tree. Check the candidates' dependencies across
 repositories. Return the candidate heads, the merged branches, their combined migration,
-dependency, manifest, and contract changes, and the fix units' load proofs; leave the lane to its
-operator.
+dependency, manifest, and contract changes, the rows and components that merged code from outside
+fix units directly affects, and the fix units' load proofs; leave the lane to its operator.
 Land: in a fresh worktree per repository, branch from its lane head and confirm the main line is
 an ancestor. Update repository-required artifacts in the repository's order: <locks, pins,
 generated files>. Leave task records to the coordinator. Finish the depended-on repository first. Run the formal gates on each final head

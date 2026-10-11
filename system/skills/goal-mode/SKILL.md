@@ -59,9 +59,10 @@ task-start / task-resume
    current phase until they produce a decisive result or a recorded blocker.
 4. **Close the phase in order.** Do not advance until all five actions complete:
    1. Establish what the closeout must prove from the phase outcome and exit
-      criteria, its contribution to the task goal, accepted requirements and
-      design, and affected behavior, interfaces, failure, and recovery paths.
-      Turn these into concrete behavior and quality claims.
+      criteria, the items its Verification names, its contribution to the task
+      goal, accepted requirements and design, and affected behavior,
+      interfaces, failure, and recovery paths. Turn these into concrete
+      behavior and quality claims.
    2. Use `review-code` on the phase's session delta or semantic scope and fix
       authorized, evidence-backed issues against those claims. Also simplify
       avoidable complexity, duplicate responsibility, temporary paths, or

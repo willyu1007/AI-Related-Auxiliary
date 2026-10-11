@@ -62,12 +62,14 @@ Use the deepest applicable level.
 
    Record each decisive result in Evidence with its baseline, and remove the Outstanding
    verification item it passes. When the checkpoint changes what earlier evidence of this task
-   covers, rerun the check or return it to Outstanding verification. When it adds behavior that a
-   check must cover, add the check there and name it in the first unfinished phase where its
-   condition can hold. When it adds or changes deployment, update Deployment changes and their
-   confirmation items. At a phase boundary, apply the phase-closing rule in `dev-docs/AGENTS.md`;
-   otherwise leave the phase open. At completion, when no other task has taken over a
-   later-environment check or exit condition, ask the user to open one; never create it yourself.
+   covers, rerun the check or return it to Outstanding verification. When it adds or changes
+   behavior that a check must cover, add the check there with the regressions it affects, and
+   schedule it under `dev-docs/AGENTS.md`. When it adds or changes deployment, update Deployment
+   changes and their confirmation items. At a phase boundary, apply the phase-closing rule in
+   `dev-docs/AGENTS.md`; otherwise leave the phase open. At completion, for each later-environment
+   check or exit condition this task still owns, read the expected taker's `verification.md`: when
+   it lists the item with itself as owner, name that task as the owner here; otherwise ask the user
+   to open or name one, and never create it yourself.
 
    Create `implementation.md` from `<repo-root>/dev-docs/templates/implementation.md` only when its durable map would help a fresh agent understand the realized design. Create `pitfalls.md` from `<repo-root>/dev-docs/templates/pitfalls.md` only after a recurring hazard has evidence. Do not append routine history, ordinary TODOs, or repeated test logs to either. Remove obsolete pitfalls after prevention is encoded and the warning is no longer useful. Put bulky raw evidence in `artifacts/`.
 

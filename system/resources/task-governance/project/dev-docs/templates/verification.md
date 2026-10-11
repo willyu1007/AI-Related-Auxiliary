@@ -10,8 +10,8 @@
 
 ## Outstanding verification
 
-- <!-- one item per open check, transitional-path exit condition, result needing a rerun, or deployment confirmation per target environment, with the fields `dev-docs/AGENTS.md` defines; use "None" when complete -->
+- <!-- one item per open check, transitional-path exit condition, result needing a rerun, or deployment confirmation per target environment, with the fields `dev-docs/AGENTS.md` defines; use "None" when no item remains -->
 
 ## Deployment changes
 
-- <!-- a deployment change this task adds or changes, with where it is declared; never a secret value. Use "None" when the task changes no deployment. -->
+- <!-- a deployment change this task adds or changes, with where it is declared and each target environment it must reach; never a secret value. Use "None" when the task changes no deployment. -->

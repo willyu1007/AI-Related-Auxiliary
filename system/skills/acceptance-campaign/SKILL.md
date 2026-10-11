@@ -54,8 +54,8 @@ slots.
 3. Take the scope the user names, and read only its tasks' `verification.md`: at the heads the
    lane will load, otherwise at the newest occurrence the governance query reports. Write
    `progress.md` yourself, as one current snapshot, in the format of
-   [references/progress-format.md](references/progress-format.md): a row, citing the item's label,
-   for each Outstanding verification item that a named task owns and the lane can check, and for
+   [references/progress-format.md](references/progress-format.md): a row for each Outstanding
+   verification item that a named task owns and the lane can check, and for
    an acceptance condition only when the user names it for the lane; each ledger mapped to its
    repository task in the `Tasks` header; and this session named in the `Coordinator` header.
    Carry an existing result with its baseline, as `passed` only when it holds for the current
@@ -133,7 +133,7 @@ reader-side verification of a cross-layer change.
   platform, under the identity and data it used; never pass a device row on source, unit tests,
   mocks, or an API check. Record each result's source: a tool observation or a user report, never
   restating a report as a tool check; the device kind, named as progress-format.md names it; and a
-  development or release build.
+  development build or one with the shipping configuration.
 - Mark a row `failed` as soon as a required check fails, with Remaining naming the confirmation;
   file the finding once it is classified.
 - Keep acceptance conditions to the lane's scope. Move what the development environment cannot
@@ -204,8 +204,8 @@ new Outstanding verification item that a named task owns and the lane can check.
   authorizes it, on a disposable sample, inside the entry before the lane opens, and record the
   sample as consumed. Never accept a ready line, a git ref, or a passing retest as a load proof,
   and count a probe only for the service and path it covers.
-- **Retest**: take the rows and components that the fix units or the lane operator name as directly
-  affected by this lane change, add the rows reached through contracts, permissions, or shared
+- **Retest**: take the rows and components that the fix units, the integrator, or the lane operator
+  name as directly affected by this lane change, add the rows reached through contracts, permissions, or shared
   logic, and retest that set. Turn its `passed` rows to `partial`, keeping their evidence and
   baseline, and leave `failed` rows `failed` until their failed qualification is retested; set each
   row's Remaining to the retest and list the retest in Next. For a row whose change crosses layers,
@@ -246,10 +246,13 @@ new Outstanding verification item that a named task owns and the lane can check.
   `evidence/`, then remove the merged unit worktrees, branches, and Units entries.
 - **Write back** yourself after a landing push, at close, and for a single row earlier when its
   task needs the result and the main line already contains the row's Loaded baseline; until then
-  write only `progress.md`. In a fresh worktree from the main line, update each mapped task under
-  `<repo-root>/dev-docs/AGENTS.md`, citing the evidence instead of copying judgments:
-  - row results → Evidence, with the Loaded baseline and the source, removing by label the
-    Outstanding verification item each passed row closes;
+  write only `progress.md`. First query each mapped task by ID
+  (`node .ai/scripts/ctl-project-governance.mjs query --id T-### --json`); when the main-line copy
+  is stale or in conflict, report its results instead of writing. In a fresh worktree from the main
+  line, update each mapped task under `<repo-root>/dev-docs/AGENTS.md`, citing the evidence instead
+  of copying judgments:
+  - row results → Evidence, with the baseline the row's evidence names and the source, removing by
+    label the Outstanding verification item each passed row closes;
   - lane-scope work still open → Outstanding verification;
   - handoff items and deferred compatibility findings → Outstanding verification with their
     conditions, owned by this task unless another task's Outstanding verification already lists

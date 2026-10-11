@@ -32,8 +32,8 @@ Card payment passes on both platforms; the iOS refund check waits for the 09:00 
 
 | ID | Group | Item | Acceptance | Status | Qualification | Remaining | Evidence |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| PAY-01 | Payment | Card payment | Paying with a saved card shows the receipt; iOS simulator and Android emulator | passed | iOS simulator; Android emulator; test card | - | [run 3](evidence/pay-01.png) |
-| PAY-02 | Payment | Refund | A refund appears in the order history within a minute; iOS simulator and Android emulator | partial | Android emulator; test card | iOS refund after the sandbox reset | - |
+| PAY-01 | Payment | `pay-card` Card payment | Paying with a saved card shows the receipt; iOS simulator and Android emulator | passed | iOS simulator; Android emulator; test card | - | [app@1a2b3c4](evidence/pay-01.png) |
+| PAY-02 | Payment | `pay-refund` Refund | A refund appears in the order history within a minute; iOS simulator and Android emulator | partial | Android emulator; test card | iOS refund after the sandbox reset | - |
 
 ## Findings
 
@@ -79,6 +79,8 @@ Card payment passes on both platforms; the iOS refund check waits for the 09:00 
   Each cell is one line; separate several facts with `; `.
 - **IDs**: unique across all tables, including across ledgers. Suggested prefixes: `R` for
   rulings, `HO-` for handoff items, `F-` for findings, `B-` for blockers.
+- **Item**: when the row comes from an Outstanding verification item, begin with its label as a
+  code span.
 - **Acceptance**: required; the condition to verify within the lane's scope, including the evidence
   qualification it requires. Name hardware `physical device` and virtual targets `simulator` or
   `emulator`. Put release-level requirements in a linked Handoff item.
@@ -92,11 +94,12 @@ Card payment passes on both platforms; the iOS refund check waits for the 09:00 
   chain the step to resume from.
 - **Qualification**: the evidence qualification established so far, never the required one: the
   evidence level (contract, unit, API, simulator or emulator on a named platform, physical device,
-  cross-system journey) and the identity and data, as at most 4 tags separated by `;`, each at
+  journey) and the identity and data, as at most 4 tags separated by `;`, each at
   most 16 characters, or a phase such as `joint check`. Required for `partial` and `passed` rows,
   `-` for `not-tested` rows, and optional for `failed` and `blocked` rows. Put narratives of what
   was verified in the row's evidence.
-- **Evidence**: links to the row's evidence, or `-`.
+- **Evidence**: links to the row's evidence, each link text naming the Loaded baseline it was taken
+  on, or `-`.
 - **Kind**: one of `defect`, `design`, `gap`, `environment`, `ruling`. Move a finding triaged as
   handoff to the Handoff table. **Severity**: `P1`, `P2`, `P3`, or `-`.
 - **State**: `open` until a fix is under way; `fixing` while the fix is in progress or verified only

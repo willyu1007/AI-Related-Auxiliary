@@ -29,4 +29,4 @@ read that task too.
 - Outstanding verification items per task, by label, with condition and owner.
 - Deployment changes in scope.
 - Unassigned: checks without a condition or owner, target-environment checks no task has taken
-  over, and items naming a taker whose Outstanding verification does not list them.
+  over, and items naming an expected taker that does not list them.
