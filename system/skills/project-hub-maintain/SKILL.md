@@ -20,8 +20,6 @@ hub semantics; also read `dev-docs/AGENTS.md` when a task bundle is being inspec
 
 ## Working boundaries
 
-- The task bundle owns task intent, progress, design, verification, and lifecycle. The hub owns
-  Milestones, Features, their relationships, and task mappings; generated views are projections.
 - If a confirmed hub change requires active task intent or progress to change, return control to
   the task workflow instead of rewriting it here.
 - Apply exact changes already confirmed by the user or enclosing workflow; loading this skill adds

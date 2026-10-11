@@ -1,8 +1,5 @@
 # Archive task
 
-Archive one completed task from its active working bundle into a compact historical record. This
-is a destructive transition, not a status rollup or a way to repair an incomplete task.
-
 ## Audit completion
 
 Resolve one valid task and its worktree. Prefer an exact task ID carried by the request or enclosing
@@ -59,15 +56,13 @@ context:
 Keep a rejected alternative only when its rationale prevents a likely harmful reversal. Do not
 retain phase plans, implementation chronology, discussion history, temporary assumptions,
 duplicated implementation detail, raw verification logs, resolved pitfalls, session material, or
-intermediate artifacts. The summary is historical context, not a replacement for live product or
-technical documentation.
+intermediate artifacts.
 
 ## Execute and close
 
 Write `summary.md`, delete every other task-local entry except `.ai-task.json`, and move the bundle
-from `dev-docs/active/<slug>/` to `dev-docs/archive/<slug>/` as one recoverable change. The archived
-bundle must contain exactly `.ai-task.json` and `summary.md`; archive location supplies its
-effective state. Preview the complete governance update:
+from `dev-docs/active/<slug>/` to `dev-docs/archive/<slug>/` as one recoverable change. Preview the
+complete governance update:
 
 ```bash
 node .ai/scripts/ctl-project-governance.mjs sync --dry-run

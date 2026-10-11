@@ -1,10 +1,5 @@
 # Task documentation
 
-`dev-docs/` is the repository record for durable task intent, progress, design, verification,
-recovery, and history. This file defines the stable meaning of a task bundle. The workflow active
-at a particular moment defines how to create, plan, synchronize, resume, hand off, inspect, or
-archive it.
-
 Only the repository's top-level `dev-docs/` directory is governed as the task-document root.
 
 ## Bundle shapes
@@ -69,8 +64,9 @@ mistaken for the live system.
 - **`artifacts/` and other supporting entries** *(optional)* — Task-specific evidence or context
   with a stated purpose and no competing authority.
 
-Update these as current snapshots. Git history retains superseded states; avoid chronological
-journals and repeated raw logs in the main documents.
+Update these as current snapshots: remove superseded content unless it still constrains the active
+route, transition, or recovery, and avoid chronological journals and repeated raw logs in the main
+documents.
 
 Evidence holds results. A result holds for its recorded baseline: commit or build, configuration,
 platform, and sample. Count it for a newer baseline only after rerunning the check there or showing
@@ -86,18 +82,19 @@ when its own Outstanding verification lists it, and that task's result closes th
 task has deployment changes, keep one item for confirming them in the target environment, owned by
 this task until a task that deploys them takes it over.
 
-`Done when` holds the task's current acceptance references. They help planning, review, and
-verification, but do not independently prove completion or override confirmed requirements,
-repository reality, verification evidence, or required user acceptance. Revise them when the
-understood outcome changes. Roadmap phase outcomes and exit criteria guide execution only; they do
-not define task acceptance.
+`Done when` holds the task's current acceptance references. They do not independently prove
+completion — checking every item does not make a task `done` — or override confirmed requirements,
+repository reality, verification evidence, or required user acceptance. Revise an outdated item
+when the understood outcome changes instead of using it to block or justify completion
+mechanically. Roadmap phase outcomes and exit criteria guide execution only; they do not define
+task acceptance.
 
 ## Lifecycle model
 
 Progress lives in `01-status.md` under `## Progress` as exactly one `State:` value:
 
 - **`planned`** — The task is opened but no later alignment, discovery, or implementation
-  checkpoint has landed.
+  checkpoint has landed; the first such checkpoint moves it to `in-progress`.
 - **`in-progress`** — Work is actively advancing.
 - **`blocked`** — External input or a dependency prevents meaningful progress.
 - **`done`** — The task-level completion contract below holds.
@@ -138,19 +135,15 @@ Implementation readiness lives separately in the roadmap kickoff gate:
 - Every new task starts `pending`.
 - While `pending`, alignment and independent discovery may continue, but implementation that
   depends on the unresolved route may not.
-- `ready` means the roadmap gate is fully satisfied and the first implementation action is
-  executable.
-- Kickoff is `pending` whenever evidence invalidates a gating premise or route; route-dependent
-  implementation remains paused until alignment is restored.
+- `ready` means every gate item is checked and the first implementation action can begin without
+  reopening the route.
+- When evidence invalidates a gating premise or route, set kickoff to `pending` at once, uncheck
+  the invalidated gate items, and pause route-dependent implementation until alignment is restored.
 - The gate's `Authorized boundary` line records how far the user has authorized implementation:
-  `none`, a phase boundary such as `through phase 2`, or `complete task`. Because it lives in the
-  bundle, the authorization survives session recovery and continuation. Reset it to `none` when
+  `none`, a phase boundary such as `through phase 2`, or `complete task`. Reset it to `none` when
   the route materially changes — phases added, removed, or redirected — not when phase detail is
   refined inside the approved route.
 - A `done` task must have kickoff `ready`.
-
-Checking every `Done when` item does not make a task `done`, and an outdated item must be revised
-rather than used to block or justify completion mechanically.
 
 A completed task remains active with `State: done` until an authorized archive transition is
 performed.

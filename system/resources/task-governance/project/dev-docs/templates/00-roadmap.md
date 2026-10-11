@@ -61,7 +61,7 @@
 - [ ] Route: the major route connects the current Goal to the completion contract, and the first implementation phase is executable with exit, verification, and recovery criteria.
 - [ ] Verification: verification needed for the proposed route is identified in `verification.md`.
 
-<!-- Keep the four category prefixes; adapt the wording after each colon to the task. `ready` means every item is checked and the first implementation action can start without reopening the route. `Authorized boundary` records how far the user has authorized implementation: `none`, `through phase N`, or `complete task`. -->
+<!-- Keep the four category prefixes; adapt the wording after each colon to the task. Set `Status` and `Authorized boundary` under the kickoff rules in `dev-docs/AGENTS.md`. -->
 
 ## Risks and recovery
 

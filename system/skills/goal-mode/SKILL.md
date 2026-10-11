@@ -11,27 +11,22 @@ description: >-
 
 Coordinate one durable repository goal through one task bundle in the same active goal run.
 
-**Do not defer phase quality work until the goal is otherwise complete: late
-review, repair, and simplification can cost more than the implementation itself,
-so each phase must close on evidence of correct behavior and a coherent
+**Do not defer review, repair, or simplification until the goal is otherwise
+complete: close each phase on evidence of correct behavior and a coherent
 implementation before work advances.**
 
 ## Framework
 
-- The host Goal owns the continuing objective and stopping condition. The task bundle owns the
-  repository-recoverable goal, route, status, settled design, and verification evidence. Do not
-  create a parallel roadmap, phase list, status record, or evidence log.
-- Within the kickoff gate's `Authorized boundary`, phase closeout is
-  pre-authorized: review fixes, residue removal, checkpoint commits. Ask only
-  for work beyond the boundary, destructive changes to pre-existing content,
-  goal or scope changes, or external side effects.
-- Each roadmap phase is one execution checkpoint. `task-plan` owns the route and
-  phase shape; this skill drives the current phase through its closeout gate.
-- Roadmap kickoff must be `ready` before implementation begins. New evidence
-  that invalidates the route returns control to planning before dependent work
-  continues.
-- Referenced skills own their operations and return control to this flow. This
-  skill sequences them without restating their internal procedures.
+- Take the continuing objective and stopping condition from the host Goal. Keep the goal, route,
+  status, settled design, and verification evidence in the task bundle; do not create a parallel
+  roadmap, phase list, status record, or evidence log.
+- Within the kickoff gate's `Authorized boundary`, do phase closeout without
+  asking: review fixes, residue removal, checkpoint commits. Ask only for work
+  beyond the boundary, destructive changes to pre-existing content, goal or
+  scope changes, or external side effects.
+- Change the route or phase shape only through `task-plan`; drive one roadmap
+  phase at a time through its closeout gate.
+- Follow each referenced skill's own procedure, then return to this flow.
 
 ## Flow
 
@@ -89,7 +84,6 @@ task-start / task-resume
    or long operation when repository state would otherwise be hard to recover. After automatic
    continuation or compaction, recover the exact bundle with `task-resume` when context is
    incomplete, then continue the same active Goal. Do not move Goal-mode execution to a fresh
-   session or chat; the host Goal does not transfer with repository context.
+   session or chat.
 6. **Finish.** Use `task-sync` to mark the goal done only after the final phase
-   closes and the completion contract in `dev-docs/AGENTS.md` holds. Archiving
-   is a separate operation.
+   closes and the completion contract in `dev-docs/AGENTS.md` holds.

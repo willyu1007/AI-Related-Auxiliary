@@ -43,7 +43,7 @@ Converge one task bundle into a coherent current plan without creating a second 
    - If the user has proposed a solution, use it as the current direction. Otherwise, form a proposal from the user's goal, constraints, preferences, and the available evidence.
    - Identify only top-level decisions that can materially change the solution or its overall route. Where the direction is not already clear, lead with a recommendation for the user to confirm or revise; resolve ordinary implementation details directly.
    - Incorporate confirmed decisions and user corrections back into the proposal until it forms one coherent direction. Do not reopen settled choices unless new evidence invalidates them.
-   - If evidence invalidates a settled decision, assumption, or dependent route, immediately set kickoff to `pending`, uncheck the affected gate items, stop dependent implementation, and revise the affected decisions and phases. When the route materially changes — phases added, removed, or redirected rather than refined — also reset the gate's `Authorized boundary` to `none`; refinement inside the approved route keeps the existing boundary. Independent evidence gathering may continue.
+   - If evidence invalidates a settled decision, assumption, or dependent route, apply the kickoff and `Authorized boundary` rules in `dev-docs/AGENTS.md`, then revise the affected decisions and phases.
 
 3. **Reconcile the task bundle into the current plan.** Use the current direction, top-level
    decisions, user feedback, and repository evidence to decide what must be added, revised,
@@ -52,16 +52,13 @@ Converge one task bundle into a coherent current plan without creating a second 
    structure, not stale content.
 
    - Keep the task outcome, boundaries, and acceptance references aligned with the current direction. Leave unresolved material changes as decisions rather than recording them as settled facts.
-   - Add, revise, or remove decisions, assumptions, relationships, risks, settled design, verification, and supporting context according to their current relevance. Retain superseded content only while it still constrains the active route, transition, or recovery.
+   - Add, revise, or remove decisions, assumptions, relationships, risks, settled design, verification, and supporting context according to their current relevance.
    - Build or revise phases at the level supported by current evidence. They should collectively reach the task outcome and completion contract, express coherent results rather than technical layers, make the first unfinished phase executable, and keep unsupported later detail provisional. Keep work in this task only while it serves the same outcome and lifecycle; represent independent outcomes as related tasks.
    - Record each check a phase must pass as an Outstanding verification item: the behavior to prove, the check, the affected regressions, and its condition, including business-time gates (earliest run time, validity window) and another task's work it waits on. Name those items in the phase's Verification, schedule each in the first phase where its condition can hold, and name the owner task of a check only a later environment can run. When the task changes a user path, schedule in the earliest feasible phase one walk of that path on the client build that will ship, checking its build configuration, server switches, role permissions, and business stage.
-   - Re-evaluate progress, the next action, and the recorded kickoff gate after each material reconciliation. If the route exposes a missing top-level decision or contradiction, return to Step 2. Keep kickoff `pending` until every recorded gate item holds and the first implementation action can begin without reopening the overall route; only then set it to `ready`.
+   - After each material reconciliation, re-evaluate progress and the kickoff gate under the lifecycle model in `dev-docs/AGENTS.md`, and the next action. If the route exposes a missing top-level decision or contradiction, return to Step 2.
 
-   Treat the conversation as working context and the bundle as the current planning snapshot. Do
-   not preserve the transcript, duplicate facts across authorities, or retain obsolete content for
-   history. The first post-opening planning checkpoint changes `State: planned` to
-   `State: in-progress`; kickoff readiness remains a separate dimension. Repeat Steps 2 and 3 as
-   feedback or evidence materially changes the direction.
+   Do not copy the conversation transcript into the bundle. Repeat Steps 2 and 3 as feedback or
+   evidence materially changes the direction.
 
 4. **Confirm the planning checkpoint with the user.** Keep planning changes uncommitted and
    present the current result in the user's preferred language and a compact, decision-oriented
@@ -108,8 +105,8 @@ Converge one task bundle into a coherent current plan without creating a second 
 5. **Create the planning checkpoint.** After user confirmation, synchronize and validate
    governance, then inspect the resulting task bundle, final diff, and entire worktree. Confirm
    that the checkpoint still matches the approved plan and separate this task's paths from foreign
-   changes. Scoped sync keeps other bundles' drift out of this checkpoint; inspect its preview and
-   continue only when every planned change belongs to this planning checkpoint.
+   changes. Inspect the scoped sync preview and continue only when every planned change belongs to
+   this planning checkpoint.
 
    ```bash
    node .ai/scripts/ctl-project-governance.mjs sync --task T-### --dry-run
@@ -146,8 +143,7 @@ Converge one task bundle into a coherent current plan without creating a second 
    If kickoff is `ready` and implementation scope is not already clear, recommend an execution
    boundary and list the current phases as cumulative stopping points, using outcomes rather than
    implementation detail. Mark provisional boundaries honestly and let the user choose how far to
-   proceed. Record the user's choice on the kickoff gate's `Authorized boundary` line so recovery
-   and later sessions inherit it. Existing implementation authorization — including a boundary
+   proceed. Record the user's choice on the kickoff gate's `Authorized boundary` line. Existing implementation authorization — including a boundary
    already recorded on the gate — takes precedence; do not ask again when the user has already
    selected a boundary or authorized the complete task.
 

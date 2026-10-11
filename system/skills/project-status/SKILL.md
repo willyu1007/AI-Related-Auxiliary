@@ -7,13 +7,6 @@ description: >-
   consistency.
 ---
 
-## Working model
-
-- **Task** — one durable work outcome recorded in a task bundle.
-- **Feature** — a project capability that tasks map to.
-- **Milestone** — a project-stage outcome that groups Features.
-- **Project hub** — connects these records; this skill reads them with repository evidence without changing them.
-
 ## Status views
 
 Load only the views relevant to the request; combine them when the request spans more than one:
@@ -48,8 +41,7 @@ Load only the views relevant to the request; combine them when the request spans
    - Use the project graph query for Feature or Milestone meaning.
 
 4. **Reconcile and present the view.**
-   - Apply the authority model in `dev-docs/AGENTS.md`; surface disagreements and leave unsupported
-     facts unknown.
+   - Apply the authority model in `dev-docs/AGENTS.md`; leave unsupported facts unknown.
    - Combine related views without repeating evidence.
    - Match the output to the caller: use the user's preferred language for a user-facing answer,
      or return only the needed facts to an enclosing workflow.
@@ -57,5 +49,3 @@ Load only the views relevant to the request; combine them when the request spans
 ## Boundaries
 
 - Remain read-only: do not edit governance records or run commands that write.
-- Preserve source disagreements and evidence gaps; do not turn unsupported or conflicted values
-  into task facts.

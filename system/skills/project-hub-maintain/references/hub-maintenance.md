@@ -76,8 +76,8 @@ Classify the dry-run and query evidence before selecting a repair:
   that worktree instead of overwriting it from the current one.
 
 Do not change an active task's goal or `State:` as a hub repair. When a repair removes or reparents
-a relationship, apply only the exact confirmed scope. Because sync plans a complete worktree, do
-not apply a preview containing changes outside the selected repair.
+a relationship, apply only the exact confirmed scope. Do not apply a preview containing changes
+outside the selected repair.
 
 ## Validate and finish
 

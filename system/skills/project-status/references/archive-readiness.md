@@ -20,7 +20,7 @@ git -C <worktree_path> log --grep="^Task: T-###"
 
 ## Evidence
 
-- Read the goal and use `Done when` from `01-status.md` only as an audit reference.
+- Read the goal and `Done when` from `01-status.md`.
 - Inspect delivered code, the exact task-trailer commit timeline, and the latest decisive evidence
   in `verification.md`.
 - Check roadmap kickoff, unresolved in-scope work, required acceptance, decisions, and material
@@ -28,9 +28,8 @@ git -C <worktree_path> log --grep="^Task: T-###"
 
 ## Interpretation
 
-- `State: done` is a claim. Archive readiness requires kickoff `ready` and decisive support for the
-  completion contract in `dev-docs/AGENTS.md`; checked `Done when` items and roadmap phase criteria
-  are only references.
+- `State: done` is a claim. Archive readiness requires decisive support for it under the lifecycle
+  model in `dev-docs/AGENTS.md`.
 - A clean, aligned closeout means the checkpoint is committed, the active bundle matches repository
   reality and the project hub, and unrelated worktree changes are identified.
 - Every material deferred outcome needs a durable disposition that will survive archive.
