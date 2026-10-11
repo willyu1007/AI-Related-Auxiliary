@@ -70,6 +70,12 @@ mistaken for the live system.
 Update these as current snapshots. Git history retains superseded states; avoid chronological
 journals and repeated raw logs in the main documents.
 
+A verification result holds for its recorded baseline: commit or build, configuration, platform,
+and sample. Count it for a newer baseline only after rerunning the check there or showing that the
+changes since cannot reach it; otherwise mark it as needing a rerun. Each Outstanding verification
+item names the condition to run it and its owner: this task, or another task that has taken it
+over.
+
 `Done when` holds the task's current acceptance references. They help planning, review, and
 verification, but do not independently prove completion or override confirmed requirements,
 repository reality, verification evidence, or required user acceptance. Revise them when the
@@ -99,13 +105,17 @@ Mark a task `done` only when all three claims hold at the task boundary:
   the project hub agree on the accepted result; no unintended parallel old/new paths, duplicated
   behavior, or competing authority remains.
 
-Ground each claim in decisive evidence and obtain any required user acceptance. A check that only
-the target environment can run does not block completion once a named task or release record has
-taken it over; name that owner under Outstanding verification. For non-code
+Ground each claim in decisive evidence and obtain any required user acceptance. For non-code
 tasks, apply the quality claim to the delivered artifacts. An explicit transitional dual track may
-remain while work is in progress only when its purpose, recovery boundary, and exit are recorded.
-Before completion, remove the superseded path unless permanent compatibility is part of the
-confirmed outcome.
+remain while work is in progress only when its purpose and recovery boundary are recorded and its
+exit condition is an Outstanding verification item: a fact the task can establish, or a fact
+outside the repository that a later environment shows, never an intention such as "later". Before
+completion, remove the superseded path unless permanent compatibility is part of the confirmed
+outcome or another task has taken over its exit condition.
+
+A check that only a later environment can run, including such an exit condition, does not block
+completion once another task has taken it over and Outstanding verification names that task and
+the condition to run the check. Without such a task, the check stays and blocks completion.
 
 Implementation readiness lives separately in the roadmap kickoff gate:
 

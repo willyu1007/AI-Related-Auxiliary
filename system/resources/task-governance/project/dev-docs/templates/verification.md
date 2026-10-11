@@ -10,7 +10,7 @@
 
 ## Outstanding verification
 
-- <!-- required check, why it remains open, what enables it, and who runs it; use "None" when complete -->
+- <!-- required check or transitional-path exit condition, why it remains open, the condition to run it, and its owner (this task or the task that took it over); use "None" when complete -->
 
 ## Deployment changes
 

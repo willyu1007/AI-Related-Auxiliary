@@ -95,7 +95,7 @@ Card payment passes on both platforms; the iOS refund check waits for the 09:00 
   cross-system journey) and the identity and data, as at most 4 tags separated by `;`, each at
   most 16 characters, or a phase such as `joint check`. Required for `partial` and `passed` rows,
   `-` for `not-tested` rows, and optional for `failed` and `blocked` rows. Put narratives of what
-  was verified in the task's verification record.
+  was verified in the row's evidence.
 - **Evidence**: links to the row's evidence, or `-`.
 - **Kind**: one of `defect`, `design`, `gap`, `environment`, `ruling`. Move a finding triaged as
   handoff to the Handoff table. **Severity**: `P1`, `P2`, `P3`, or `-`.

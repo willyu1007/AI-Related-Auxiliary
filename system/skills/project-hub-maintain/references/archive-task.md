@@ -32,8 +32,8 @@ roadmap criteria, or historical evidence alone.
 
 Reconcile the task record with the audit. If reality is incomplete, update its progress and affected
 task snapshots to the actual state, checkpoint the reconciliation, and stop the archive. Unresolved
-evidence also blocks archive, except a target-environment check another task or release record has
-taken over under the completion contract. When completion holds, bring a stale bundle or hub to an aligned
+evidence also blocks archive, except a check another task has taken over under the completion
+contract. When completion holds, bring a stale bundle or hub to an aligned
 `done` state before continuing.
 
 Before the final closeout, move live product, interface, operational, or migration knowledge into

@@ -78,7 +78,10 @@ task-start / task-resume
       ordinary temporary instrumentation and scratch artifacts.
    4. Run decisive checks on the final result. Each must directly support a
       closeout claim; resolve or record any remaining failed or inconclusive
-      check, finding, residue, or blocker without advancing the phase.
+      check, finding, residue, or blocker without advancing the phase. A check
+      that only a later environment can run does not hold the phase once
+      Outstanding verification names its condition and owner under the
+      completion contract in `dev-docs/AGENTS.md`.
    5. Use `task-sync` to checkpoint repository reality and move to the next
       phase only after the closeout is verified.
 5. **Route and recover.** Repeat from the next phase; if evidence changes the route, return to

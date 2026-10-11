@@ -51,21 +51,25 @@ slots.
    kebab-case slug. Put `progress.md`, the rendered `index.html`, `evidence/` (screenshots,
    recordings, logs, API captures), and, if the project has none, the runbook there. Leave adopted
    evidence where it is and link to it.
-3. Write `progress.md` yourself, as one current snapshot, in the format of
-   [references/progress-format.md](references/progress-format.md): each row with its acceptance
-   condition for the lane's scope and any existing result with its baseline (reuse valid results),
-   each ledger mapped to its repository task in the `Tasks` header, and this session named in the
-   `Coordinator` header. Record missing mappings instead of creating tasks or widening scope. Draw
-   rows from the scope the user names and from the mapped tasks' outstanding verification and
-   deployment changes in their `verification.md`.
+3. Take the scope the user names, and read only its tasks' `verification.md`. Write `progress.md`
+   yourself, as one current snapshot, in the format of
+   [references/progress-format.md](references/progress-format.md): a row for each acceptance
+   condition in scope and each Outstanding verification item the lane can check, each ledger
+   mapped to its repository task in the `Tasks` header, and this session named in the
+   `Coordinator` header. Carry an existing result with its baseline: `passed` only when that
+   baseline is the current Loaded, otherwise `partial` with the retest in Remaining. Report other
+   tasks' outstanding checks as unmapped, and record missing mappings, instead of creating tasks
+   or widening scope.
 4. Check the runbook against the lane operator's runbook duty in
    [references/units.md](references/units.md); if it is missing or incomplete, have the lane
    operator complete it.
-5. For each capability the lane has on, have the lane operator check that the project's
-   environment contract gives every configuration it needs a source and an injection path into the
-   process that consumes it, and prove it ready with the smallest real business chain it serves,
-   writing only to a disposable sample; never take a health check as readiness. Do the same inside the entry
-   (section 5) whenever a lane change turns a capability on.
+5. Bring the named tasks' deployment changes onto the lane as lane operations (section 5) and
+   record them in the Lane section; make one a row only when its user-visible behavior is itself
+   an acceptance condition. For each capability the lane has on, have the lane operator check that
+   the project's environment contract gives every configuration it needs a source and an injection
+   path into the process that consumes it, and prove it ready with the smallest real business
+   chain it serves, writing only to a disposable sample; never take a health check as readiness.
+   Do the same inside the entry whenever a lane change turns a capability on.
 6. Schedule time-gated rows (next-day due items, opening hours, expiry) now. Before creating,
    seeding, or consuming test data, read [references/test-data.md](references/test-data.md).
 7. Before planning fixes for a chain, have a test batch walk its user path once on a device slot
@@ -140,7 +144,7 @@ reader-side verification of a cross-layer change.
   | --- | --- | --- |
   | `defect` | In-scope behavior is wrong or missing | Fix unit, then retest on the lane |
   | `design` | The behavior matches the design | Record where the design lives; judge the row on it |
-  | `gap` | The capability's scope is unconfirmed | Ask for a ruling: in scope, it becomes a defect; out of scope, register it in the task's gap list and judge on substitute evidence only under that ruling |
+  | `gap` | The capability's scope is unconfirmed | Ask for a ruling: in scope, it becomes a defect; out of scope, it goes to the task's Out of scope at write-back; judge on substitute evidence only under that ruling |
   | `environment` | The lane, not the product, causes it | Fix the lane or runbook through section 5 |
   | `ruling` | A product decision is open | Ask the user; continue unaffected work |
   | `handoff` | Only an environment outside the lane can check it | Move it to the handoff package |
@@ -170,8 +174,9 @@ reader-side verification of a cross-layer change.
   proofs move it at most to `loaded`.
 - When a fix resolves a related defect but the originally reported symptom was never reproduced,
   keep that symptom as its own `open` finding; never close it with the fix.
-- When a fix keeps a compatibility path, file a `deferred` finding with its exit condition and
-  owner, and register it in the task's gap list.
+- When a fix keeps a compatibility path, file a `deferred` finding with its exit condition (an
+  observable fact the task can establish or a later environment shows, never "later") and the task
+  that will remove the path.
 
 ## 5. Update the lane
 
@@ -235,15 +240,24 @@ Next.
 - **Land**: when the user asks to land the lane on the main line, first list the failed rows and
   open P1 and P2 findings caused by lane code, and leave that code out or get the user's
   agreement. Have the integrator prepare the landing from the lane head, with the depended-on
-  repository first, and sync decisive results with their baselines, rulings, handoff items, and
-  gaps into the mapped repository task records through the repository's task workflow, citing the
-  evidence instead of copying judgments. After the push, move the evidence the records cite into
+  repository first. After the push, write back, move the evidence the records cite into
   `evidence/`, then remove the merged unit worktrees, branches, and Units entries.
+- **Write back** only after a landing push and at close, yourself; until then write only
+  `progress.md`. In a fresh worktree from the main line, update each mapped task under
+  `<repo-root>/dev-docs/AGENTS.md` as one checkpoint per task, citing the evidence instead of
+  copying judgments:
+  - row results → Evidence, with the Loaded baseline and the source;
+  - lane-scope work still open → Outstanding verification;
+  - handoff items and deferred compatibility findings → Outstanding verification, with the
+    condition and the task that takes each over;
+  - rulings that change scope or an acceptance basis → the roadmap's decisions, and `Done when` or
+    Out of scope when the scope changed;
+  - out-of-scope gaps → Out of scope.
 - **Handoff**: write a requested handoff document as a current snapshot of state, next steps, and
   constraints, and point it to `progress.md`.
 - **Close** execution when every row has a current judgment with evidence or a stated reason it
   has none, every row not passed has a disposition (fixed, ruled, handed off, or deferred by the
-  user), and nothing is pending. Sync what no landing has synced into the task records as in Land.
-  Report tested and untested scope, the handoff package with its release gates, and the verified
-  baseline, and say that execution closure is not release readiness unless those gates are
-  verified. Retire the lane only with the user's agreement.
+  user), and nothing is pending. Write back what no landing has written back. Report tested and
+  untested scope, the handoff package with its release gates, and the verified baseline, and say
+  that execution closure is not release readiness unless those gates are verified. Retire the lane
+  only with the user's agreement.
