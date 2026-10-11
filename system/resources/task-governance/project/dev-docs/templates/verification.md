@@ -10,7 +10,7 @@
 
 ## Outstanding verification
 
-- <!-- check, transitional-path exit condition, or result needing a rerun; the condition to run it; its owner task (with its repository when another); use "None" when complete -->
+- <!-- one item per open check, transitional-path exit condition, result needing a rerun, or deployment confirmation per target environment, with the fields `dev-docs/AGENTS.md` defines; use "None" when complete -->
 
 ## Deployment changes
 

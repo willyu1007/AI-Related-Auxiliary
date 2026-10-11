@@ -37,8 +37,8 @@ Before the final closeout, move live product, interface, operational, or migrati
 its code or formal documentation. Remove task-owned temporary test scaffolding, artifacts, and
 test-only content; keep tests that guard delivered behavior and unrelated existing tests. Resolve
 new tasks, Ideas, or Feature semantics separately. Synchronize and commit these changes as one
-aligned closeout. Archive only when that
-checkpoint has no task-owned uncommitted work and the task has one checked-out occurrence.
+aligned closeout. Archive only when that checkpoint has no task-owned uncommitted work and the task
+has one checked-out occurrence.
 
 ## Distill the archive record
 
@@ -51,6 +51,8 @@ context:
 - key decisions that still constrain behavior, design, compatibility, migration, or maintenance,
   together with the decisive reasons, evidence, or constraints behind them;
 - project and task relationships, including confirmed follow-up work;
+- deployment changes not yet confirmed in every target environment, and checks another task took
+  over, with that task;
 - known limitations only when they remain useful.
 
 Keep a rejected alternative only when its rationale prevents a likely harmful reversal. Do not

@@ -61,8 +61,7 @@ task-start / task-resume
    1. Establish what the closeout must prove from the phase outcome and exit
       criteria, its contribution to the task goal, accepted requirements and
       design, and affected behavior, interfaces, failure, and recovery paths.
-      Turn these into concrete behavior and quality claims; planned checks are
-      evidence candidates, not proof.
+      Turn these into concrete behavior and quality claims.
    2. Use `review-code` on the phase's session delta or semantic scope and fix
       authorized, evidence-backed issues against those claims. Also simplify
       avoidable complexity, duplicate responsibility, temporary paths, or
@@ -73,10 +72,8 @@ task-start / task-resume
       ordinary temporary instrumentation and scratch artifacts.
    4. Run decisive checks on the final result. Each must directly support a
       closeout claim; resolve or record any remaining failed or inconclusive
-      check, finding, residue, or blocker without advancing the phase. A check
-      that only a later environment can run does not hold the phase once
-      Outstanding verification names its condition and owner under the
-      completion contract in `dev-docs/AGENTS.md`.
+      check, finding, residue, or blocker without advancing the phase, except as
+      the phase-closing rule in `dev-docs/AGENTS.md` allows.
    5. Use `task-sync` to checkpoint repository reality and move to the next
       phase only after the closeout is verified.
 5. **Route and recover.** Repeat from the next phase; if evidence changes the route, return to

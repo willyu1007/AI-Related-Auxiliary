@@ -51,16 +51,17 @@ slots.
    kebab-case slug. Put `progress.md`, the rendered `index.html`, `evidence/` (screenshots,
    recordings, logs, API captures), and, if the project has none, the runbook there. Leave adopted
    evidence where it is and link to it.
-3. Take the scope the user names, and read only its tasks' `verification.md`. Write `progress.md`
-   yourself, as one current snapshot, in the format of
-   [references/progress-format.md](references/progress-format.md): a row for each Outstanding
-   verification item the lane can check, and for an acceptance condition only when the user names
-   it for the lane, each ledger mapped to its repository task in the `Tasks` header, and this
-   session named in the `Coordinator` header. Carry an existing result with its baseline, as
-   `passed` only when it holds for the current Loaded under `<repo-root>/dev-docs/AGENTS.md`,
-   otherwise `partial` with the retest in Remaining. When you come across another task's
-   outstanding check, report it to the user as unmapped; record missing mappings; never create
-   tasks or widen scope.
+3. Take the scope the user names, and read only its tasks' `verification.md`: at the heads the
+   lane will load, otherwise at the newest occurrence the governance query reports. Write
+   `progress.md` yourself, as one current snapshot, in the format of
+   [references/progress-format.md](references/progress-format.md): a row, citing the item's label,
+   for each Outstanding verification item that a named task owns and the lane can check, and for
+   an acceptance condition only when the user names it for the lane; each ledger mapped to its
+   repository task in the `Tasks` header; and this session named in the `Coordinator` header.
+   Carry an existing result with its baseline, as `passed` only when it holds for the current
+   Loaded under `<repo-root>/dev-docs/AGENTS.md`, otherwise `partial` with the retest in Remaining.
+   When you come across another task's outstanding check, report it to the user as unmapped;
+   record missing mappings; never create tasks or widen scope.
 4. Check the runbook against the lane operator's runbook duty in
    [references/units.md](references/units.md); if it is missing or incomplete, have the lane
    operator complete it.
@@ -131,15 +132,14 @@ reader-side verification of a cross-layer change.
 - Judge with the statuses defined in progress-format.md. Pass only what a result established, per
   platform, under the identity and data it used; never pass a device row on source, unit tests,
   mocks, or an API check. Record each result's source: a tool observation or a user report, never
-  restating a report as a tool check; `physical device`, `simulator`, or `emulator`; and a
+  restating a report as a tool check; the device kind, named as progress-format.md names it; and a
   development or release build.
-- Mark a row `failed` as soon as a required check fails, before its cause is confirmed, with
-  Remaining naming the confirmation; file the finding once it is classified.
+- Mark a row `failed` as soon as a required check fails, with Remaining naming the confirmation;
+  file the finding once it is classified.
 - Keep acceptance conditions to the lane's scope. Move what the development environment cannot
   close (physical devices, real identity providers, production content moderation, real push
   credentials, external services) into the handoff package with what it needs and its release
-  gate, linked to its rows. Pass a row when its lane scope is established, and never count a
-  handoff as evidence.
+  gate, linked to its rows. Never count a handoff as evidence.
 - Classify every finding:
 
   | Kind | Condition | Action |
@@ -156,8 +156,7 @@ reader-side verification of a cross-layer change.
   limits, and re-observe it through a second channel such as a server read. Grade defects P1
   (lost or wrong data, security, a blocked main user flow), P2 (a broken flow with a workaround),
   or P3 (polish); fix P1 and P2 within the authorized scope by default, and P3 when the user
-  agrees. Never lower an
-  acceptance condition or widen scope by classifying.
+  agrees. Never lower an acceptance condition or widen scope by classifying.
 - Ask the user about each open ruling, including a fix that needs a new product decision.
 - Ask whether to fix a defect now or defer it only when the fix needs a breaking contract change
   or work beyond the authorized scope. Record the answer in the finding's Disposition.
@@ -171,9 +170,8 @@ reader-side verification of a cross-layer change.
   authorization.
 - Pass the rows of a fix that changes user-facing design only after the user confirms screenshots
   from the lane.
-- Update each finding's State after every dispatch, retest, and ruling that touches it. Set
-  `verified` only after the user chain its rows require passes on the lane; source checks and load
-  proofs move it at most to `loaded`.
+- Update each finding's State, as progress-format.md defines it, after every dispatch, retest, and
+  ruling that touches it.
 - When a fix resolves a related defect but the originally reported symptom was never reproduced,
   keep that symptom as its own `open` finding; never close it with the fix.
 - When a fix keeps a compatibility path, file a `deferred` finding with its exit condition, as the
@@ -189,7 +187,7 @@ keep the lane closed until it is repaired or returned to the previous baseline. 
 loaded baseline and its load proofs under Loaded, and write the next candidate as the first item of
 Next. Before a change loads new code, read the named tasks' `verification.md` at the candidate
 heads: bring their new deployment changes on in the same entry, and afterwards add a row for each
-new Outstanding verification item the lane can check.
+new Outstanding verification item that a named task owns and the lane can check.
 
 - **Code**: bring code onto the lane only as a candidate head that passed the formal gates: the
   checks and artifacts (locks, pins, generated files) the repository requires before code loads or
@@ -246,12 +244,12 @@ new Outstanding verification item the lane can check.
   agreement. Have the integrator prepare the landing from the lane head, with the depended-on
   repository first. After the push, write back, move the evidence the records cite into
   `evidence/`, then remove the merged unit worktrees, branches, and Units entries.
-- **Write back** only after a landing push and at close, yourself; until then write only
-  `progress.md`. In a fresh worktree from the main line, update each mapped task under
-  `<repo-root>/dev-docs/AGENTS.md` as one checkpoint per task, citing the evidence instead of
-  copying judgments:
-  - row results → Evidence, with the Loaded baseline and the source, removing the Outstanding
-    verification item each passed row closes;
+- **Write back** yourself after a landing push, at close, and for a single row earlier when its
+  task needs the result and the main line already contains the row's Loaded baseline; until then
+  write only `progress.md`. In a fresh worktree from the main line, update each mapped task under
+  `<repo-root>/dev-docs/AGENTS.md`, citing the evidence instead of copying judgments:
+  - row results → Evidence, with the Loaded baseline and the source, removing by label the
+    Outstanding verification item each passed row closes;
   - lane-scope work still open → Outstanding verification;
   - handoff items and deferred compatibility findings → Outstanding verification with their
     conditions, owned by this task unless another task's Outstanding verification already lists
@@ -260,6 +258,8 @@ new Outstanding verification item the lane can check.
     Out of scope when the scope changed;
   - out-of-scope gaps → Out of scope.
 
+  For each task, run `node .ai/scripts/ctl-project-governance.mjs sync --task T-### --apply` and
+  `lint --task T-###`, commit with its `Task: T-###` trailer, and hand the user the push commands.
   Report, instead of writing, results for a task already archived. After the push, tell the user
   which tasks have other worktrees that must merge the main line.
 - **Handoff**: write a requested handoff document as a current snapshot of state, next steps, and

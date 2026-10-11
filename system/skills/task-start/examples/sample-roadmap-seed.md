@@ -43,7 +43,7 @@
 - Affected boundaries / entry points: checkout frontend, checkout backend, shared flag client.
 - Dependencies: repository evidence.
 - Exit criteria: the shared boundary is confirmed or the decision records why it must change.
-- Verification: focused inspection and the smallest runnable provider check.
+- Verification: `flag-boundary`.
 - Recovery: leave checkout behavior unchanged and keep kickoff pending.
 
 ### Phase 2 — Integrate behind the flag (provisional)
@@ -55,7 +55,7 @@
 - Affected boundaries / entry points: the boundaries confirmed in Phase 1.
 - Dependencies: Phase 1 decision and settled interface.
 - Exit criteria: the flag controls both entry points without changing disabled behavior.
-- Verification: focused integration checks for enabled and disabled paths.
+- Verification: `enabled-path`, `disabled-path`.
 - Recovery: disable the flag and revert the bounded integration if the contract fails.
 
 ### Phase 3 — Verify rollout and recovery (provisional)
@@ -67,16 +67,17 @@
 - Affected boundaries / entry points: checkout behavior and operational flag control.
 - Dependencies: Phase 2 integration and user-owned rollout decisions.
 - Exit criteria: verification evidence is current and rollout ownership is explicit.
-- Verification: scenario checks plus direct rollback observation.
+- Verification: `rollback-path`.
 - Recovery: keep exposure disabled until the evidence and decision support rollout.
 
 ## Kickoff gate
 
 - Status: pending
+- Authorized boundary: none
 - [ ] Decisions: the flag-evaluation boundary choice is decided with its named confirmation.
 - [ ] Design: the settled evaluation contract is reflected in `02-architecture.md`.
 - [ ] Route: the major route connects the current Goal to the completion contract, and Phase 1 is executable with exit, verification, and recovery criteria.
-- [ ] Verification: checks for the enabled, disabled, and rollback paths are identified in `verification.md`.
+- [ ] Verification: `flag-boundary`, `enabled-path`, `disabled-path`, and `rollback-path` are Outstanding verification items in `verification.md`.
 
 ## Risks and recovery
 

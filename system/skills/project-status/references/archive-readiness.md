@@ -28,8 +28,8 @@ git -C <worktree_path> log --grep="^Task: T-###"
 
 ## Interpretation
 
-- `State: done` is a claim. Archive readiness requires decisive support for it under the lifecycle
-  model in `dev-docs/AGENTS.md`.
+- Archive readiness requires decisive support for `State: done` under the lifecycle model in
+  `dev-docs/AGENTS.md`.
 - A clean, aligned closeout means the checkpoint is committed, the active bundle matches repository
   reality and the project hub, and unrelated worktree changes are identified.
 - Every material deferred outcome needs a durable disposition that will survive archive.

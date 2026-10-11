@@ -73,21 +73,26 @@ platform, and sample. Count it for a newer baseline only after rerunning the che
 that the changes since cannot reach it.
 
 Every required check without a passing result that holds for the current baseline, including one
-that needs a rerun, is an Outstanding verification item; a phase's Verification names these items
-instead of restating them. Each item names its condition to run, including business-time gates,
-another task's work it waits on, and how it reaches a shared environment, and one owner task,
-named with its repository when it lives in another one. Other tasks that need the same check
-reference that owner instead of keeping their own copy. Another task has taken an item over only
-when its own Outstanding verification lists it, and that task's result closes the item. When the
-task has deployment changes, keep one item for confirming them in the target environment, owned by
-this task until a task that deploys them takes it over.
+that needs a rerun, is an Outstanding verification item. Each item gives a short label, the
+behavior to prove with the evidence qualification it needs (platform, build, identity), its
+condition to run (business-time gates, another task's work it waits on, and how it reaches a shared
+environment), and one owner task, named with its repository when it lives in another one. Phases,
+other tasks, and campaign rows cite items by label. When several tasks need the same check, the
+first to record it owns it; the others list it under that owner, and the owner's result closes it
+for all of them. Another task has taken an item over only when its own Outstanding verification
+lists it, and that task's result closes the item. When the task has deployment changes, keep one
+confirmation item per target environment, owned by this task until a task that deploys them there
+takes it over.
+
+A phase's Verification names by label the items the phase must close. A phase closes when each
+named item has a passing result or, when only a later environment can run it, stays an Outstanding
+verification item with its condition and owner.
 
 `Done when` holds the task's current acceptance references. They do not independently prove
-completion — checking every item does not make a task `done` — or override confirmed requirements,
-repository reality, verification evidence, or required user acceptance. Revise an outdated item
-when the understood outcome changes instead of using it to block or justify completion
-mechanically. Roadmap phase outcomes and exit criteria guide execution only; they do not define
-task acceptance.
+completion or override confirmed requirements, repository reality, verification evidence, or
+required user acceptance. Revise an outdated item when the understood outcome changes instead of
+using it to block or justify completion mechanically. Roadmap phase outcomes and exit criteria
+guide execution only; they do not define task acceptance.
 
 ## Lifecycle model
 
@@ -121,11 +126,13 @@ intention such as "later". Before completion, remove the superseded path unless 
 compatibility is part of the confirmed outcome or another task has taken over its exit condition.
 
 A later environment is one this task cannot use yet: an environment, release channel, device, or
-data set that does not exist or is not available to it. An existing shared test environment is
-not later; this task keeps the checks that run there and completes them before `done`. A check
-that only a later environment can run, including such an exit condition, does not block
-completion once another task has taken it over and Outstanding verification names that task and
-the condition to run the check. Without such a task, the check stays and blocks completion.
+data set that does not exist or is not available to it, including a target environment this task
+does not deploy to. An existing shared test environment is not later, and neither is a build with
+the shipping configuration that this task can produce; only its distribution channel is. This task
+keeps the checks that run in environments that are not later and completes them before `done`. A
+check that only a later environment can run, including such an exit condition and a deployment
+confirmation, does not block completion once another task has taken it over. Without such a task,
+the check stays and blocks completion.
 
 A task that deploys other tasks' work to an environment takes over their deployment-confirmation
 items, and the checks they hand to it, by listing them in its own Outstanding verification.

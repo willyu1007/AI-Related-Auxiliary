@@ -102,7 +102,7 @@ Card payment passes on both platforms; the iOS refund check waits for the 09:00 
 - **State**: `open` until a fix is under way; `fixing` while the fix is in progress or verified only
   in source; `loaded` once the fix is on the lane and awaits the user-chain retest; `verified` once
   the user chain its rows require passes on the lane; `deferred` once ruled out of this campaign or
-  registered as a gap.
+  kept as a compatibility path with its exit condition.
 - **Rows columns** in Blockers, Findings, Handoff, and Rulings list row ids separated by commas, or
   `-`. Every id must exist in some ledger.
 - **Summary**: after each adopted result, state in two to five lines the candidate's stage

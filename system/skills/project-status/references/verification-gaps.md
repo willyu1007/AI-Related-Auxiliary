@@ -26,7 +26,7 @@ read that task too.
 
 ## Include
 
-- Outstanding checks per task, with condition, owner, and the acceptance references they cover.
+- Outstanding verification items per task, by label, with condition and owner.
 - Deployment changes in scope.
 - Unassigned: checks without a condition or owner, target-environment checks no task has taken
   over, and items naming a taker whose Outstanding verification does not list them.

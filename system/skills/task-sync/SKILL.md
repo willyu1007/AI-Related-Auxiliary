@@ -63,11 +63,11 @@ Use the deepest applicable level.
    Record each decisive result in Evidence with its baseline, and remove the Outstanding
    verification item it passes. When the checkpoint changes what earlier evidence of this task
    covers, rerun the check or return it to Outstanding verification. When it adds behavior that a
-   check must cover, add the check there. When it adds or changes deployment, update Deployment
-   changes. At a phase boundary, confirm that each check the phase names has a passing result or,
-   when only a later environment can run it, stays in Outstanding verification with its condition
-   and owner; otherwise leave the phase open. At completion, when a later-environment check or exit
-   condition has no owner task, ask the user to open one; never create it yourself.
+   check must cover, add the check there and name it in the first unfinished phase where its
+   condition can hold. When it adds or changes deployment, update Deployment changes and their
+   confirmation items. At a phase boundary, apply the phase-closing rule in `dev-docs/AGENTS.md`;
+   otherwise leave the phase open. At completion, when no other task has taken over a
+   later-environment check or exit condition, ask the user to open one; never create it yourself.
 
    Create `implementation.md` from `<repo-root>/dev-docs/templates/implementation.md` only when its durable map would help a fresh agent understand the realized design. Create `pitfalls.md` from `<repo-root>/dev-docs/templates/pitfalls.md` only after a recurring hazard has evidence. Do not append routine history, ordinary TODOs, or repeated test logs to either. Remove obsolete pitfalls after prevention is encoded and the warning is no longer useful. Put bulky raw evidence in `artifacts/`.
 
@@ -90,8 +90,8 @@ Use the deepest applicable level.
    node .ai/scripts/ctl-project-governance.mjs lint --task T-###
    ```
 
-   Inspect the selected bundle and generated diff before staging. A sync validation error leaves its planned change set unapplied;
-   if lint fails, keep the applied changes uncommitted and resolve or report the failure.
+   Inspect the selected bundle and generated diff before staging. If lint fails, keep the applied
+   changes uncommitted and resolve or report the failure.
 
 5. **Commit one isolated checkpoint.** Before staging implementation, verify that the roadmap
    kickoff gate is `ready`. When it is `pending`, commit only coherent planning, discovery
