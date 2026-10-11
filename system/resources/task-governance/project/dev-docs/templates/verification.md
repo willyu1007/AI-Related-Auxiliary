@@ -14,4 +14,4 @@
 
 ## Deployment changes
 
-- <!-- build configuration or switch, secret reference and its injection path, migration or initialization step, contract pairing or required client upgrade, or rollback limit that this task adds or changes, with where it is declared; never a secret value. Use "None" when the task changes no deployment. -->
+- <!-- a deployment change this task adds or changes, as `dev-docs/AGENTS.md` defines them, with where it is declared; never a secret value. Use "None" when the task changes no deployment. -->

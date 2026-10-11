@@ -58,7 +58,9 @@ mistaken for the live system.
   or decision history.
 - **`verification.md`** — Planned checks and the latest decisive evidence, with its baseline, for
   relevant claims, acceptance references, phase outcomes, and material limitations, plus the task's
-  deployment changes.
+  deployment changes: build configuration and switches, secret references and their injection
+  path, migrations and initialization steps, contract pairing and required client upgrades, and
+  rollback limits.
 - **`implementation.md`** *(optional)* — Current realization map when architecture alone is not
   enough to resume safely.
 - **`pitfalls.md`** *(optional)* — Current anti-error register for recurring, evidenced hazards.
@@ -113,9 +115,16 @@ outside the repository that a later environment shows, never an intention such a
 completion, remove the superseded path unless permanent compatibility is part of the confirmed
 outcome or another task has taken over its exit condition.
 
-A check that only a later environment can run, including such an exit condition, does not block
-completion once another task has taken it over and Outstanding verification names that task and
-the condition to run the check. Without such a task, the check stays and blocks completion.
+A later environment is one this task cannot use yet: an environment, release channel, device, or
+data set that does not exist or is not available to it. An existing shared test environment where
+the check can be scheduled is not later; this task keeps the checks that run there and completes
+them before `done`. A check that only a later environment can run, including such an exit
+condition, does not block completion once another task has taken it over and Outstanding
+verification names that task and the condition to run the check. Without such a task, the check
+stays and blocks completion.
+
+A task that deploys other tasks' work to an environment lists their deployment changes, and the
+checks they hand to it, under its own Outstanding verification until each is confirmed there.
 
 Implementation readiness lives separately in the roadmap kickoff gate:
 

@@ -67,13 +67,12 @@ Use the deepest applicable level. Depth changes the breadth of reconciliation, n
    Remove superseded content unless it still constrains the active route, transition, or recovery;
    Git history retains the former state.
 
-   Record each decisive result in `verification.md` with its baseline. When the checkpoint reaches
+   Record each decisive result in `verification.md` with its baseline. When the checkpoint changes
    what earlier evidence of this task covers, rerun the check or mark the evidence as needing a
-   rerun. When it adds or changes deployment (build configuration, switches, secret references and
-   their injection, migrations, initialization, contract pairing, client upgrades), update
-   Deployment changes. At a phase boundary, check the phase's planned verification; record a check
-   that only a later environment can run with its condition and owner instead of holding the phase
-   for it.
+   rerun. When it adds behavior that a check must cover, add the check. When it adds or changes
+   deployment, update Deployment changes. At a phase boundary, confirm that each planned check of
+   the phase has a result with its baseline or, when only a later environment can run it, an
+   Outstanding verification item with its condition and owner; otherwise leave the phase open.
 
    Create `implementation.md` from `<repo-root>/dev-docs/templates/implementation.md` only when its durable map would help a fresh agent understand the realized design. Create `pitfalls.md` from `<repo-root>/dev-docs/templates/pitfalls.md` only after a recurring hazard has evidence. Update both as current snapshots: do not append routine history, ordinary TODOs, or repeated test logs. Remove obsolete pitfalls after prevention is encoded and the warning is no longer useful; Git history retains the old entry. Put bulky raw evidence in `artifacts/`.
 

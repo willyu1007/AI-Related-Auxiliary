@@ -57,15 +57,15 @@ slots.
    condition in scope and each Outstanding verification item the lane can check, each ledger
    mapped to its repository task in the `Tasks` header, and this session named in the
    `Coordinator` header. Carry an existing result with its baseline: `passed` only when that
-   baseline is the current Loaded, otherwise `partial` with the retest in Remaining. Report other
-   tasks' outstanding checks as unmapped, and record missing mappings, instead of creating tasks
-   or widening scope.
+   baseline is the current Loaded, otherwise `partial` with the retest in Remaining. When you come
+   across another task's outstanding check, report it to the user as unmapped; record missing
+   mappings; never create tasks or widen scope.
 4. Check the runbook against the lane operator's runbook duty in
    [references/units.md](references/units.md); if it is missing or incomplete, have the lane
    operator complete it.
-5. Bring the named tasks' deployment changes onto the lane as lane operations (section 5) and
-   record them in the Lane section; make one a row only when its user-visible behavior is itself
-   an acceptance condition. For each capability the lane has on, have the lane operator check that
+5. Bring the named tasks' deployment changes onto the lane as lane operations (section 5),
+   recording switches under `Switches` and the rest under `Loaded`; make one a row only when its
+   user-visible behavior is itself an acceptance condition. For each capability the lane has on, have the lane operator check that
    the project's environment contract gives every configuration it needs a source and an injection
    path into the process that consumes it, and prove it ready with the smallest real business
    chain it serves, writing only to a disposable sample; never take a health check as readiness.
@@ -174,9 +174,9 @@ reader-side verification of a cross-layer change.
   proofs move it at most to `loaded`.
 - When a fix resolves a related defect but the originally reported symptom was never reproduced,
   keep that symptom as its own `open` finding; never close it with the fix.
-- When a fix keeps a compatibility path, file a `deferred` finding with its exit condition (an
-  observable fact the task can establish or a later environment shows, never "later") and the task
-  that will remove the path.
+- When a fix keeps a compatibility path, file a `deferred` finding with its exit condition, as the
+  completion contract in `<repo-root>/dev-docs/AGENTS.md` requires, and the task that will remove
+  the path.
 
 ## 5. Update the lane
 
@@ -185,7 +185,8 @@ until every running test batch has actually handed back, have the lane operator 
 the final smoke check with the load proofs, and record the lane open. If the smoke check fails,
 keep the lane closed until it is repaired or returned to the previous baseline. Record the new
 loaded baseline and its load proofs under Loaded, and write the next candidate as the first item of
-Next.
+Next. When the change loads new code, re-read the named tasks' `verification.md` and add a row for
+each new Outstanding verification item the lane can check.
 
 - **Code**: bring code onto the lane only as a candidate head that passed the formal gates: the
   checks and artifacts (locks, pins, generated files) the repository requires before code loads or
@@ -246,10 +247,11 @@ Next.
   `progress.md`. In a fresh worktree from the main line, update each mapped task under
   `<repo-root>/dev-docs/AGENTS.md` as one checkpoint per task, citing the evidence instead of
   copying judgments:
-  - row results → Evidence, with the Loaded baseline and the source;
+  - row results → Evidence, with the Loaded baseline and the source, removing the Outstanding
+    verification item each passed row closes;
   - lane-scope work still open → Outstanding verification;
   - handoff items and deferred compatibility findings → Outstanding verification, with the
-    condition and the task that takes each over;
+    condition and the task that takes each over, or this task when none has;
   - rulings that change scope or an acceptance basis → the roadmap's decisions, and `Done when` or
     Out of scope when the scope changed;
   - out-of-scope gaps → Out of scope.
