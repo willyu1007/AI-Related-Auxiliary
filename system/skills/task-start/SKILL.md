@@ -91,4 +91,6 @@ Open one user-approved, non-duplicate tracked task with a clear outcome, project
    git commit -m "docs(task): open T-### <slug>" -m "Task: T-###"
    ```
 
+   Put any other trailers in that same final `-m`.
+
    Report the task ID, path, Feature placement, kickoff status, checkpoint state, preserved foreign changes, and next action. If planning or implementation was requested, continue into planning. Otherwise, ask whether the user wants to plan the task now. Do not change application code until kickoff is `ready`. Never put secrets, credentials, or tokens in task or hub artifacts.

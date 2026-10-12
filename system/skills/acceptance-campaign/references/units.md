@@ -50,9 +50,10 @@ the whole smoke, and report the restart.
 - load proofs for each changed service and client: <read-only method and expected result>; a
   write probe only on <disposable sample> when this brief authorizes it, recorded as consumed
 Runbook: keep it able to rebuild the lane from files alone, covering the worktrees, stores, and
-ports the campaign owns; the environment file; start and sync steps; smoke checks (health routes,
-invariants, allow-list entries, read routes, load proofs, device time zones); sign-in per slot; how
-to read server state for second-channel checks; the authorized business write APIs and their
+ports the campaign owns; the campaign holding the lane, if any; the environment file; the change
+procedure (close, load, smoke, open) a task follows when no campaign holds the lane; start and sync
+steps; smoke checks (health routes, invariants, allow-list entries, read routes, load proofs,
+device time zones); sign-in per slot; how to read server state for second-channel checks; the authorized business write APIs and their
 tools; how fix units get, isolate, and clean up disposable databases; project constraints; and the
 traps you hit. If there is no runbook, write it at <path>.
 Check free disk before builds and installs.

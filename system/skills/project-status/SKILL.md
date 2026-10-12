@@ -22,7 +22,8 @@ Load only the views relevant to the request; combine them when the request spans
 ## Workflow
 
 1. **Resolve the scope and views.**
-   - Resolve the Git top-level and run the workflow there.
+   - Resolve the Git top-level and run the workflow there; when the user names several
+     repositories, run it in each and combine the answer.
    - Determine whether the request concerns one task, selected work, or the project as a whole.
    - Read `dev-docs/AGENTS.md` and only the relevant status views. Read `.ai/project/AGENTS.md`
      when project-hub semantics or consistency are in scope.

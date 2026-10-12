@@ -130,6 +130,8 @@ Converge one task bundle into a coherent current plan without creating a second 
    git commit -m "docs(task): plan T-### <slug>" -m "Task: T-###"
    ```
 
+   Put any other trailers in that same final `-m`.
+
    If the user or repository policy rules out a commit, leave the validated checkpoint coherent
    and uncommitted.
 

@@ -23,13 +23,15 @@ too. Take kickoff from `roadmap.kickoff_status`; for a task with kickoff `ready`
 
 ## Interpretation
 
+For each task, take the first row that matches; the last row applies to the project.
+
 | Condition | Action type |
 |----------|-----------|
+| An Outstanding verification item whose recorded condition evidence shows to hold | Run that check by the route its condition names |
 | `in-progress` with kickoff `pending` | Obtain the user decision the next step names, or continue alignment or replanning; not implementation |
 | `in-progress` with kickoff `ready` and a current phase marked `(provisional)` | Replan that phase, not implementation |
 | `in-progress` with kickoff `ready`, a non-provisional current phase, and an `Authorized boundary` that does not cover it | Ask the user how far implementation may proceed |
 | `in-progress` with kickoff `ready`, a non-provisional current phase, and an `Authorized boundary` that covers it | Continue that task's implementation |
-| An Outstanding verification item whose recorded condition evidence shows to hold, on any active task | Run that check by the route its condition names |
 | `blocked` | Investigate the named blocker or required external input |
 | `planned` | Continue planning toward kickoff |
 | All tasks `done` or archived and no Outstanding verification item runnable | Report completion or suggest selecting new work |

@@ -65,7 +65,8 @@ slots.
    record missing mappings; never create tasks or widen scope.
 4. Check the runbook against the lane operator's runbook duty in
    [references/units.md](references/units.md); if it is missing or incomplete, have the lane
-   operator complete it.
+   operator complete it. When the runbook shows the lane closed for a task's own check, wait until
+   it reopens; then record in the runbook that this campaign holds the lane.
 5. Bring the named tasks' deployment changes onto the lane as lane operations (section 5),
    recording switches under `Switches` and the rest under `Loaded`; make one a row only when its
    user-visible behavior is itself an acceptance condition. For each capability the lane has on,
@@ -276,4 +277,5 @@ new Outstanding verification item that a named task owns and the lane can check.
   untested scope, the handoff package with its release gates, and the verified baseline, and say
   that execution closure is not release readiness unless those gates are verified. Ask the user
   whether to keep each switch whose ruling ends with the campaign, and turn it off unless they keep
-  it. Retire the lane only with the user's agreement.
+  it; this change reopens no judged row. Remove this campaign's hold from the runbook. Retire the
+  lane only with the user's agreement.

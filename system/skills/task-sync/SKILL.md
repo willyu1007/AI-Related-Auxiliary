@@ -113,6 +113,8 @@ Use the deepest applicable level.
    git commit -m "<type>(<scope>): <subject>" -m "Task: T-###"
    ```
 
+   Put any other trailers in that same final `-m`.
+
    Commit only when the current
    authorization includes creating the checkpoint; otherwise leave the validated state
    uncommitted and preserve that fact for the enclosing workflow. Leave incomplete or unverified

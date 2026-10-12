@@ -77,7 +77,8 @@ that needs a rerun, is an Outstanding verification item. Each item gives a short
 behavior to prove with the evidence qualification it needs (platform, build, identity), its
 condition to run (business-time gates, another task's work it waits on, and how it reaches a shared
 environment), one owner task named with its repository when it lives in another one, and, for a
-check only a later environment can run, the task expected to take it over once one is known.
+check only a later environment can run, the task expected to take it over: its ID once that task
+is opened, otherwise the work that will take the check over.
 Phases and campaign rows cite items by label. A check several tasks need belongs to one of them;
 the others record a depends-on relationship to that task in the roadmap instead of an item.
 Another task takes an item over by listing it with itself as owner, and its result closes the
@@ -139,15 +140,21 @@ compatibility is part of the confirmed outcome or another task has taken over it
 
 A later environment is one this task cannot use yet: an environment, release channel, device, or
 data set that does not exist or is not available to it, including a target environment this task
-does not deploy to. An existing shared test environment is not later, even when only a campaign can
-load it, and neither is a build with the shipping configuration that this task can produce; only
-its distribution channel is. This task keeps the checks that run in environments that are not
-later and completes them before `done`. A check that only a later environment can run, including
-such an exit condition and a deployment confirmation, does not block completion once another task
-has taken it over. Without such a task, the check stays and blocks completion.
+does not deploy to. An existing shared test environment is not later, even when a campaign holds
+it, and neither is a build with the shipping configuration that this task can produce; only its
+distribution channel is. This task keeps the checks that run in environments that are not later
+and completes them before `done`. A check that only a later environment can run, including such an
+exit condition and a deployment confirmation, does not block completion once another task has
+taken it over. Without such a task, the check stays and blocks completion.
+
+Run a check that needs an existing shared test environment as soon as its condition holds. When
+the environment's runbook names no campaign holding it, run the check from this task through the
+runbook's change procedure: close the environment, load the candidate heads, run the smoke check,
+run the check, restore and reopen it, and record the result with the loaded baseline. When a
+campaign holds it, hand the item to that campaign; its write-back records the result.
 
 A task that deploys other tasks' work takes over their confirmation items for the environments it
-deploys to, and the later-environment checks that name it as the expected taker.
+deploys to, and the later-environment checks that name it by ID as the expected taker.
 
 Implementation readiness lives separately in the roadmap kickoff gate:
 
@@ -200,7 +207,9 @@ missing work as landed.
 1. Read `01-status.md` for the task head.
 2. Read current `pitfalls.md` when present, reconcile linked commits and worktree changes, and
    check roadmap kickoff before implementation.
-3. Expand to roadmap decisions and phases, architecture, implementation context, verification, or
+3. Read the records of the tasks in Task relationships that changed since this task's last
+   checkpoint, and reconcile what affects this task.
+4. Expand to roadmap decisions and phases, architecture, implementation context, verification, or
    other supporting documents only for the current question.
-4. When reality changes, update only the documents whose responsibility changed and keep status
+5. When reality changes, update only the documents whose responsibility changed and keep status
    pointed at the first unfinished action.
