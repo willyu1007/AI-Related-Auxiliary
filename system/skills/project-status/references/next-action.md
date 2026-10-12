@@ -18,14 +18,17 @@ node .ai/scripts/ctl-project-governance.mjs resume --repo-root <worktree_path> -
 Use packet warnings and `truncated_fields` to decide whether the underlying Git or task evidence
 needs selective expansion. Read each active task's Outstanding verification in `verification.md`,
 and when an item names a task in another repository, run the same query there and read that task
-too.
+too. Take kickoff from `roadmap.kickoff_status`; for a task with kickoff `ready`, read the
+`Authorized boundary` and the current phase's heading in its `00-roadmap.md`.
 
 ## Interpretation
 
 | Condition | Action type |
 |----------|-----------|
-| `in-progress` with kickoff `pending` | Continue alignment or replanning, not implementation |
-| `in-progress` with kickoff `ready` | Continue that task's implementation |
+| `in-progress` with kickoff `pending` | Obtain the user decision the next step names, or continue alignment or replanning; not implementation |
+| `in-progress` with kickoff `ready` and a current phase marked `(provisional)` | Replan that phase, not implementation |
+| `in-progress` with kickoff `ready`, a non-provisional current phase, and an `Authorized boundary` that does not cover it | Ask the user how far implementation may proceed |
+| `in-progress` with kickoff `ready`, a non-provisional current phase, and an `Authorized boundary` that covers it | Continue that task's implementation |
 | An Outstanding verification item whose recorded condition evidence shows to hold, on any active task | Run that check by the route its condition names |
 | `blocked` | Investigate the named blocker or required external input |
 | `planned` | Continue planning toward kickoff |
@@ -34,7 +37,6 @@ too.
 - When several tasks are eligible, rank them only from documented deadlines, dependencies, blockers,
   project focus, or an explicit user priority. If no evidence distinguishes them, present the choices
   without inventing a project priority.
-- Use `roadmap.kickoff_status` to distinguish alignment/replanning from runnable implementation.
 - Never recommend decision-dependent implementation while kickoff is `pending`.
 - Treat `timeline.commits` as bounded task-trailer evidence. An empty or scan-limited timeline leaves
   progress unknown beyond its evidence boundary.
