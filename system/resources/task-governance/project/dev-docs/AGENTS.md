@@ -20,9 +20,9 @@ below or other supporting documents and directories when the actual work benefit
 each addition a distinct, durable purpose and do not use one to duplicate the goal, status, plan,
 decisions, architecture, or verification authorities.
 
-Templates are starting shapes, not a request for filler. Preserve headings and fields consumed by
-governance tooling, adapt the depth to the task, remove authoring prompts, and record uncertainty
-instead of inventing facts. Omit irrelevant optional detail where the contract allows it.
+Use templates as starting shapes: preserve the headings and fields governance tooling consumes,
+adapt the depth to the task, remove authoring prompts, and record uncertainty instead of inventing
+facts.
 
 Each immediate child of `dev-docs/archive/` is one archived task and contains exactly:
 
@@ -33,7 +33,7 @@ dev-docs/archive/<slug>/
 ```
 
 Archive location makes the effective state `archived`. `summary.md` preserves the durable outcome
-and evidence; the active working files do not survive the archive transition.
+and evidence.
 
 When behavior, interfaces, or implementation paths described in task records are removed or
 replaced, identify the affected active bundles and archived summaries and reconcile them in the
@@ -70,40 +70,43 @@ documents.
 
 Evidence holds results. A result holds for its recorded baseline: commit or build, configuration,
 platform, and sample. Count it for a newer baseline only after rerunning the check there or showing
-that the changes since cannot reach it.
+that the changes since cannot reach it; changes to task records alone (`dev-docs/`, `.ai/`) never
+reach it.
 
 Every required check without a passing result that holds for the current baseline, including one
-that needs a rerun, is an Outstanding verification item. Each item gives a short label, the
-behavior to prove with the evidence qualification it needs (platform, build, identity), its
-condition to run (business-time gates, another task's work it waits on, and how it reaches a shared
-environment), one owner task named with its repository when it lives in another one, and, for a
-check only a later environment can run, the task expected to take it over: its ID once that task
-is opened, otherwise the work that will take the check over.
-Phases and campaign rows cite items by label. A check several tasks need belongs to one of them;
-the others record a depends-on relationship to that task in the roadmap instead of an item.
-Another task takes an item over by listing it with itself as owner, and its result closes the
-item. The taker may restate the item; it records any part it cannot meet as a limitation and keeps
-that part as an Outstanding verification item. When the task has deployment changes, keep one
-confirmation item per target environment named in Deployment changes, owned by this task until a
-task that deploys them there takes it over. A shared test environment is not a target environment.
+that needs a rerun, is an Outstanding verification item with:
+
+- a short label, which phases and campaign rows cite;
+- the behavior to prove and the evidence qualification it needs (platform, build, identity);
+- its condition to run: business-time gates, another task's work it waits on, and how it reaches
+  a shared environment;
+- one owner task, named with its repository when it lives in another one;
+- for a check only a later environment can run, the task expected to take it over: its ID once
+  that task is opened, otherwise the work that will take the check over.
+
+A check several tasks need belongs to one of them; the others record a depends-on relationship to
+that task in the roadmap instead of an item. Another task takes an item over by listing it with
+itself as owner, and its result closes the item. The taker may restate the item; it records any
+part it cannot meet as a limitation and keeps that part as an Outstanding verification item. When
+the task has deployment changes, keep one confirmation item per target environment named in
+Deployment changes, owned by this task until a task that deploys them there takes it over. A shared
+test environment is not a target environment.
 
 A phase's Verification names by label the items the phase must close, including an item another
-task owns through a depends-on relationship, which that task's result closes. Schedule each item
-in the first phase where its condition can hold: a check waiting on another task's work goes in
-the first phase after that work can be available, and a check only a later environment can run
-goes in no phase. A phase closes when each item it names has a passing result; move an item that
-turns out to need a later environment out of the phase. Begin the next phase only after the
-current one closes.
+task owns through a depends-on relationship; that task's result closes it, and the phase waits on
+that result, never on the owner's planning. Schedule each item in the first phase where its
+condition can hold: a check waiting on another task's work goes in the first phase after that work
+can be available, and a check only a later environment can run goes in no phase. A phase closes
+when each item it names has a passing result; move an item that turns out to need a later
+environment out of the phase. Begin the next phase only after the current one closes.
 
 Mark a later phase `(provisional)` in its heading while current evidence does not support its
-detail. When a provisional phase becomes current, its next step is replanning; only the planning
-checkpoint that makes the phase executable removes the label.
+detail. When it becomes current, remove the label in the next checkpoint if its named items and
+planned changes still hold; otherwise replan it before implementing it.
 
-`Done when` holds the task's current acceptance references. They do not independently prove
-completion or override confirmed requirements, repository reality, verification evidence, or
-required user acceptance. Revise an outdated item when the understood outcome changes instead of
-using it to block or justify completion mechanically. Roadmap phase outcomes and exit criteria
-guide execution only; they do not define task acceptance.
+`Done when` holds the task's current acceptance references; revise an item when the understood
+outcome changes. Neither `Done when` nor roadmap exit criteria prove completion or override
+confirmed requirements, repository reality, verification evidence, or required user acceptance.
 
 ## Lifecycle model
 

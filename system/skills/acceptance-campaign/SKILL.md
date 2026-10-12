@@ -17,8 +17,8 @@ slots.
 - Run test batches in parallel only across slots and data partitions; give each slot and each
   partition to one batch at a time. Let a batch hold several slots for a cross-system journey. A
   batch holds every partition it writes and every shared state its acceptance depends on: the
-  whole group when a write affects it (attendance affects a class), and any shared object it
-  changes (an organization-wide setting, an identity's roles, a shared catalog, a global flag).
+  whole group when a write to one member affects it, and any shared object it changes (an
+  organization-wide setting, an identity's roles, a shared catalog, a global flag).
   Share only stable read-only content; put work whose effects cannot be separated in a window
   (section 5).
 - Run fix and integration work off the lane, in worktrees, disposable databases, and local test
@@ -52,9 +52,8 @@ slots.
    recordings, logs, API captures), and, if the project has none, the runbook there. Leave adopted
    evidence where it is and link to it.
 3. Take the scope the user names, and read only its tasks' records, starting with
-   `verification.md`: on the main line, or at the newest occurrence the governance query reports,
-   until the candidate heads are settled, then again at those heads. Write `progress.md` yourself,
-   as one current snapshot, in the format of
+   `verification.md` on the main line or at the newest occurrence the governance query reports.
+   Write `progress.md` yourself, as one current snapshot, in the format of
    [references/progress-format.md](references/progress-format.md): a row for each Outstanding
    verification item that a named task owns and the lane can check, and for an acceptance
    condition only when the user names it for the lane; each ledger mapped to its repository task
@@ -207,8 +206,8 @@ new Outstanding verification item that a named task owns and the lane can check.
   sample as consumed. Never accept a ready line, a git ref, or a passing retest as a load proof,
   and count a probe only for the service and path it covers.
 - **Retest**: take the rows and components that the fix units, the integrator, or the lane operator
-  name as directly affected by this lane change, add the rows reached through contracts, permissions, or shared
-  logic, and retest that set. Turn its `passed` rows to `partial`, keeping their evidence and
+  name as directly affected by this lane change, add the rows reached through contracts,
+  permissions, or shared logic, and retest that set. Turn its `passed` rows to `partial`, keeping their evidence and
   baseline, and leave `failed` rows `failed` until their failed qualification is retested; set each
   row's Remaining to the retest and list the retest in Next. For a row whose change crosses layers,
   take the evidence on the reader side. If the retest needs consumed samples, seed replacements

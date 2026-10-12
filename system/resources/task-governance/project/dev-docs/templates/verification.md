@@ -1,6 +1,6 @@
 # Verification
 
-<!-- Keep the latest decisive results, the checks still open, and this task's deployment changes, as `dev-docs/AGENTS.md` defines them. This is evidence, not a second acceptance authority or a test log. Remove authoring comments. -->
+<!-- Keep the latest decisive results, the checks still open, and this task's deployment changes, as `dev-docs/AGENTS.md` defines them; no test logs. Remove authoring comments. -->
 
 ## Evidence
 

@@ -29,7 +29,7 @@ For each task, take the first row that matches; the last row applies to the proj
 |----------|-----------|
 | An Outstanding verification item whose recorded condition evidence shows to hold | Run that check by the route its condition names |
 | `in-progress` with kickoff `pending` | Obtain the user decision the next step names, or continue alignment or replanning; not implementation |
-| `in-progress` with kickoff `ready` and a current phase marked `(provisional)` | Replan that phase, not implementation |
+| `in-progress` with kickoff `ready` and a current phase marked `(provisional)` | Apply the provisional-phase rule in `dev-docs/AGENTS.md`: remove the label or replan the phase, not implementation |
 | `in-progress` with kickoff `ready`, a non-provisional current phase, and an `Authorized boundary` that does not cover it | Ask the user how far implementation may proceed |
 | `in-progress` with kickoff `ready`, a non-provisional current phase, and an `Authorized boundary` that covers it | Continue that task's implementation |
 | `blocked` | Investigate the named blocker or required external input |
