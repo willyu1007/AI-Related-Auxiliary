@@ -51,13 +51,14 @@ slots.
    kebab-case slug. Put `progress.md`, the rendered `index.html`, `evidence/` (screenshots,
    recordings, logs, API captures), and, if the project has none, the runbook there. Leave adopted
    evidence where it is and link to it.
-3. Take the scope the user names, and read only its tasks' `verification.md`: at the heads the
-   lane will load, otherwise at the newest occurrence the governance query reports. Write
-   `progress.md` yourself, as one current snapshot, in the format of
+3. Take the scope the user names, and read only its tasks' records, starting with
+   `verification.md`: on the main line, or at the newest occurrence the governance query reports,
+   until the candidate heads are settled, then again at those heads. Write `progress.md` yourself,
+   as one current snapshot, in the format of
    [references/progress-format.md](references/progress-format.md): a row for each Outstanding
-   verification item that a named task owns and the lane can check, and for
-   an acceptance condition only when the user names it for the lane; each ledger mapped to its
-   repository task in the `Tasks` header; and this session named in the `Coordinator` header.
+   verification item that a named task owns and the lane can check, and for an acceptance
+   condition only when the user names it for the lane; each ledger mapped to its repository task
+   in the `Tasks` header; and this session named in the `Coordinator` header.
    Carry an existing result with its baseline, as `passed` only when it holds for the current
    Loaded under `<repo-root>/dev-docs/AGENTS.md`, otherwise `partial` with the retest in Remaining.
    When you come across another task's outstanding check, report it to the user as unmapped;
@@ -68,11 +69,11 @@ slots.
 5. Bring the named tasks' deployment changes onto the lane as lane operations (section 5),
    recording switches under `Switches` and the rest under `Loaded`; make one a row only when its
    user-visible behavior is itself an acceptance condition. For each capability the lane has on,
-   have the lane operator check that every configuration it needs has the source and injection
-   path its task's Deployment changes record and reaches the process that consumes it, and prove
-   it ready with the smallest real business chain it serves, writing only to a disposable sample;
-   never take a health check as readiness. Do the same inside the entry whenever a lane change
-   turns a capability on.
+   have the lane operator check that every configuration its task's Deployment changes name has
+   the source and injection path the runbook records for the lane and reaches the process that
+   consumes it, and prove it ready with the smallest real business chain it serves, writing only
+   to a disposable sample; never take a health check as readiness. Do the same inside the entry
+   whenever a lane change turns a capability on.
 6. Schedule time-gated rows (next-day due items, opening hours, expiry) now. Before creating,
    seeding, or consuming test data, read [references/test-data.md](references/test-data.md).
 7. Before planning fixes for a chain, have a test batch walk its user path once on a device slot
@@ -259,7 +260,9 @@ new Outstanding verification item that a named task owns and the lane can check.
     them;
   - rulings that change scope or an acceptance basis → the roadmap's decisions, and `Done when` or
     Out of scope when the scope changed;
-  - out-of-scope gaps → Out of scope.
+  - out-of-scope gaps → Out of scope;
+  - the phase results, status, and `Done when` items those results settle → the task's roadmap and
+    status, including tasks that depend on a written-back item.
 
   For each task, run `node .ai/scripts/ctl-project-governance.mjs sync --task T-### --apply` and
   `lint --task T-###`, commit with its `Task: T-###` trailer, and hand the user the push commands.
@@ -271,5 +274,6 @@ new Outstanding verification item that a named task owns and the lane can check.
   has none, every row not passed has a disposition (fixed, ruled, handed off, or deferred by the
   user), and nothing is pending. Write back what no landing has written back. Report tested and
   untested scope, the handoff package with its release gates, and the verified baseline, and say
-  that execution closure is not release readiness unless those gates are verified. Retire the lane
-  only with the user's agreement.
+  that execution closure is not release readiness unless those gates are verified. Ask the user
+  whether to keep each switch whose ruling ends with the campaign, and turn it off unless they keep
+  it. Retire the lane only with the user's agreement.

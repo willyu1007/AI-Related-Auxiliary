@@ -51,8 +51,9 @@ context:
 - key decisions that still constrain behavior, design, compatibility, migration, or maintenance,
   together with the decisive reasons, evidence, or constraints behind them;
 - project and task relationships, including confirmed follow-up work;
-- deployment changes not yet confirmed in every target environment, and checks another task took
-  over, with that task;
+- under `## Deployment changes not yet confirmed`, the deployment changes not yet confirmed in
+  every target environment, and under `## Checks taken over`, the checks another task took over,
+  with that task;
 - known limitations only when they remain useful.
 
 Keep a rejected alternative only when its rationale prevents a likely harmful reversal. Do not

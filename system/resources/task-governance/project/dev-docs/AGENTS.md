@@ -81,15 +81,18 @@ check only a later environment can run, the task expected to take it over once o
 Phases and campaign rows cite items by label. A check several tasks need belongs to one of them;
 the others record a depends-on relationship to that task in the roadmap instead of an item.
 Another task takes an item over by listing it with itself as owner, and its result closes the
-item. When the task has deployment changes, keep one confirmation item per target environment
-named in Deployment changes, owned by this task until a task that deploys them there takes it
-over. A shared test environment is not a target environment.
+item. The taker may restate the item; it records any part it cannot meet as a limitation and keeps
+that part as an Outstanding verification item. When the task has deployment changes, keep one
+confirmation item per target environment named in Deployment changes, owned by this task until a
+task that deploys them there takes it over. A shared test environment is not a target environment.
 
-A phase's Verification names by label the items the phase must close. Schedule each item in the
-first phase where its condition can hold: a check waiting on another task's work goes in the first
-phase after that work can be available, and a check only a later environment can run goes in no
-phase. A phase closes when each item it names has a passing result; move an item that turns out to
-need a later environment out of the phase. Begin the next phase only after the current one closes.
+A phase's Verification names by label the items the phase must close, including an item another
+task owns through a depends-on relationship, which that task's result closes. Schedule each item
+in the first phase where its condition can hold: a check waiting on another task's work goes in
+the first phase after that work can be available, and a check only a later environment can run
+goes in no phase. A phase closes when each item it names has a passing result; move an item that
+turns out to need a later environment out of the phase. Begin the next phase only after the
+current one closes.
 
 `Done when` holds the task's current acceptance references. They do not independently prove
 completion or override confirmed requirements, repository reality, verification evidence, or
@@ -168,7 +171,9 @@ Use each source only for what it proves:
   Milestones, Features, and their task mappings; its task entries are projections of task bundles.
 - Generated hub views are derived and may be rebuilt. Neither registry task entries nor generated
   views override a task bundle.
-- Git history proves committed work; a task commit carries exactly one `Task: T-###` trailer.
+- Git history proves committed work; a task commit carries exactly one `Task: T-###` trailer, in
+  its final paragraph together with any other trailers. Commit verified code before recording
+  evidence that names its commit, then record that evidence in a following checkpoint.
 - The worktree proves current uncommitted work.
 
 Report disagreements instead of silently choosing one source. Never describe uncommitted or

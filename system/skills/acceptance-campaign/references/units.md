@@ -141,9 +141,10 @@ repositories. Return the candidate heads, the merged branches, their combined mi
 dependency, manifest, and contract changes, the rows and components that merged code from outside
 fix units directly affects, and the fix units' load proofs; leave the lane to its operator.
 Land: in a fresh worktree per repository, branch from its lane head and confirm the main line is
-an ancestor. Update repository-required artifacts in the repository's order: <locks, pins,
-generated files>. Leave task records to the coordinator. Finish the depended-on repository first. Run the formal gates on each final head
-in a clean tree. Return the final heads and push commands that check ancestry and push without
+an ancestor; when the main line has moved ahead, merge it into the landing head. Update
+repository-required artifacts in the repository's order: <locks, pins, generated files>. Leave
+task records to the coordinator. Finish the depended-on repository first. Run the formal gates on
+each final head in a clean tree. Return the final heads and push commands that check ancestry and push without
 touching main checkouts, in landing order.
 When a replay, rebase, or merge did not trigger the repository's hooks, run their checks by hand.
 Return the checks you ran and their exit codes. Do not push and do not bypass hooks.

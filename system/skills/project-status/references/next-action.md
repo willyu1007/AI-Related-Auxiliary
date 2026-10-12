@@ -17,7 +17,7 @@ node .ai/scripts/ctl-project-governance.mjs resume --repo-root <worktree_path> -
 
 Use packet warnings and `truncated_fields` to decide whether the underlying Git or task evidence
 needs selective expansion. Read each active task's Outstanding verification in `verification.md`,
-and when an owner names a task in another repository, run the same query there and read that task
+and when an item names a task in another repository, run the same query there and read that task
 too.
 
 ## Interpretation
