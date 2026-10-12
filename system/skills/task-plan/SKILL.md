@@ -53,9 +53,9 @@ Converge one task bundle into a coherent current plan without creating a second 
 
    - Keep the task outcome, boundaries, and acceptance references aligned with the current direction. Leave unresolved material changes as decisions rather than recording them as settled facts.
    - Add, revise, or remove decisions, assumptions, relationships, risks, settled design, verification, and supporting context according to their current relevance.
-   - Build or revise phases at the level supported by current evidence. They should collectively reach the task outcome and completion contract, express coherent results rather than technical layers, make the first unfinished phase executable, and keep unsupported later detail provisional. Keep work in this task only while it serves the same outcome and lifecycle; represent independent outcomes as related tasks.
+   - Build or revise phases at the level supported by current evidence. They should collectively reach the task outcome and completion contract, express coherent results rather than technical layers, make the first unfinished phase executable, and mark later phases provisional under `dev-docs/AGENTS.md`. Keep work in this task only while it serves the same outcome and lifecycle; represent independent outcomes as related tasks.
    - Record each check a phase must pass, including the regressions the change affects, as an Outstanding verification item, and schedule and name it in phases, under `dev-docs/AGENTS.md`. Before recording a check a related task also needs, read that task's `verification.md`; when it already holds the check, record a depends-on relationship instead. Record the deployment changes the route introduces, with each target environment and its confirmation item. When the task deploys other tasks' work, read each of their `verification.md` files in their own repositories and take over the items `dev-docs/AGENTS.md` assigns to a deploying task. When the task changes a user path, schedule in the earliest feasible phase one walk of that path on a client build with the shipping configuration, checking its build configuration, server switches, role permissions, and the business state the path needs.
-   - After each material reconciliation, re-evaluate progress and the kickoff gate under the lifecycle model in `dev-docs/AGENTS.md`, and the next action. If the route exposes a missing top-level decision or contradiction, return to Step 2.
+   - After each material reconciliation, re-evaluate decision status, progress, the kickoff gate, and its `Authorized boundary` under the lifecycle model in `dev-docs/AGENTS.md`, and the next action. If the route exposes a missing top-level decision or contradiction, return to Step 2.
 
    Do not copy the conversation transcript into the bundle. Repeat Steps 2 and 3 as feedback or
    evidence materially changes the direction.
@@ -88,6 +88,7 @@ Converge one task bundle into a coherent current plan without creating a second 
    - Kickoff: `ready` / `pending`
    - Reason:
    - First action:
+   - Authorized boundary:
 
    **Material risks or relationships**
    - ...
@@ -96,11 +97,16 @@ Converge one task bundle into a coherent current plan without creating a second 
    - Approve this planning checkpoint or provide corrections.
    ```
 
+   When kickoff is `ready` and no authorization on the gate or in the request covers the current
+   phase, recommend an execution boundary under Readiness and list the current phases as
+   cumulative stopping points, using outcomes rather than implementation detail. Mark provisional
+   boundaries honestly and let the user choose how far to proceed as part of the confirmation.
+
    After feedback, return to Steps 2 and 3, then present only the changed direction and its effects
    on decisions, phases, and readiness unless the plan changed enough to require a new full
    checkpoint. End with one explicit request to approve the checkpoint or provide corrections.
-   Proceed only after the user confirms that no further planning changes are needed; confirmation
-   does not close choices still recorded as unresolved.
+   Proceed only after the user confirms, in advance or in reply, that no further planning changes
+   are needed; record their decision answers and boundary choice under `dev-docs/AGENTS.md`.
 
 5. **Create the planning checkpoint.** After user confirmation, synchronize and validate
    governance, then inspect the resulting task bundle, final diff, and entire worktree. Confirm
@@ -140,14 +146,7 @@ Converge one task bundle into a coherent current plan without creating a second 
    - Material task relationships or preserved foreign changes:
    ```
 
-   If kickoff is `ready` and implementation scope is not already clear, recommend an execution
-   boundary and list the current phases as cumulative stopping points, using outcomes rather than
-   implementation detail. Mark provisional boundaries honestly and let the user choose how far to
-   proceed. Record the user's choice on the kickoff gate's `Authorized boundary` line. Existing implementation authorization — including a boundary
-   already recorded on the gate — takes precedence; do not ask again when the user has already
-   selected a boundary or authorized the complete task.
-
    Planning approval alone does not authorize implementation. Begin or resume implementation only
-   within the authorized boundary and while kickoff remains `ready`; any selected scope remains
-   subject to newly discovered top-level decisions and required external approvals. Otherwise stop
-   after the handback.
+   as the `Authorized boundary` rules in `dev-docs/AGENTS.md` allow and while kickoff remains
+   `ready`; any selected scope remains subject to newly discovered top-level decisions and required
+   external approvals. Otherwise stop after the handback.

@@ -65,11 +65,11 @@ Use the deepest applicable level.
    covers, rerun the check or return it to Outstanding verification. When it adds or changes
    behavior that a check must cover, add the check there with the regressions it affects, and
    schedule it under `dev-docs/AGENTS.md`. When it adds or changes deployment, update Deployment
-   changes and their confirmation items. At a phase boundary, apply the phase-closing rule in
-   `dev-docs/AGENTS.md`; otherwise leave the phase open. At completion, for each later-environment
-   check or exit condition this task still owns, read the expected taker's `verification.md`: when
-   it lists the item with itself as owner, name that task as the owner here; otherwise ask the user
-   to open or name one, and never create it yourself.
+   changes and their confirmation items. At a phase boundary, apply the phase-closing and
+   provisional-phase rules in `dev-docs/AGENTS.md`; otherwise leave the phase open. At completion,
+   for each later-environment check or exit condition this task still owns, read the expected
+   taker's `verification.md`: when it lists the item with itself as owner, name that task as the
+   owner here; otherwise ask the user to open or name one, and never create it yourself.
 
    Create `implementation.md` from `<repo-root>/dev-docs/templates/implementation.md` only when its durable map would help a fresh agent understand the realized design. Create `pitfalls.md` from `<repo-root>/dev-docs/templates/pitfalls.md` only after a recurring hazard has evidence. Do not append routine history, ordinary TODOs, or repeated test logs to either. Remove obsolete pitfalls after prevention is encoded and the warning is no longer useful. Put bulky raw evidence in `artifacts/`.
 

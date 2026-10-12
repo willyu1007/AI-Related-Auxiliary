@@ -41,7 +41,7 @@ An empty linked commit timeline means progress is unknown, not zero.
 
 Reconcile the packet under the authority model in `dev-docs/AGENTS.md`.
 
-Context reconstruction is read-only. When the enclosing request authorizes continuing or changing the task, return to the current execution workflow from the recovered next action.
+Context reconstruction is read-only. When the enclosing request authorizes continuing or changing the task, continue from the recovered next action: inside the enclosing workflow when one is active, otherwise by taking that action as the current request, under the kickoff and `Authorized boundary` rules in `dev-docs/AGENTS.md`.
 
 ## Communicate when needed
 

@@ -94,6 +94,10 @@ goes in no phase. A phase closes when each item it names has a passing result; m
 turns out to need a later environment out of the phase. Begin the next phase only after the
 current one closes.
 
+Mark a later phase `(provisional)` in its heading while current evidence does not support its
+detail. When a provisional phase becomes current, its next step is replanning; only the planning
+checkpoint that makes the phase executable removes the label.
+
 `Done when` holds the task's current acceptance references. They do not independently prove
 completion or override confirmed requirements, repository reality, verification evidence, or
 required user acceptance. Revise an outdated item when the understood outcome changes instead of
@@ -105,9 +109,11 @@ guide execution only; they do not define task acceptance.
 Progress lives in `01-status.md` under `## Progress` as exactly one `State:` value:
 
 - **`planned`** — The task is opened but no later alignment, discovery, or implementation
-  checkpoint has landed; the first such checkpoint moves it to `in-progress`.
+  checkpoint has landed. The first such checkpoint, a planning checkpoint included, lands with
+  `State: in-progress`.
 - **`in-progress`** — Work is actively advancing.
-- **`blocked`** — External input or a dependency prevents meaningful progress.
+- **`blocked`** — External input or a dependency prevents meaningful progress. Waiting on a user
+  decision is not `blocked`; name the decision as the next step.
 - **`done`** — The task-level completion contract below holds.
 
 ### Completion contract
@@ -150,12 +156,22 @@ Implementation readiness lives separately in the roadmap kickoff gate:
   depends on the unresolved route may not.
 - `ready` means every gate item is checked and the first implementation action can begin without
   reopening the route.
+- In the roadmap's decision table, `proposed` awaits its named confirmation or evidence and
+  `decided` has it. Only the user's answer to a user-owned decision, given in advance or in reply,
+  decides it; approving a planning checkpoint, in advance or after review, answers none of the
+  decisions it lists as needing confirmation. Write each status as it stands when its checkpoint
+  lands.
 - When evidence invalidates a gating premise or route, set kickoff to `pending` at once, uncheck
   the invalidated gate items, and pause route-dependent implementation until alignment is restored.
 - The gate's `Authorized boundary` line records how far the user has authorized implementation:
-  `none`, a phase boundary such as `through phase 2`, or `complete task`. Reset it to `none` when
-  the route materially changes — phases added, removed, or redirected — not when phase detail is
-  refined inside the approved route.
+  `none`, a phase boundary such as `through phase 2`, or `complete task`. Write a new
+  authorization into the next checkpoint that lands after the user gives it; an authorization
+  alone does not warrant a checkpoint. The boundary limits implementation and does not request it:
+  implementation begins only when the current request or an enclosing workflow asks for it.
+- Reset `Authorized boundary` to `none` when the route materially changes: a phase is added,
+  removed, or reordered, its outcome changes, or it takes on scope the authorized route did not
+  include, such as a new entry point. Keep it when planning only refines how a phase reaches its
+  authorized outcome and scope.
 - A `done` task must have kickoff `ready`.
 
 A completed task remains active with `State: done` until an authorized archive transition is

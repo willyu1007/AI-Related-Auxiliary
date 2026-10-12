@@ -19,7 +19,7 @@
 |---|---|---|---|---|---|---|
 | <!-- material top-level question --> | <!-- viable choices and material tradeoffs --> | <!-- recommendation or settled choice --> | open / proposed / decided / superseded | <!-- user, role, or evidence owner --> | <!-- confirmation or evidence that closes it --> | <!-- effect on scope, design, plan, or verification --> |
 
-<!-- Track only choices that can change scope, design, sequencing, or verification. `proposed` awaits its named confirmation or evidence; `decided` has it. Use one `None` row when no material choice exists. -->
+<!-- Track only choices that can change scope, design, sequencing, or verification. Set `Status` under the kickoff rules in `dev-docs/AGENTS.md`. Use one `None` row when no material choice exists. -->
 
 ### Assumptions
 
