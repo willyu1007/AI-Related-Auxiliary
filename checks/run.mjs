@@ -2,8 +2,8 @@
 /**
  * checks/run.mjs
  *
- * Static self-check for this library: scan system/ for dangling references,
- * cross-linked skills, drifted global docs, and hygiene problems.
+ * Self-check for this library: scan system/ for dangling references, cross-linked skills,
+ * drifted global docs, and hygiene problems, then run behavioral checks of shipped scripts.
  *
  * `checks/` validates the library; `system/` is the library. Nothing under checks/ is ever copied
  * into a target project.
@@ -22,6 +22,7 @@ import {
   skillsForProfile,
 } from '../install-system-auxiliary.mjs';
 import { sensitiveOpsTemplateFailures } from './sensitive-ops.mjs';
+import { taskGovernanceArchiveFailures } from './task-governance.mjs';
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SKILLS_DIR = path.join(REPO_ROOT, 'system', 'skills');
@@ -322,6 +323,11 @@ function runBehavioral() {
     fail('sensitive-ops-template', message);
   }
   if (messages.length === 0) console.log(c.green('  ok') + c.dim('  sensitive-ops template'));
+  const governance = taskGovernanceArchiveFailures();
+  for (const message of governance) {
+    fail('task-governance-archive', message);
+  }
+  if (governance.length === 0) console.log(c.green('  ok') + c.dim('  task-governance archive over an older worktree copy'));
 }
 
 function main() {

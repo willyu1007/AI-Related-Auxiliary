@@ -684,6 +684,17 @@ function committedBundleDigest(repoRoot, sha, relPath) {
   return lines.sort().join('\n');
 }
 
+/**
+ * The committed bundle an occurrence descends from. Archiving only moves a bundle, so an archived
+ * copy whose move is not committed yet descends from the active bundle of the same slug.
+ */
+function lineageBundleDigest(repoRoot, sha, relPath) {
+  const digest = committedBundleDigest(repoRoot, sha, relPath);
+  const archived = toPosix(relPath).match(/^dev-docs\/archive\/([^/]+)$/);
+  if (digest !== '' || !archived) return digest;
+  return committedBundleDigest(repoRoot, sha, `dev-docs/active/${archived[1]}`);
+}
+
 function serializeTaskProjection(featureId, milestoneId) {
   return `${featureId || ''}\u0000${milestoneId || ''}`;
 }
@@ -783,13 +794,14 @@ function resolveStaleTaskOccurrences(repoRoot, taskId, ordered, conflicts) {
       ]);
     }
     state.head = headRaw.trim();
-    const headBundle = committedBundleDigest(repoRoot, state.head, state.occurrence.dev_docs_path);
+    const headBundle = lineageBundleDigest(repoRoot, state.head, state.occurrence.dev_docs_path);
     if (headBundle === null) {
       return failWith('unreadable-evidence', [
         { ...taskOccurrenceRef(state.occurrence), stage: 'head-bundle' },
       ]);
     }
-    // A bundle absent from its own HEAD has no provable lineage.
+    // A bundle absent from its own HEAD (at its path, or the active path it was archived from)
+    // has no provable lineage.
     if (headBundle === '') {
       return failWith('missing-lineage', [
         { ...taskOccurrenceRef(state.occurrence), stage: 'head-bundle' },
