@@ -18,7 +18,9 @@ diagnosis does not authorize mutation.
 
 ## Load the matching reference
 
-Read only the file that matches the symptom. Do not load the rest.
+Start with the reference that matches the symptom. Load another only when
+evidence or an explicit cross-reference points to that layer; do not load
+unrelated files.
 
 | Symptom / keywords | Reference |
 |---|---|

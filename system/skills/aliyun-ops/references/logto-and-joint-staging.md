@@ -118,20 +118,20 @@ flow, allowlist input, and verification method. After real participants
 arrive: register, confirm identity, grant, create and bind business entities,
 then fill real IDs.
 
-When both products are in scope: My-Chat owns global family and child
-identity; The-Nurture's local child ID must not stand in for a global child
-ID. Family or child identity is created by an authorized parent or steward, or
-under explicit authorization. Campus staff data does not automatically grant
-that power. A routing bind does not grant Nurture data access.
+Across products, read the project's authoritative identity ownership and
+authorization rules. Do not substitute a product-local ID for a shared
+identity. Create identities and bindings only through the authorized flow;
+a staff roster or routing bind does not itself grant identity-creation or
+business-data access.
 
 ## L13 A campus timezone policy must be written to an existing, exact campus
 
-When this project's `set-institution-time-policy.mjs` is the writer, read this
-run's parameters, default timezone, publish time, retry time, and idempotency
-rules. The script validates an active institution, workspace, and exact name.
-Do not run it against a fictional campus ID. Write to the real target and read
-back. The same config must not create a new version. Steps may be prepared
-before data exists; do not forge "write completed".
+Use the project's documented initialization writer and verify its target
+selection, timezone and scheduling parameters, and idempotency rules. Confirm
+the existing target, its lifecycle state, and workspace before writing; do not
+use a fictional campus ID. Read back the policy and version under that
+writer's contract; do not assume every writer deduplicates identical input.
+Steps may be prepared before data exists; do not forge "write completed".
 
 ## L14 After the loop closes, handle external waits; do not treat polling as progress
 

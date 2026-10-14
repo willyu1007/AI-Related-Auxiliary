@@ -19,10 +19,11 @@ available does not prove the current version has that CVE.
 
 ## E03 An ECS reboot clears tmpfs; a container restart policy does not restore secrets
 
-After reboot, restore pull credentials and runtime secrets first — BWS
-materialization in a memory directory is gone — then recover affected services
-with the existing scripts. Do not persist a machine token to disk or an image.
-Verify by the business and protected requests, not container `Up`.
+When pull credentials or runtime secrets are materialized in tmpfs, reboot
+removes those files. Restore them through the environment's approved secret
+source and consume path before recovering affected services with the existing
+scripts. Do not persist a machine token to disk or an image. Verify by the
+business and protected requests, not container `Up`.
 
 ## E04 Public egress timeout to one site is not missing NAT
 
@@ -120,7 +121,7 @@ create. If creating, confirm region, zone, vswitch, engine, sku inventory, and
 price now; do not silently downgrade. Distinguish disabled, fully configured,
 and partially misconfigured optional integrations — a Worker that initializes
 an unconfigured optional client can fail all startups. Do not reintroduce a
-retired Convex instance.
+resource that the project's authoritative records mark as retired.
 
 ## E16 Builds and probes can check the wrong thing
 

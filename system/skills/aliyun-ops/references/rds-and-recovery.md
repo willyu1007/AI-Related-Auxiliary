@@ -34,10 +34,12 @@ driver must prove connect and reject a wrong hostname.
 
 ## D04 `sslmode=require` alone does not prove certificate identity checks
 
-Accept a positive connect and rejection of an untrusted CA or wrong hostname.
-Finding `sslmode=require` in a string is not that proof. Some Logto versions
-need `NODE_EXTRA_CA_CERTS` plus the real driver; recheck the current version.
-Do not fix connect by globally disabling certificate checks.
+Separately prove a valid connection succeeds, an untrusted certificate chain
+is rejected, and a wrong hostname is rejected through the real application
+driver. If a check is established by another mechanism, name the mechanism
+and evidence. Finding `sslmode=require` in a string is not that proof. Some
+Logto versions need `NODE_EXTRA_CA_CERTS` plus the real driver; recheck the
+current version. Do not fix connect by globally disabling certificate checks.
 
 ## D05 A privileged admin is not necessarily the business-database owner
 

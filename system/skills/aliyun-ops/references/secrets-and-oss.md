@@ -42,12 +42,14 @@ capabilities actually enabled.
 
 ## S05 Creating a secret still leaves materialization and runtime consume
 
-Follow the existing BWS → temp file → `*_FILE` consume path and check the
-loader allowlist. A full deploy overlay must keep optional secret references;
-an unused capability may be empty but must not drop the contract. A new vault
-value is not in effect. For bind-mount inode after atomic replace, see
-ecs-network-and-releases.md E08. For tmpfs after reboot, see
-ecs-network-and-releases.md E03.
+Follow the environment's approved secret source, injection, and consume path;
+check any applicable loader allowlist. Do not substitute BWS or file mounts
+for an approved role-based, managed-secret, or in-memory path. For optional
+capabilities, verify the project's disabled-state contract rather than
+requiring every secret reference to remain. A new vault value is not proof of
+runtime consumption. When file mounts are used, see ecs-network-and-releases.md
+E08 for bind-mount inode after atomic replace; when files live in tmpfs, see
+E03 in that file for reboot recovery.
 
 ## S06 KMS showing Enabled does not mean the intended secret type is supported
 
