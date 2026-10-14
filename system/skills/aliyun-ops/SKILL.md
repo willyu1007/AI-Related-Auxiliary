@@ -25,7 +25,7 @@ unrelated files.
 | Symptom / keywords | Reference |
 |---|---|
 | Blank console, DMS, OpenAPI, CloudShell, Workbench, unclear result | [console-and-access.md](references/console-and-access.md) |
-| ECS vulnerability, snapshot, reboot, egress timeout, NAT, Docker, ACR, rollback | [ecs-network-and-releases.md](references/ecs-network-and-releases.md) |
+| ECS vulnerability, snapshot, reboot, egress timeout, NAT, Docker, ACR, shared deployment, prune, sidecar, symlink, rollback | [ecs-network-and-releases.md](references/ecs-network-and-releases.md) |
 | RDS SSL, password auth, owner/runtime, RLS, migration, backup restore | [rds-and-recovery.md](references/rds-and-recovery.md) |
 | Private ops document, Bitwarden, BWS, RAM, OSS upload, CORS | [secrets-and-oss.md](references/secrets-and-oss.md) |
 | Logto register/login, port-forward, OAuth, two-product staging | [logto-and-joint-staging.md](references/logto-and-joint-staging.md) |

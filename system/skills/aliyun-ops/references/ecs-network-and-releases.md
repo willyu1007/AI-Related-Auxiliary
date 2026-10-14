@@ -1,7 +1,7 @@
 # ECS, Network, and Releases
 
 Keywords: snapshot, vulnerability, tmpfs, NAT, TLS timeout, DockerHub, ACR,
-image digest, rollback.
+image digest, rollback, shared deployment, prune, sidecar, symlink.
 
 ## E01 A system-disk snapshot is not a full restore
 
@@ -29,32 +29,32 @@ business and protected requests, not container `Up`.
 
 Separate DNS → route / source egress → TCP → TLS/SNI → HTTP → app upstream.
 Confirm the real path of the existing EIP, public IP, NAT, or proxy. Laptop
-success is not ECS success. One-site TCP/TLS timeout, including Cloud Logto,
-while other HTTPS works is not missing NAT, a patch, or one cross-border hop.
+success is not ECS success. Do not infer missing NAT or a specific network
+root cause from one destination timing out while other HTTPS works.
 Do not buy NAT when an egress path already exists. Build a redacted ticket
 with time, target, source environment, and failure stage.
 
 ## E05 A self-hosted service can still depend on external networks
 
 Treat DockerHub, GitHub Releases, vulnerability databases, model APIs, and
-pwned-password checks as egress even when the service is self-hosted in
-Hangzhou. See logto-and-joint-staging.md L05.
+pwned-password checks as egress for self-hosted services. For Logto password
+checks, see logto-and-joint-staging.md L05.
 
 ## E06 A Docker daemon mirror does not guarantee metadata or every tag
 
-Check the actual registry, tag, manifest, and architecture. A present mirror
-can 404 a Node tag and fall back to DockerHub. Use a configured private ACR
-source when needed; do not guess tags. Restarting Docker affects every
-container on the shared host. Lock build-base, runtime-base, and service-image
-digests as the release baseline. Subscription tags discover updates and can
-change digest; they are not an immutable rollback handle.
+Check the actual registry, tag, manifest, and architecture; inspect fallback
+when a mirror misses metadata or a tag. Use an approved private ACR source
+when needed. Pin build-base, runtime-base, and service images under E12;
+mutable subscription tags are discovery inputs, not rollback handles.
+Check the shared-host impact before restarting Docker.
 
 ## E07 If tool distribution fails, do not guess a version or swap an unknown binary
 
-Reconfirm the current official distribution. A working path when a GitHub
-Release times out: official image → lock a usable digest → verify the version
-→ extract the tool from a stopped container. Do not write an old tag as a
-standing instruction.
+Check the current official distribution. If direct download fails and the
+vendor supplies an image containing the tool, record only the image identity
+fields defined in E12; tool extraction does not require a release package.
+Verify the version and platform, and extract it from a stopped container.
+Do not substitute an unverified binary or historical tag.
 
 ## E08 Runtime checks produce false negatives
 
@@ -75,8 +75,8 @@ existing parser and emit only non-secret fields. Do not log full
 
 ## E10 Local tool prep can disagree with the cloud environment
 
-- After `corepack prepare --activate`, verify the real `pnpm` path and
-  version; enable it explicitly when needed.
+- After package-manager setup, verify the executable path and version in the
+  target shell; enable the required shim when applicable.
 - On an old ECS system Python, use a compatible parallel runtime. Do not
   overwrite the OS Python link.
 - Exclude AppleDouble `._*` from the package and Docker context. Clean only
@@ -91,11 +91,15 @@ pass, and do not reuse a failed immutable tag.
 
 ## E12 A release package must be complete, not "what changed this time"
 
-A release record must map to source SHA, image digest, complete Compose and
-proxy config, config version, and schema version. Runtime health is not the
-next-boot state on disk. Use reviewed per-service overrides; a global
-`IMAGE_TAG` can affect the wrong service. Do not concatenate unknown versions.
-If config is prepared but not redeployed, write "not in effect".
+A release record must identify its source/build, actual deployment artifacts,
+and effective runtime configuration. For container images, record the exact
+registry/repository@digest, object type, and target platform. Include the
+applicable service definitions (such as Compose or systemd), proxy config,
+config version, and schema version; do not require components the deployment
+does not use. Runtime health is not the next-boot state on disk. Use reviewed
+per-service overrides; a global `IMAGE_TAG` can affect the wrong service. Do
+not concatenate unknown versions. If config is prepared but not redeployed,
+write "not in effect".
 
 ## E13 An old image is not a safe rollback after a breaking database change
 
@@ -125,11 +129,62 @@ resource that the project's authoritative records mark as retired.
 
 ## E16 Builds and probes can check the wrong thing
 
-- Keep product dependency chains serial. A scan started beside plan generation
-  can hit an old hostname.
+- Run checks only after their input generation completes; bind them to the
+  generated candidate rather than an earlier artifact.
 - Package verification must cover the actual released assets, including schema
   static files. Do not treat `*` in package `exports` as a literal path.
 - Accept the real provider, region, runtime, and target. A prod plan can PASS
   while still mockcloud/local.
 - Dry-run lazy placeholders are only for offline structure checks. Do not mix
   them into live deploy secrets or default-allow config.
+
+## E17 Shared-host handoff invalidates an earlier inventory
+
+When another session is deploying, do not type into its terminal or clean
+images, release paths, or build inputs it may use. After handoff, reread the
+running and stopped containers, resolved current release, rollback references,
+and relevant host services. A Docker list alone misses systemd applications.
+Map Compose project/service labels and network dependencies before treating
+container count as project count or deciding that a service is redundant.
+
+## E18 Reclaimable space is not a deletion allowlist
+
+Protect images referenced by containers, images named by a frozen release
+record, rollback configuration, and recovery tools. Untagged, old, or
+Docker-reported reclaimable images can still be needed. Separate local cache
+removal from remote ACR deletion. An object present in ACR does not make the
+local image disposable, and a local cache that can be pulled again does not
+make the remote original disposable.
+
+For authorized cleanup, record exact candidates and why they are unused.
+Recheck current use, rollback references, and whether the recorded
+registry/repository@digest and target platform can actually be pulled again.
+Remove only the listed objects without force or broad prune. Compare actual
+disk space and service state afterward; summed image sizes double-count
+shared layers. Keep volumes, backups, and unrelated projects outside an
+image-cache cleanup.
+
+## E19 An index digest is not a local image ID
+
+An index, platform manifest, and image config have distinct digests. Using the
+release reference recorded under E12, resolve an index to the intended
+platform manifest; a direct manifest reference needs no index resolution.
+Compare that manifest's config digest with the local image ID, not the index
+digest. An index-to-image-ID mismatch is not an image mismatch.
+
+## E20 Replacing a namespace provider can strand its sidecar
+
+Inspect Compose network mode and runtime namespace dependencies before
+recreating a service. A TLS sidecar using another container's network
+namespace may need recreation with that provider. Recheck the dependent
+internal request path as well as public health; public health alone can pass
+while the sidecar still points at the old namespace. Limit recreation to the
+verified dependency set.
+
+## E21 A current symlink is not the frozen deployment entry point
+
+Resolve the active release path and read that release's script contract before
+invocation. Some scripts validate their physical path and reject invocation
+through a current symlink. Do not bypass that guard or substitute a newer
+main-branch script into an old release. Confirm source, config, and image
+references belong to the same release before executing it.

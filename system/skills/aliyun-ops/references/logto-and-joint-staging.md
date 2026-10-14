@@ -1,13 +1,13 @@
 # Auth and Joint Staging
 
-Keywords: OSS, 13002, localhost, 127.0.0.1, state mismatch, session missing,
-HIBP, issuer, allowlist, campus principal.
+Keywords: OSS, localhost, 127.0.0.1, state mismatch, session missing,
+HIBP, issuer, allowlist, business role, initialization.
 
 ## L01 Two "OSS" names are not the same thing
 
-Logto OSS is the open-source self-hosted software. Aliyun OSS is object
-storage. Logto needs a running service and a database; uploading to a bucket
-is not an auth server. Self-hosting does not remove every external dependency.
+Resolve whether "OSS" means self-hosted Logto or Aliyun object storage before
+selecting the target. Check external dependencies under
+ecs-network-and-releases.md E05.
 
 ## L02 A local Console that will not open is not proof the remote service is down
 
@@ -15,18 +15,14 @@ Locate by: local listen → forward process or Workbench session → ECS loopbac
 port → container health → public auth endpoint. `ERR_EMPTY_RESPONSE` can mean
 the local port-forward dropped. Do not open the admin port to the public
 internet to recover Console. After the port returns, a re-login may be
-required. Reuse a few explicit tabs; do not send the user hunting across
-localhost and 127 pages.
+required. For preserving operation tabs, see console-and-access.md C12.
 
-## L03 localhost versus 127.0.0.1 has been a real version issue
+## L03 A rendered Console does not prove its API origin is allowed
 
-Check Console URL, service config, request Origin, and CORS response. Verify
-OPTIONS and actual requests for an allowed origin, and that a disallowed
-origin does not get ACAO. On Logto 1.43 multi-origin production config,
-localhost and 127.0.0.1 are different origins — a localhost Console can render
-while some APIs are rejected. Recheck the current version; do not generalize
-to "every browser forbids localhost". Do not use a wide `*` or disable checks
-in place of consistent config.
+Compare the Console URL, deployed origin configuration, and failing request's
+Origin. Treat localhost and 127.0.0.1 as distinct origins. Verify OPTIONS and
+actual requests for an allowed origin, and absence of ACAO for a disallowed
+origin. Do not replace consistent configuration with `*` or disabled checks.
 
 ## L04 An "unknown error" needs the failing request; do not keep changing the password
 
@@ -38,9 +34,9 @@ root cause.
 
 ## L05 Self-hosted Logto can still call HIBP pwned-password checks
 
-Recheck the actual version and config before reuse. The check may send a
-SHA-1 prefix, not the plaintext password. Turning that dependency off does
-not fix an underlying public-network fault.
+Check whether the deployed version enables HIBP and locate any failing
+outbound request without collecting password payloads. Disabling that check
+does not establish that the network fault is fixed.
 
 Apply `rejects.pwned=false` only when this project's staging business tenant
 and an explicit current approval already chose it. Keep the other constraints.
@@ -60,37 +56,39 @@ Hitting `/sign-in?app_id=...` directly can show "session not found" because
 there was no valid authorization interaction. That is not proof the user is
 missing. A Demo login proves the Demo flow only.
 
-## L07 Console admin, business user, and campus principal are different authorization layers
+## L07 Identity-provider admin, business user, and domain role are different authorization layers
 
 Bind product identity to the real issuer and subject. A Logto
 management-tenant account is not a business-tenant account. A platform global
-admin is not automatically a campus principal (园长). The same email or
+admin does not automatically hold a domain role. The same email or
 username on old Cloud and new OSS does not guarantee the same subject, and
 does not mean the account was migrated.
 
-Grant platform review, campus-creation approval, principal or admin, and
-similar through the product authorization flow. Do not infer a backend admin
-from a displayed email, and do not treat an allowlist as a role grant.
+Grant business roles and resource access through the product's authorized
+flow. Do not infer backend administration rights from a displayed email, and
+do not treat an allowlist as a role grant.
 
 ## L08 Switching issuer affects clients still using old tokens
 
 Before switching, list Web, Admin, Native, and Workbench, and each client,
-callback, audience, and allowed caller. After an API trusts the new OSS, old
-Cloud mobile and admin clients may fail even if old accounts and keys remain.
-Do not leak a client secret. Keeping an explicit rollback config is not
-dual-issuer trust. Switch only in the authorized scope.
+callback, audience, and allowed caller. Verify each client's token acceptance
+against the proposed issuer before switching inside the authorized scope.
+Keeping the old accounts, keys, or rollback config does not establish
+dual-issuer trust.
 
 ## L09 A successful login does not prove role business, database, or cross-product communication
 
 Cover as needed: new user persisted, returning user login,
-insufficient-privilege deny, admin page real API, campus association,
+insufficient-privilege deny, admin page real API, domain-resource association,
 cross-service token, object storage, logout or refresh. Concurrent first login
 can hit a unique-key conflict from a lookup/create race; login can also
 succeed while a missing database column returns 500 on an admin business API.
 
 Fix a race at the provider/subject consistency boundary and recheck. Do not
-paper over it by widening privileges or retrying. Every real product client
-needs its own acceptance. A health endpoint and Demo do not replace that.
+use wider privileges or blind retries as a substitute for the fix. A retry
+after checking the original result must follow the operation's retry and
+idempotency contract. Every real product client needs its own acceptance.
+A health endpoint and Demo do not replace that.
 
 ## L10 The same ECS or RDS can be logically isolated; that is not physical isolation or HA
 
@@ -102,16 +100,16 @@ A prod config template or later design is not prod deployed, load-tested,
 restore-drilled, or sized. Do not create prod as a side effect of an
 internal-test loop.
 
-## L11 A `test_*` name is not a valid ID and not a wildcard grant
+## L11 A test label is not an identity or a wildcard grant
 
 List actual variables from current deploy inputs and consuming code, and name
 which owner an ID belongs to. Exact-set allowlists do not match `test_*` as a
 wildcard. Do not reuse a count from an old report. Staging data may have TEST
 in the display name, but IDs must be generated by the normal flow. Email
-confirms a participant. A Logto subject identifies a user. Neither replaces
-organization, institution, family, or child IDs.
+can help confirm a participant. A Logto subject identifies a user within its
+issuer. Neither substitutes for the product's domain-entity IDs.
 
-## L12 Roster collection and environment prep can be separate; identities must not be prefabricated
+## L12 Environment readiness does not establish participant identities
 
 First prepare the registration entry, admin instructions, invite or grant
 flow, allowlist input, and verification method. After real participants
@@ -121,16 +119,17 @@ then fill real IDs.
 Across products, read the project's authoritative identity ownership and
 authorization rules. Do not substitute a product-local ID for a shared
 identity. Create identities and bindings only through the authorized flow;
-a staff roster or routing bind does not itself grant identity-creation or
+a participant roster or routing bind does not itself grant identity-creation or
 business-data access.
 
-## L13 A campus timezone policy must be written to an existing, exact campus
+## L13 An initialization policy must be applied to the exact authorized target
 
 Use the project's documented initialization writer and verify its target
 selection, timezone and scheduling parameters, and idempotency rules. Confirm
-the existing target, its lifecycle state, and workspace before writing; do not
-use a fictional campus ID. Read back the policy and version under that
-writer's contract; do not assume every writer deduplicates identical input.
+the existing target, its lifecycle state, and applicable tenant or workspace
+scope before writing; do not use a placeholder resource ID. Read back the
+policy and version under that writer's contract; do not assume every writer
+deduplicates identical input.
 Steps may be prepared before data exists; do not forge "write completed".
 
 ## L14 After the loop closes, handle external waits; do not treat polling as progress
