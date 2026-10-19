@@ -75,8 +75,14 @@ When delivering a UI mock:
   or variant label is usually sufficient.
 - Do not add introductory copy, feature summaries, rationale panels, legends, or explanatory
   captions unless explicitly requested.
-- For variants, label them `A`, `B`, `C`... outside the product surface and lay them out for direct
-  comparison.
+- When the mock changes an existing implementation, show the current state beside each changed
+  view: current on the left, proposed on the right, at the same size and with the same data, one
+  row per changed state.
+- Take the current state from a screenshot of the running implementation. When none is available,
+  rebuild it from the code, including the shared containers it renders inside, and label it as
+  rebuilt.
+- Label variants `A`, `B`, `C`... outside the product surface and place them to the right of the
+  current state, or side by side when there is none.
 - Represent tabs, overlays, pagination, and other interactive states as labeled static states or
   variants in the same document.
 - When annotations are requested, place them outside the product surface and keep them visually
