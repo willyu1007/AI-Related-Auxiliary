@@ -26,7 +26,7 @@ When using the default path and migration is needed, if only the legacy `~/Docum
 
 Read this skill before inspecting private document contents; do not batch the skill and raw private files into one output. For discovery or reorganization, process private bytes in memory and emit only an allowlisted heading inventory or sanitized fields. Do not use whole-file dumps, raw matching lines, or raw diffs to inspect a private document.
 
-1. Search within the relevant document or known project locations for headings and matches before reading entries. For private files, return locations or sanitized metadata rather than matching lines that may contain secrets. Read only the fields needed for the task; consume secret values without echoing them.
+1. Locate relevant headings in the document or known project sources, then read only the fields needed for the task. Consume secret values without echoing them.
 2. Prefer stable identifiers, scoped by provider/account and environment. Then try known usernames, emails, endpoints, or aliases. Display names alone do not establish identity; an application account, identity-provider account, and organization membership are distinct objects. Record mappings only when evidenced.
 3. Follow explicit references to the authoritative secret store, account register, or runbook. If necessary, inspect relevant historical records, then perform authorized read-only live checks. Do not scan unrelated disks, vault projects, or accounts.
 4. Distinguish not found in a source from verified absent in the system. Report which source and scope were searched. Before creating a missing-value placeholder, exhaust the relevant document, project evidence, and accessible referenced sources; ask only for the specific unresolved fact or user-bound action.
@@ -52,7 +52,9 @@ Write only fields that have useful facts or need user input:
 
 Use Chinese headings, labels, and placeholders; preserve literal identifiers, commands, endpoints, and credential bytes. Update current facts in place, not under dated task sections. Remove superseded copies only when equivalence and replacement are established. Do not rewrite the whole document for a lookup or one-field update. If an unedited historical section repeats the changed fact, identify that location rather than leaving an undisclosed conflict.
 
-Retain durable access, account, resource, permission, and injection facts. Keep deployment history, incident narratives, task progress, and future product work in their project records. Never retain one-time codes, temporary tokens, sessions, or transient output. For released resources, keep minimal identity/environment/status to prevent reuse; remove obsolete credentials and paths, retaining recovery instructions only while applicable.
+Keep private access facts, environment-specific differences, credential sources, and applicable recovery methods here. Link to verified repository documentation for general setup, startup commands, and configuration contracts; record only private overrides beside the link. Do not maintain a second tutorial or move private values into repository documentation.
+
+Deployment history, incident narratives, task progress, and future work belong in project records. Extract any still-needed private fact before removing such prose; do not create a new archive merely to retain duplicates. Never retain one-time codes, temporary tokens, sessions, or transient output. For released resources, keep minimal identity/environment/status to prevent reuse; remove obsolete credentials and paths only after verifying that recovery no longer needs them.
 
 For an explicitly requested whole-document reorganization, read [restructure.md](references/restructure.md). Ordinary updates do not require this workflow.
 
