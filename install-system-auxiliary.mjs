@@ -78,6 +78,7 @@ export const SKILL_TIER = {
   'sync-db-from-prisma': 'will',
   'manage-llm-config': 'will',
   'aliyun-ops': 'will',
+  'release-handoff': 'will',
 };
 
 /** A profile may replace or omit skills from the ranks it otherwise includes. */
