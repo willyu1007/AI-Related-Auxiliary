@@ -74,7 +74,6 @@ export const SKILL_TIER = {
   wizard: 'general',
   'write-prompt': 'will',
   'sensitive-ops': 'will',
-  'sensitive-ops-modify': 'will',
   'sync-db-from-prisma': 'will',
   'manage-llm-config': 'will',
   'aliyun-ops': 'will',
@@ -101,7 +100,7 @@ export const SKILL_HOST = {
 };
 
 /** Renamed or retired library skills that should not survive profile changes. */
-const OBSOLETE_SKILLS = new Set(['get-sensitive-info', 'test-campaign']);
+const OBSOLETE_SKILLS = new Set(['get-sensitive-info', 'sensitive-ops-modify', 'test-campaign']);
 
 function fail(message) {
   console.error(`[error] ${message}`);
@@ -126,7 +125,7 @@ Profiles:
   general   minimal plus everyday debug, UI, HTML, cleanup, Codex, and wizard
   will      personal: general with sensitive-ops instead of wizard, without C++,
             PowerShell, or the UML skills, plus write-prompt, Prisma, .ai/llm,
-            Aliyun ops, acceptance campaigns, and sensitive-ops-modify
+            Aliyun ops, acceptance campaigns, and release handoff
 
 ~/.codex never receives the three codex-* skills.
 Library skills outside the selected profile are removed from the target.
