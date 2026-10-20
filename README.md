@@ -47,7 +47,7 @@ checks/          # 本仓库自己的校验，不是分发物
 
 技能发现只扫 `system/skills/` 的第一层，所以那一层保持平铺，不要建分组子目录。
 
-## system/ —— 31 个技能
+## system/ —— 32 个技能
 
 任务治理的八个技能按实际操作划分；其中 `goal-mode` 串联同一 Goal 运行内的长任务主线，其余每个对应工作流程里的一个时刻。主线是 `start → plan → implementation`；新证据推翻路线时回到 plan，实施检查点通过 `sync → resume` 走仓库跨越时间，`handoff → 新会话` 则通过对话完成普通任务的零间隔交接。
 
@@ -62,7 +62,7 @@ checks/          # 本仓库自己的校验，不是分发物
 | [project-status](system/skills/project-status/SKILL.md) | 一项或多项任务及项目 hub 的只读状态、归档就绪度与一致性审查 | 仓库 |
 | [goal-mode](system/skills/goal-mode/SKILL.md) | 在同一 Goal 运行内串联 start、planning、分阶段执行、checkpoint、恢复与完成契约 | 仓库 + 对话 |
 
-另有 23 个与任务治理无关的技能：
+另有 24 个与任务治理无关的技能：
 
 | Skill | 用途 |
 |---|---|
@@ -79,6 +79,7 @@ checks/          # 本仓库自己的校验，不是分发物
 | [debug-mode](system/skills/debug-mode/SKILL.md) | 根因不明故障的证据循环：准确症状信号、可证伪假设、授权修复、原始复现验证与自动清理 |
 | [acceptance-campaign](system/skills/acceptance-campaign/SKILL.md) | 在单条车道上推进大范围验收、回归或发布前的测试与修复：统筹派发有界单元（设备批次、修复、车道运维、集成），分流发现，记录用户裁定与交接包，按轮判定，并由 progress.md 生成进度页 |
 | [sensitive-ops](system/skills/sensitive-ops/SKILL.md) | 管理项目级敏感运维上下文及 MFA、OAuth、认证 UI、实体设备等用户绑定步骤；默认使用 `~/Documents/LLM/sensitive-ops.md`（可指定其他私密文档）让用户直接补齐，仅在明确要求时生成可恢复 shell helper |
+| [sensitive-ops-modify](system/skills/sensitive-ops-modify/SKILL.md) | 按提供方 / 环境 / 资源 / 身份维护同一份私密运维文档；使用位置写在身份上，原地更新当前值。仅在用户明确要求整理或按该技能维护时使用 |
 | [manage-ui-style](system/skills/manage-ui-style/SKILL.md) | 继承、探索并沉淀项目 UI 风格，在需要时审计和修复视觉漂移 |
 | [cleanup-project-residue](system/skills/cleanup-project-residue/SKILL.md) | 清理当前 session、任务、近期工作或全项目中的过时测试、冗余内容、语义漂移、双轨/legacy 残留和技术债；证据+批准后删除，校验门收尾 |
 | [resolve-vcs-conflicts](system/skills/resolve-vcs-conflicts/SKILL.md) | 在已获授权且进行中的 merge、rebase、cherry-pick 或 revert 中恢复双方意图并解决 Git 冲突 |
@@ -102,7 +103,7 @@ checks/          # 本仓库自己的校验，不是分发物
 |---|---|---|
 | `minimal` | 基础档 | 治理主线以及 C++、PowerShell（仅 Windows）、review、research、tdd |
 | `general` | 包含 `minimal` | 增加日常调试、UI、HTML、清理、Codex 和 script-first 的 wizard |
-| `will` | 个人档：包含 `general` 的日常技能，但以 sensitive-ops 替换 wizard，且不装 C++、PowerShell 与两套 UML 图技能 | 另含 write-prompt、Prisma、`.ai/llm`、`aliyun-ops`、`acceptance-campaign` |
+| `will` | 个人档：包含 `general` 的日常技能，但以 sensitive-ops 替换 wizard，且不装 C++、PowerShell 与两套 UML 图技能 | 另含 write-prompt、Prisma、`.ai/llm`、`aliyun-ops`、`acceptance-campaign`、`sensitive-ops-modify` |
 
 `wizard` 与 `sensitive-ops` 不会同时安装；`.codex` 在 `general` 和 `will` 下仍不安装三个 `codex-*` 技能。`using-powershell` 只在 Windows（`win32`）安装，且从不进入 `will`；macOS / Linux 会跳过，并删掉目标里已有的副本。
 

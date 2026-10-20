@@ -74,6 +74,7 @@ export const SKILL_TIER = {
   wizard: 'general',
   'write-prompt': 'will',
   'sensitive-ops': 'will',
+  'sensitive-ops-modify': 'will',
   'sync-db-from-prisma': 'will',
   'manage-llm-config': 'will',
   'aliyun-ops': 'will',
@@ -124,7 +125,7 @@ Profiles:
   general   minimal plus everyday debug, UI, HTML, cleanup, Codex, and wizard
   will      personal: general with sensitive-ops instead of wizard, without C++,
             PowerShell, or the UML skills, plus write-prompt, Prisma, .ai/llm,
-            Aliyun ops, and acceptance campaigns
+            Aliyun ops, acceptance campaigns, and sensitive-ops-modify
 
 ~/.codex never receives the three codex-* skills.
 Library skills outside the selected profile are removed from the target.
