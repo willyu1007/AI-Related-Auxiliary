@@ -32,8 +32,10 @@ description: >-
 
 ## Handoff space
 
+Unless the user requests another location, use `<Desktop>/release-handoff/<target>/`.
+
 ```text
-<synced root>/handoff/<target>/
+<Desktop>/release-handoff/<target>/
   deployment.md
   progress.md
   pilots.md

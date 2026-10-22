@@ -11,7 +11,7 @@ Keep it in the local user directory, for example `~/.config/release-handoff/<tar
 
 - Machine:
 - Role: submitter / deployer / both
-- Handoff space path:
+- Handoff space path: `<Desktop>/release-handoff/<target>/`
 - Local repository paths: <repository> → <path>
 - Execution directory (not in the synced folder):
 - Operations skills and runbooks on this machine:
