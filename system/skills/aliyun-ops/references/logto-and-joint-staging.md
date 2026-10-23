@@ -15,7 +15,13 @@ Locate by: local listen → forward process or Workbench session → ECS loopbac
 port → container health → public auth endpoint. `ERR_EMPTY_RESPONSE` can mean
 the local port-forward dropped. Do not open the admin port to the public
 internet to recover Console. After the port returns, a re-login may be
-required. For preserving operation tabs, see console-and-access.md C12.
+required. A listening local socket alone does not prove a working forward:
+check a real HTTP response from the expected service. With command-line
+forwarding, verify the tool's authentication support and bind only the intended
+loopback address. Preserve the configured admin origin exactly (including
+host and port); `localhost` is not a substitute for `127.0.0.1`. Do not kill an
+unknown listener or create a competing forward to fix a stale window. For
+channel selection and session preservation, see console-and-access.md C12–C14.
 
 ## L03 A rendered Console does not prove its API origin is allowed
 

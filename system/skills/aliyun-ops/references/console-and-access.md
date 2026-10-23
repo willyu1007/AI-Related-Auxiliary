@@ -1,7 +1,8 @@
 # Console and Access
 
 Keywords: blank page, SecurityError, OpenAPI, DMS, CloudShell, Workbench,
-MissingParameter, Base64, change confirm.
+MissingParameter, Base64, change confirm, CLI, OAuth, RAM, stale screenshot,
+Session Manager, port forwarding.
 
 ## C01 A blank login or a skeleton resource list is not a dead account or a missing resource
 
@@ -13,9 +14,13 @@ instance count is not proof of engine, region, and target instance.
 
 ## C02 An installed CLI is not a logged-in, authorized client
 
-Prove identity and scope with the smallest read-only call for the needed
-service. An installed `ossutil` or Aliyun CLI is not a logged-in client. Do
-not print a full profile. Docker login or pull access does not establish ACR
+Read caller identity (for example STS GetCallerIdentity where supported),
+then use the smallest read-only call for the intended account, region and
+resource. A profile name such as `default` is not a RAM username or a scope
+restriction; ECS `root` is an OS user, not the cloud caller. Client credentials
+and CLI credentials are not automatically the same. A successful Describe
+call establishes read access only, not permission to deploy. An installed
+`ossutil` or Aliyun CLI is not a logged-in client. Do not print a full profile. Docker login or pull access does not establish ACR
 management-delete authority. Use credentials supported by that API and an
 identity explicitly authorized for the exact operation and resources; do not
 infer deletion authority from an existing application credential or ECS role.
@@ -60,10 +65,18 @@ migrations, define how to handle existing state before submitting.
 
 ## C08 A Workbench disconnect does not cancel a foreground operation
 
-Confirm the process, runtime logs, exit status, and service state. Do not
-redeploy immediately. For a long authorized task, use an execution method that
-can be checked across sessions, and keep a redacted result file, a completion
-mark, and a rollback entry.
+Confirm the process, runtime logs, exit status, and service state. A local
+CLI timeout or lost session also leaves the remote outcome unknown. Retain
+the invocation ID and target instance for Cloud Assistant; query that same
+invocation before submitting another. Request acceptance is not command
+completion. Check per-instance status, exit code, and application readback;
+truncated output is not a full result.
+
+For a long authorized task, use the existing release runner with durable,
+redacted results and a recovery entry. Check service-specific timeout and
+output limits before choosing the transport. A disconnected launcher must
+not start a second runner; detached execution must retain the deployment's
+single-executor and failure-recovery controls.
 
 ## C09 Upload failure and a working terminal can coexist
 
@@ -92,10 +105,54 @@ purpose. Continue only after login completes. If closing a tab would lose a
 terminal, port-forward, or unsaved content, keep that state. Reread the live
 form; do not pin a DOM index or guess a route.
 
-## C13 A connected terminal is not a readable result
+## C13 Bound window recovery, then change channel
 
-A connected Workbench terminal can be reduced to an unreadable thumbnail.
-Restore readability first. Before reconnecting, assess whether it would
-interrupt a pending operation or port-forward. If the original result cannot
-be recovered, verify the operation through an independent read-only channel
-before resubmitting.
+A Client or Workbench can report connected while its screenshot remains on
+an old disconnect dialog, its accessibility tree shows a different tab, or
+keystrokes fail to reach the terminal. Do not type a mutation into that state.
+
+Refresh the observation and try one focused recovery: select the intended
+window/tab, rebind the tool or raise/fullscreen it as appropriate. Check for
+a fresh, task-specific read-only response. If the inconsistency remains,
+stop repeating raise/fullscreen/reconnect loops and use a verified CLI/API
+or Session Manager channel. Do not repeatedly ask the user to keep the window
+in front. If no alternative is usable, name the missing access or user-bound
+step, preserve the pending operation, and continue independent work.
+
+Before closing or reconnecting a session, check whether it carries a running
+operation or a private tunnel. Recover unknown command outcomes under C08;
+changing channel is not permission to resubmit them.
+
+## C14 Select and qualify the command-line replacement
+
+| Need | Preferred channel when available and authorized |
+|---|---|
+| Resource inventory and cloud API operations | Aliyun CLI / official API |
+| Bounded remote commands with retrievable results | Cloud Assistant via CLI/API |
+| Interactive shell or private port forwarding | Official Session Manager command-line tooling |
+| Container registry push/pull | Docker with ACR authentication |
+
+Use current official documentation and installed-tool help for supported
+commands, versions, authentication and region support. Aliyun CLI alone is
+not a replacement for every interactive session or tunnel. Do not assume a
+CLI OAuth profile is accepted by a separate Session Manager tool.
+
+For a new machine, first prove cloud identity and target read access, then a
+harmless remote command with a fresh marker and exit status; test the private
+tunnel only if needed. Distinguish vendor-supported capability from a path
+actually verified in this environment. Treat the replacement as a recommendation,
+not an environment-qualified path, until those probes pass. Record machine,
+time, tool version and channel verification in the project's operations record,
+not as a global assumption in this skill.
+
+Prefer OAuth or temporary credentials where supported. OAuth supports a main
+account as well as RAM identities; main-account login does not limit access to
+staging. Do not create a main-account AccessKey merely to avoid the GUI issue.
+Use the authorized identity and keep effective privileges distinct from the
+narrower task authorization; dedicated RAM access is preferable for recurring
+operations. Do not print profiles or transfer browser sessions to another Mac.
+
+Official references (recheck before setup):
+- [CLI OAuth credentials](https://help.aliyun.com/zh/cli/oauth-credentials)
+- [CLI quick start](https://help.aliyun.com/zh/cli/quickly-start-using-alibaba-cloud-cli)
+- [Session Manager connections and forwarding](https://www.alibabacloud.com/help/en/ecs/user-guide/connect-to-an-instance-by-using-session-manager-2/)

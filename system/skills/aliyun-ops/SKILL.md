@@ -16,6 +16,18 @@ Separate explanation, diagnosis, and implementation. Lock the target
 environment, resource, and which services may be affected. A question or
 diagnosis does not authorize mutation.
 
+## Choose an execution channel
+
+For repeatable deployment work, prefer an authorized CLI/API channel with
+retrievable results over typing into a GUI terminal. Interactive sessions and
+private tunnels may require the official Session Manager command-line tool in
+addition to Aliyun CLI. Keep Client as a manual fallback; honor an explicitly
+requested channel. Verify the replacement channel before relying on it.
+
+When window state is stale or input is unreliable, use the bounded recovery
+and channel-switch rules in console-and-access.md C13. Changing transport
+does not change deployment authorization, maintenance gates, or recovery rules.
+
 ## Load the matching reference
 
 Start with the reference that matches the symptom. Load another only when
@@ -24,7 +36,7 @@ unrelated files.
 
 | Symptom / keywords | Reference |
 |---|---|
-| Blank console, DMS, OpenAPI, CloudShell, Workbench, unclear result | [console-and-access.md](references/console-and-access.md) |
+| CLI authentication, Client window/input failure, Session Manager, blank console, DMS, OpenAPI, CloudShell, Workbench, unclear result | [console-and-access.md](references/console-and-access.md) |
 | ECS vulnerability, snapshot, reboot, egress timeout, NAT, Docker, ACR, shared deployment, prune, sidecar, symlink, rollback | [ecs-network-and-releases.md](references/ecs-network-and-releases.md) |
 | RDS SSL, password auth, owner/runtime, RLS, migration, backup restore | [rds-and-recovery.md](references/rds-and-recovery.md) |
 | Private ops document, Bitwarden, BWS, RAM, OSS upload, CORS | [secrets-and-oss.md](references/secrets-and-oss.md) |

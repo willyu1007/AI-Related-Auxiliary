@@ -147,6 +147,14 @@ and relevant host services. A Docker list alone misses systemd applications.
 Map Compose project/service labels and network dependencies before treating
 container count as project count or deciding that a service is redundant.
 
+When another machine takes over deployment, name one active executor and stop
+writes from the previous machine. For an existing handoff, follow its ownership
+and freeze protocol; a synced folder is not a lock. Verify artifact hashes,
+copy executable inputs outside the synced folder, and reread live state before
+resuming. Reauthenticate on the new machine instead of transferring sessions.
+Keep secrets and database backups out of the shared handoff. A new transport
+or machine does not waive maintenance, backup, or paired-recovery gates.
+
 ## E18 Reclaimable space is not a deletion allowlist
 
 Protect images referenced by containers, images named by a frozen release
