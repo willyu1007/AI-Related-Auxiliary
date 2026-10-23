@@ -20,7 +20,7 @@ resource. A profile name such as `default` is not a RAM username or a scope
 restriction; ECS `root` is an OS user, not the cloud caller. Client credentials
 and CLI credentials are not automatically the same. A successful Describe
 call establishes read access only, not permission to deploy. An installed
-`ossutil` or Aliyun CLI is not a logged-in client. Do not print a full profile. Docker login or pull access does not establish ACR
+CLI is not proof of authentication. Do not print a full profile. Docker login or pull access does not establish ACR
 management-delete authority. Use credentials supported by that API and an
 identity explicitly authorized for the exact operation and resources; do not
 infer deletion authority from an existing application credential or ECS role.

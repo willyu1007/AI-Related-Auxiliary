@@ -25,7 +25,7 @@ addition to Aliyun CLI. Keep Client as a manual fallback; honor an explicitly
 requested channel. Verify the replacement channel before relying on it.
 
 When window state is stale or input is unreliable, use the bounded recovery
-and channel-switch rules in console-and-access.md C13. Changing transport
+and channel-switch rules in [console-and-access.md](references/console-and-access.md) C13. Changing transport
 does not change deployment authorization, maintenance gates, or recovery rules.
 
 ## Load the matching reference
