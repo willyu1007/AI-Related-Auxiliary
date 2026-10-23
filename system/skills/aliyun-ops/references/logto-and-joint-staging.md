@@ -18,7 +18,11 @@ internet to recover Console. After the port returns, a re-login may be
 required. A listening local socket alone does not prove a working forward:
 check a real HTTP response from the expected service. With command-line
 forwarding, verify the tool's authentication support and bind only the intended
-loopback address. Preserve the configured admin origin exactly (including
+loopback address. Inspect the actual listener: reaching `127.0.0.1` does not
+prove that other interfaces are excluded. If the tool binds `*` and offers no
+verified loopback option, stop the new forward and mark the private-tunnel
+gate blocked; do not leave it running or relax firewall/origin controls.
+Preserve the configured admin origin exactly (including
 host and port); `localhost` is not a substitute for `127.0.0.1`. Do not kill an
 unknown listener or create a competing forward to fix a stale window. For
 channel selection and session preservation, see console-and-access.md C12–C14.
