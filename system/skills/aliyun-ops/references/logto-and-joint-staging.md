@@ -149,3 +149,33 @@ If the original fault path is no longer a dependency, say whether the network
 root cause is still unknown, and stop monitoring the user no longer wants. Do
 not keep burning polls, and do not write "no longer blocking" as "the path is
 fixed".
+
+## L15 Use OpenSSH for an explicit loopback bind when direct forwarding cannot
+
+If the official Session Manager tool's direct forward binds all interfaces,
+use an authorized OpenSSH `-L` connection through its documented SSH
+ProxyCommand instead. The proxy supplies the private transport; OpenSSH owns
+the local listener. Do not substitute an HTTP stream into the SSH proxy.
+
+- Verify the target's SSH host public key through an authenticated independent
+  channel. Use a dedicated known_hosts file and `StrictHostKeyChecking=yes`;
+  do not accept an unverified key or disable checking.
+- Check existing SSH authentication and forwarding support read-only. Where
+  the installed instance already supports the official temporary-public-key
+  flow, register a fresh local public key through `send_public_key` and connect
+  within its validity window. Do not edit authorized_keys or sshd settings as
+  an implicit part of tunnel recovery. Keep private keys outside shared files.
+- Bind explicitly with `-L 127.0.0.1:<local-port>:127.0.0.1:<remote-port>` and
+  use `-N -T`, `ExitOnForwardFailure=yes`, `BatchMode=yes` and keepalives.
+  Match the remote port to the ECS host mapping, not the container port.
+- Check the actual listener, a real HTTP response, the authenticated console
+  page, and the allowed/disallowed origins. Confirm the host's non-loopback
+  address cannot connect; do not infer isolation from a successful localhost
+  request alone.
+- Record the owning process and stop/reconnect method. Temporary key expiry
+  does not close an established SSH tunnel. Delete one-use private key material
+  once authentication is complete; reconnect with a fresh registration. Do not
+  add an unattended reconnect service without a separate operational need.
+
+References: [official SSH ProxyCommand example](https://developer.aliyun.com/article/1327179)
+and [temporary public-key registration](https://www.alibabacloud.com/help/en/ecs/user-guide/register-a-public-key-and-connect-to-an-instance-with-the-key-by-using-ali-instance-cli).
