@@ -1,11 +1,13 @@
 /**
- * Read-only Milestone and Feature discovery across linked worktrees.
+ * Read-only Milestone and Feature discovery across linked worktrees. A copy that Git proves is
+ * merely behind another worktree is reported stale instead of conflicting.
  */
 
 import {
   canonicalPath,
   listGitWorktrees,
   loadRegistry,
+  runGit,
   toPosix,
 } from './governance-read.mjs';
 import { getRegistryDataErrors } from './governance-lint.mjs';
@@ -15,7 +17,87 @@ const PROJECT_FIELDS = Object.freeze({
   feature: ['title', 'milestone_id', 'status', 'description'],
 });
 
-function mergeProjectRows(kind, rows) {
+const REGISTRY_PATH = '.ai/project/registry.json';
+
+function rowValue(kind, row) {
+  return JSON.stringify(PROJECT_FIELDS[kind].map((field) => row?.[field] ?? null));
+}
+
+function rowRef(row) {
+  return { worktree_path: row.worktree_path, worktree_branch: row.worktree_branch };
+}
+
+/**
+ * Lazy, cached Git evidence for stale-copy resolution. Every lookup returns null when Git cannot
+ * prove the answer, and callers treat null as "changed" so unreadable evidence stays a conflict.
+ */
+function createGitEvidence(repoRoot) {
+  const cache = new Map();
+  const cached = (key, read) => {
+    if (!cache.has(key)) cache.set(key, read());
+    return cache.get(key);
+  };
+  const head = (worktreePath) =>
+    cached(`head:${worktreePath}`, () => runGit(worktreePath, ['rev-parse', 'HEAD'])?.trim() || null);
+  return {
+    mergeBase(leftPath, rightPath) {
+      const left = head(leftPath);
+      const right = head(rightPath);
+      if (!left || !right) return null;
+      if (left === right) return left;
+      return cached(`base:${[left, right].sort().join(' ')}`, () =>
+        runGit(repoRoot, ['merge-base', left, right])?.trim() || null
+      );
+    },
+    registryAt(sha) {
+      return cached(`registry:${sha}`, () => {
+        const raw = runGit(repoRoot, ['show', `${sha}:${REGISTRY_PATH}`]);
+        try {
+          return raw === null ? null : JSON.parse(raw);
+        } catch {
+          return null;
+        }
+      });
+    },
+  };
+}
+
+/**
+ * Split same-ID copies into the newest line of evolution and stale copies, mirroring task
+ * occurrences: a copy is stale when its worktree has not touched this row since its merge base
+ * with a differing copy, so Git proves the other side is newer. The working-tree registry is
+ * compared, so an uncommitted edit counts as a change, and the check is per row, so unrelated
+ * registry edits (task projections, other rows) never block it. Without one provable leading
+ * value every copy stays live and the caller reports the conflict.
+ */
+function splitStaleRows(kind, id, rows, git) {
+  const values = rows.map((row) => rowValue(kind, row));
+  if (new Set(values).size === 1) return { live: rows, stale: [] };
+
+  const listKey = kind === 'milestone' ? 'milestones' : 'features';
+  const changedSince = (index, base) => {
+    const list = base ? git.registryAt(base)?.[listKey] : null;
+    const baseRow = Array.isArray(list) ? list.find((item) => item?.id === id) : null;
+    return !baseRow || rowValue(kind, baseRow) !== values[index];
+  };
+  const leading = new Set(
+    values.filter((value, index) =>
+      rows.every(
+        (other, otherIndex) =>
+          values[otherIndex] === value ||
+          !changedSince(otherIndex, git.mergeBase(rows[index].worktree_path, other.worktree_path))
+      )
+    )
+  );
+  if (leading.size !== 1) return { live: rows, stale: [] };
+  const [value] = leading;
+  return {
+    live: rows.filter((_, index) => values[index] === value),
+    stale: rows.filter((_, index) => values[index] !== value),
+  };
+}
+
+function mergeProjectRows(kind, rows, git) {
   const fields = PROJECT_FIELDS[kind];
   const groups = new Map();
   for (const row of rows) {
@@ -28,16 +110,14 @@ function mergeProjectRows(kind, rows) {
   for (const [id, grouped] of groups) {
     const result = { kind, id };
     const conflicts = [];
+    const { live, stale } = splitStaleRows(kind, id, grouped, git);
     for (const field of fields) {
       const values = new Map();
-      for (const row of grouped) {
+      for (const row of live) {
         const value = row[field];
         const key = JSON.stringify(value);
         const entry = values.get(key) || { value, worktrees: [] };
-        entry.worktrees.push({
-          worktree_path: row.worktree_path,
-          worktree_branch: row.worktree_branch,
-        });
+        entry.worktrees.push(rowRef(row));
         values.set(key, entry);
       }
       if (values.size === 1) result[field] = [...values.values()][0].value;
@@ -49,10 +129,8 @@ function mergeProjectRows(kind, rows) {
     result.conflict = conflicts.length > 0;
     result.conflicts = conflicts;
     result.occurrence_count = grouped.length;
-    result.worktrees = grouped.map((row) => ({
-      worktree_path: row.worktree_path,
-      worktree_branch: row.worktree_branch,
-    }));
+    result.worktrees = grouped.map(rowRef);
+    result.stale_worktrees = stale.map(rowRef);
     merged.push(result);
   }
 
@@ -111,8 +189,9 @@ export function readProjectGraph({ repoRoot, repairingRepoRoot = null }) {
     }
   }
 
-  const milestones = mergeProjectRows('milestone', milestoneOccurrences);
-  const features = mergeProjectRows('feature', featureOccurrences);
+  const git = createGitEvidence(repoRoot);
+  const milestones = mergeProjectRows('milestone', milestoneOccurrences, git);
+  const features = mergeProjectRows('feature', featureOccurrences, git);
   errors.push(...getConflictErrors(milestones), ...getConflictErrors(features));
   return {
     ok: errors.length === 0,

@@ -22,7 +22,7 @@ import {
   skillsForProfile,
 } from '../install-system-auxiliary.mjs';
 import { sensitiveOpsTemplateFailures } from './sensitive-ops.mjs';
-import { taskGovernanceArchiveFailures } from './task-governance.mjs';
+import { taskGovernanceArchiveFailures, taskGovernanceProjectFailures } from './task-governance.mjs';
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SKILLS_DIR = path.join(REPO_ROOT, 'system', 'skills');
@@ -328,6 +328,11 @@ function runBehavioral() {
     fail('task-governance-archive', message);
   }
   if (governance.length === 0) console.log(c.green('  ok') + c.dim('  task-governance archive over an older worktree copy'));
+  const project = taskGovernanceProjectFailures();
+  for (const message of project) {
+    fail('task-governance-project', message);
+  }
+  if (project.length === 0) console.log(c.green('  ok') + c.dim('  task-governance Milestone/Feature rows behind another worktree'));
 }
 
 function main() {

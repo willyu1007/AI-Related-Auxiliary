@@ -82,8 +82,9 @@ Commands:
   project-query
     --repo-root <path>        Repo root (default: auto-detect from cwd)
     --json                    Output one object containing Milestones, Features, and diagnostics
-    Locate the project graph across every linked worktree. Same-ID semantic conflicts preserve
-    their exact values and worktree occurrences and exit non-zero.
+    Locate the project graph across every linked worktree. A copy whose worktree never touched
+    the row since diverging is listed as stale. Other same-ID semantic conflicts preserve their
+    exact values and worktree occurrences and exit non-zero.
 
   resume
     --repo-root <path>        Repo root (default: auto-detect from cwd)

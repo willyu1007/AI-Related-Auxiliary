@@ -94,12 +94,15 @@ The hub consumes these task facts:
 - In a worktree listed as stale, sync only records that worktree's local reality; never copy the
   newest occurrence's facts into a stale bundle. Recovery and implementation belong in the newest
   occurrence, or bring the stale worktree level through Git first.
-- Registry Milestone and Feature values are project-level semantic decisions, so they do not use
-  the task rule: any same-ID divergence across linked worktree registries is a stop condition
-  until the registries are reconciled.
+- Registry Milestone and Feature values are project-level semantic decisions, judged per row. A
+  copy whose worktree has not touched that row since its merge base with a differing copy —
+  committed or uncommitted — is merely behind: the other copy supplies the row and the older
+  worktree is listed in `stale_worktrees`. Any other same-ID divergence across linked worktree
+  registries, including unreadable lineage, is a stop condition until the registries are
+  reconciled.
 - `project-query --json` returns the Milestone and Feature union across linked worktrees. Each
-  logical row preserves its worktree occurrences and exact same-ID semantic conflicts; conflicted
-  values remain unset until reconciled.
+  logical row preserves its worktree occurrences, stale copies, and exact same-ID semantic
+  conflicts; conflicted values remain unset until reconciled.
 - Changing a task-to-Feature mapping stays fail-closed while the task has multiple checked-out
   copies; resolve to one writable occurrence or coordinate every occurrence as one edit.
 - `invalid: true` means at least one occurrence has invalid task metadata. `metadata_errors`
