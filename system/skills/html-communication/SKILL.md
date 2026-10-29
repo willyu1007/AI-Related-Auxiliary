@@ -106,4 +106,6 @@ Deliver the document locally.
    `http://127.0.0.1:4380`. Reuse a server already answering there; otherwise start one in the
    background (e.g. `bunx serve -l tcp://127.0.0.1:4380 <root>`) and leave it running.
 3. Return `http://127.0.0.1:4380/<slug>/`, followed by the primary HTML file's absolute path for
-   when the server is down.
+   when the server is down. Open the served link in the system default browser
+   (e.g. `open <url>` on macOS); use the in-app browser only when you need to inspect the page
+   yourself.

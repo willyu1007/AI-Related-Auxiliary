@@ -56,7 +56,7 @@ Channel both "measure twice, cut once" and "yagni". Fight scope creep. Honor the
 
 ### Commands
 
-- When running development server commands (e.g., `pnpm dev`), check if it is already running and request authorization.
+- When running development server commands (e.g., `pnpm dev`), check if it is already running first.
 - Don't run build commands unless specifically told to.
 - Focus on checking commands like `pnpm typecheck`, `pnpm lint`, etc.
 
