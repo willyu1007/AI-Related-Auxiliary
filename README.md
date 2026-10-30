@@ -47,7 +47,7 @@ checks/          # 本仓库自己的校验，不是分发物
 
 技能发现只扫 `system/skills/` 的第一层，所以那一层保持平铺，不要建分组子目录。
 
-## system/ —— 32 个技能
+## system/ —— 33 个技能
 
 任务治理的八个技能按实际操作划分；其中 `goal-mode` 串联同一 Goal 运行内的长任务主线，其余每个对应工作流程里的一个时刻。主线是 `start → plan → implementation`；新证据推翻路线时回到 plan，实施检查点通过 `sync → resume` 走仓库跨越时间，`handoff → 新会话` 则通过对话完成普通任务的零间隔交接。
 
@@ -62,7 +62,7 @@ checks/          # 本仓库自己的校验，不是分发物
 | [project-status](system/skills/project-status/SKILL.md) | 一项或多项任务及项目 hub 的只读状态、归档就绪度与一致性审查 | 仓库 |
 | [goal-mode](system/skills/goal-mode/SKILL.md) | 在同一 Goal 运行内串联 start、planning、分阶段执行、checkpoint、恢复与完成契约 | 仓库 + 对话 |
 
-另有 24 个与任务治理无关的技能：
+另有 25 个与任务治理无关的技能：
 
 | Skill | 用途 |
 |---|---|
@@ -81,6 +81,7 @@ checks/          # 本仓库自己的校验，不是分发物
 | [sensitive-ops](system/skills/sensitive-ops/SKILL.md) | 管理项目级敏感运维上下文及 MFA、OAuth、认证 UI、实体设备等用户绑定步骤；默认使用 `~/Documents/LLM/sensitive-ops.md`（可指定其他私密文档）让用户直接补齐，仅在明确要求时生成可恢复 shell helper |
 | [manage-ui-style](system/skills/manage-ui-style/SKILL.md) | 继承、探索并沉淀项目 UI 风格，在需要时审计和修复视觉漂移 |
 | [cleanup-project-residue](system/skills/cleanup-project-residue/SKILL.md) | 清理当前 session、任务、近期工作或全项目中的过时测试、冗余内容、语义漂移、双轨/legacy 残留和技术债；证据+批准后删除，校验门收尾 |
+| [prune-tests](system/skills/prune-tests/SKILL.md) | 仅应用户明确请求，围绕已对齐的长期核心精简测试与专用设施，同步覆盖声明和 pin，并报告实际执行与维护成本变化 |
 | [resolve-vcs-conflicts](system/skills/resolve-vcs-conflicts/SKILL.md) | 在已获授权且进行中的 merge、rebase、cherry-pick 或 revert 中恢复双方意图并解决 Git 冲突 |
 | [tdd](system/skills/tdd/SKILL.md) | 在行为与测试 seam 足够稳定时，以 red → green → refactor 推进测试优先实现 |
 | [using-powershell](system/skills/using-powershell/SKILL.md) | 在 Windows PowerShell 5.1/PowerShell 7 中编写命令与 `.ps1`，避免 Bash/CMD 语法混入，并对 `.ps1` 跑无依赖 lint |

@@ -63,6 +63,7 @@ export const SKILL_TIER = {
   'acceptance-campaign': 'will',
   'resolve-vcs-conflicts': 'general',
   'cleanup-project-residue': 'general',
+  'prune-tests': 'general',
   'html-communication': 'general',
   'uml-diagrams': 'general',
   'uml-diagrams-new': 'general',

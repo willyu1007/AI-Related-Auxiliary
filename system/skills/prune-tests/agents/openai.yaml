@@ -1,0 +1,5 @@
+interface:
+  display_name: "精简测试"
+  short_description: "仅应用户明确请求，围绕长期核心保障精简测试并实测执行和维护成本"
+policy:
+  allow_implicit_invocation: false
