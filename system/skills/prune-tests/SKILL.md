@@ -1,52 +1,133 @@
 ---
 name: prune-tests
 description: >-
-  Use only when the user explicitly requests test-suite pruning or invokes this
-  skill to reduce ongoing test execution and maintenance cost. Never activate
-  automatically during feature development, failure diagnosis, or routine review.
+  Activate only when the user explicitly calls this skill by name.
+disable-model-invocation: true
 ---
 
-# 精简测试
+# Prune Tests
 
-围绕当前产品真正需要长期保障的行为，删除低价值测试及其专用设施。以执行和维护成本为目标，不承诺用例数、覆盖率或耗时的固定降幅。
+Delete low-value tests and their dedicated fixtures, and remove CI overhead
+within the approved scope. Keep protecting behaviors the product still needs
+long-term. Optimize for execution and maintenance cost. Do not promise fixed
+cuts in case count, coverage, or runtime.
 
-## 确定取舍与基线
+## Set trade-offs and baseline
 
-- 沿用用户指定的仓库、排除项、已批准清单和授权；只要求盘点或讨论时保持只读。大幅退出仍受支持行为的独有覆盖前，先列出保留核心、删除范围、失去的保障和预估成本供用户对齐。已有明确批准则直接实施，不重复请求。
-- 从实际产品入口与当前规则确认行为，不把测试名称、旧计划或版本号当成需求。发现清单与产品事实不符时，标明差异；不要为了保留一个编号而发明业务规则。
-- 查明所有实际执行入口：默认命令、workspace/project 配置、CI、数据库、跨仓联验、工具、原生依赖与发布验证。分别记录发现、执行、跳过和重复执行的范围；文件数、runner 报告数和独立行为数分开计。
-- 优先复用来源与范围明确的实测基线；缺失时在改动前记录必要通道的命令、源码版本、环境、退出码与墙钟时间。已有失败或未激活通道单独列出，不把它们当作完整全绿基线。
+- Honor the user's repo, exclusions, approved list, and authorization. Stay
+  read-only when only inventory or discussion is requested. Before dropping
+  unique coverage of still-supported behavior at scale, list the retained core,
+  deletion scope, lost guarantees, and estimated cost for user alignment. With
+  clear prior approval, implement without re-asking.
+- Confirm behavior from real product entry points and current rules. Do not treat
+  test names, old plans, or version labels as requirements. When a list disagrees
+  with product reality, mark the gap; do not invent business rules to keep a
+  numbered case.
+- Find every real execution entry: default commands, workspace/project config,
+  CI, databases, cross-repo joint checks, tools, native deps, and release
+  verification. Record discovery, execution, skip, and duplicate-run scope
+  separately. Count files, runner-reported cases, and independent behaviors
+  separately.
+- Prefer a measured baseline with clear source and scope. If missing, record
+  commands, source revision, environment, exit codes, and wall-clock time for
+  required channels before edits. List already-failing or inactive channels
+  separately; do not treat them as a full green baseline.
 
-## 按保障价值选择核心
+## Choose the core by guarantee value
 
-按当前行为、风险与重复责任分类，不按文件年龄或是否全绿作结论。当前仍有效的细节测试也可退出；不要因 CI 仍执行或存在独有断言就自动保留，将其覆盖损失纳入取舍。
+Classify by current behavior, risk, and duplicate responsibility—not by file age
+or whether everything is green. Detail tests that are still valid may exit.
+Do not keep a test only because CI still runs it or it has a unique assertion;
+fold that coverage loss into the trade-off.
 
-| 类别 | 处理 |
+| Category | Handling |
 | --- | --- |
-| 高后果且需要长期保障的当前行为 | 保留有限、直接的证据，优先覆盖授权与隐私、事务原子性、幂等、并发竞争、未知结果恢复及撤回等关键边界；具体取舍以本次产品为准。 |
-| 多层重复验证同一保证 | 选择最能暴露真实故障的层；只有承接不同风险的接线或交互证据才另留。不要给每个 controller、DTO、client 复制同一矩阵。 |
-| 字段/错误码/状态排列、实现快照、普通 UI 细节、过量工具自测 | 根据其独有风险与维护代价裁剪或退出；会损失仍有效的独有保障时纳入已确认的取舍。 |
-| 已删除功能、已退役轨道、一次性演练及无当前用途的语料 | 连同专用设施删除；先核实当前调用、公开契约、按约定加载的入口与外部消费。 |
+| High-consequence current behavior that needs long-term protection | Keep limited, direct evidence. Prefer critical boundaries such as auth and privacy, transactional atomicity, idempotency, concurrency races, unknown-outcome recovery, and undo. Concrete trade-offs follow this product. |
+| Multiple layers verifying the same guarantee | Keep the layer most likely to catch a real fault. Keep wiring or interaction evidence only when it covers a different risk. Do not copy the same matrix onto every controller, DTO, and client. |
+| Field/error-code/state permutations, implementation snapshots, ordinary UI detail, excess tool self-tests | Trim or exit by unique risk vs maintenance cost. Include any still-valid unique coverage loss in the confirmed trade-off. |
+| Removed features, retired tracks, one-off drills, and corpora with no current use | Delete with dedicated fixtures. First verify current callers, public contracts, conventionally loaded entry points, and external consumers. |
 
-每个保留流程写明当前行为、固定输入或有限连续步骤、可观察结果，以及源码位置。只给测试换名、合并外层用例或移动文件，不构成精简。
+For each retained flow, state the current behavior, fixed inputs or bounded
+sequential steps, observable outcome, and source location. Renaming tests,
+merging outer cases, or moving files alone is not pruning.
 
-- 检查参数表、循环注册、fixture replay 与测试体内的遍历；减少实际变体和执行，不把旧矩阵藏进一个用例，也不转入 nightly、manual 或 verify。
-- 将同一命令的正常执行、响应丢失与原命令恢复作为一个连续流程时，只计一次；独立风险不能仅为减少计数而拼在一起。双参与者竞争、重放和有界交互须注明实际步骤。
-- 让证据到达声明的结果：保存 payload 不能代表刷新后数据可见；mock 接收调用不能代表数据库已提交；schema 编译、字节哈希和源码字符串不能代表业务行为通过。
-- mock 放在核心保证之外。声称保障事务、真实双 Owner 或原生加载时，实际执行对应数据库、双方边界或原生入口；否则缩小声明。无需为裁剪而新建通用测试框架。
+- Inspect parameter tables, loop registration, fixture replay, and in-test
+  iteration. Cut real variants and execution; do not hide the old matrix inside
+  one case, and do not move it to nightly, manual, or verify.
+- Count happy path, lost response, and recovery of the same command as one
+  continuous flow when that is the real scenario. Do not glue independent risks
+  only to reduce counts. Dual-participant races, replays, and bounded
+  interactions must state actual steps.
+- Make evidence reach the claimed result: saving a payload does not prove data
+  is visible after refresh; a mock receiving a call does not prove the database
+  committed; schema compile, byte hashes, and source strings do not prove
+  business behavior.
+- Keep mocks outside the core guarantee. When claiming transactional, real
+  dual-owner, or native-load protection, exercise the matching database, both
+  boundaries, or native entry; otherwise narrow the claim. Do not invent a
+  general test framework just to prune.
 
-## 删除并同步消费关系
+## Delete and sync consumers
 
-- 裁剪混合文件中的非核心输入，再沿删除范围清理 fixture、snapshot、helper、mock、配置、runner、工作区与依赖；保留仍有生产、工具或其他测试消费者的部分。存活 helper 内仅服务退役模式的分支也要清掉。
-- 解析 package exports、约定加载、脚本、CI 与发布入口后判断可达性。跨仓已钉工件可以无人 import；查 consumer pin 后再删。区分测试 replay spec 与生产 schema、协议类型、工件和生成输入。
-- 同步默认命令、完整验证入口、CI 和文档，删除退役入口；保留需要长期执行的实际核心，避免默认命令或条件变量悄悄漏跑它们。
-- 同步行为资格、覆盖矩阵和其他保障声明，只保留真实证据支持的范围。覆盖声明收缩不等于生产契约语义改变，不为删测旋转无关生产版本。
-- 涉及跨仓 pin、冻结副本或来源锁时，按仓库现有协议与工具提交源码、重算身份并更新受影响消费者；核对固定 revision 与实际 provider 字节。不要只改 consumer JSON、排除测试路径来逃避来源校验，或手填哈希绕过封签。
+- Trim non-core inputs in mixed files, then clean fixtures, snapshots, helpers,
+  mocks, config, runners, workspaces, and deps along the deletion scope. Keep
+  anything still consumed by production, tools, or other tests. Also remove
+  branches inside living helpers that exist only for retired patterns.
+- Judge reachability after resolving package exports, conventional loads,
+  scripts, CI, and release entry points. Cross-repo pinned artifacts may have no
+  local import; check consumer pins before deleting. Distinguish test replay
+  specs from production schemas, protocol types, artifacts, and generated
+  inputs.
+- Sync default commands, full verification entry points, CI, and docs; remove
+  retired entries. Keep the real core that must keep running so defaults or
+  conditionals do not silently skip them.
+- Sync behavior eligibility, coverage matrices, and other guarantee claims to
+  what real evidence still supports. Shrinking a coverage claim is not a
+  production-contract semantic change; do not rotate unrelated production
+  versions just to delete tests.
+- For cross-repo pins, frozen copies, or source locks, follow the repo's existing
+  protocol and tools: commit source, recompute identity, and update affected
+  consumers. Verify fixed revisions against actual provider bytes. Do not only
+  edit consumer JSON, exclude test paths to dodge source checks, or hand-fill
+  hashes to bypass seals.
 
-## 完整验证与交付
+## Reduce CI overhead when in scope
 
-- 运行精简后所有保留通道及仓库要求的类型、lint、契约和来源校验，包含条件启用的数据库、跨仓、原生与制品通道；不能只跑改动文件或默认命令。数据库和破坏性场景使用本次可控的隔离临时环境，清理自己创建的对象与进程。
-- 对发现、执行和跳过量与保留清单逐项核对。已有失败须辨明是产品、测试设置还是环境原因；保留有效保障，按现有授权修复或报告，不能删掉失败用例换取全绿。未执行或跳过的通道如实列出。
-- 若验证后改动源码，重跑受影响检查；仅修改锁或文档元数据时，至少复验其校验和、来源与消费关系。以最终交付身份记录结果。
-- 报告实际删除/裁剪的测试和专用设施、保留核心映射、输入与文件减少量、覆盖损失、依赖/入口/pin 变化、完整验证结果，以及前后命令的墙钟时间。逐文件清单随规模按需提供。
-- 比较同范围、同环境口径，标明预编译、迁移、打包、启动和缓存差异。旧报告的跳过或重叠不算独立执行；当前新增真实联验时，不把其总耗时与旧单元通道直接相减。没有可比完整基线就明说，不从用例数推算提速。
+Read [references/ci-cost.md](references/ci-cost.md) when assessing or changing CI
+cost. Keep the retained core and release/security gates as invariants unless the
+user approves a different trade-off. Approval to prune tests does not itself
+authorize changing cache, image, runner, or publication policy.
+
+Separate test-suite savings from CI preparation savings. Trace the actual event
+paths and step timings before choosing between fewer jobs/checkouts, narrower
+installs, persistent caches, or fewer image builds. For a CI-only request, leave
+test coverage unchanged. Explain the proposed savings and trade-offs before
+implementation when the user asks for discussion.
+
+## Full verification and delivery
+
+- Run every retained channel after pruning, plus the repo's required type, lint,
+  contract, and source checks—including conditionally enabled database,
+  cross-repo, native, and artifact channels. Do not run only changed files or
+  the default command. Use an isolated temporary environment you control for
+  databases and destructive scenarios; clean up objects and processes you create.
+- Reconcile discovery, execution, and skip counts against the retention list
+  item by item. For existing failures, separate product, test setup, and
+  environment causes. Keep valid guarantees; fix or report under existing
+  authorization. Do not delete failing cases to buy a green suite. List
+  unrun or skipped channels honestly.
+- If verification changes source, re-run affected checks. For lock or doc
+  metadata-only edits, at least re-verify checksums, source, and consumer links.
+  Record results against the final delivered identity.
+- Report tests and dedicated fixtures actually deleted or trimmed, retained-core
+  mapping, input and file reductions, coverage loss, dependency/entry/pin
+  changes, full verification results, and wall-clock times for before/after
+  commands. Provide a per-file inventory when scale warrants it.
+- When CI is in scope, report job, checkout, install, cache, and timing changes
+  under [Measure and report](references/ci-cost.md#measure-and-report); include
+  cold/warm comparisons for cache changes.
+- Compare like scope and environment. Call out precompile, migration, package,
+  startup, and cache differences. Skips or overlaps in old reports are not
+  independent runs. When new real joint checks are added, do not subtract their
+  total time from the old unit-only channel. If there is no comparable full
+  baseline, say so; do not infer speedup from case counts.

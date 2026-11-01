@@ -102,10 +102,4 @@ When delivering a UI mock:
 Deliver the document locally.
 
 1. Keep the primary HTML file and its previews outside the repository unless the user requests otherwise.
-2. In-app browsers block `file://` URLs, so serve the artifact root (the parent of `<slug>/`) on
-   `http://127.0.0.1:4380`. Reuse a server already answering there; otherwise start one in the
-   background (e.g. `bunx serve -l tcp://127.0.0.1:4380 <root>`) and leave it running.
-3. Return `http://127.0.0.1:4380/<slug>/`, followed by the primary HTML file's absolute path for
-   when the server is down. Open the served link in the system default browser
-   (e.g. `open <url>` on macOS); use the in-app browser only when you need to inspect the page
-   yourself.
+2. Return the primary HTML file's absolute path. Open it in the system default browser.
