@@ -79,6 +79,7 @@ export const SKILL_TIER = {
   'manage-llm-config': 'will',
   'aliyun-ops': 'will',
   'release-handoff': 'will',
+  'review-ui-visual': 'will',
 };
 
 /** A profile may replace or omit skills from the ranks it otherwise includes. */

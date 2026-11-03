@@ -157,7 +157,7 @@ function runStatic() {
   if (!generalSkills.has('wizard') || generalSkills.has('sensitive-ops')) {
     fail('skill-profile', 'general must install wizard without sensitive-ops');
   }
-  for (const name of ['write-prompt', 'sensitive-ops', 'sync-db-from-prisma', 'manage-llm-config', 'aliyun-ops', 'acceptance-campaign', 'release-handoff']) {
+  for (const name of ['write-prompt', 'sensitive-ops', 'sync-db-from-prisma', 'manage-llm-config', 'aliyun-ops', 'acceptance-campaign', 'release-handoff', 'review-ui-visual']) {
     if (minimalSkills.has(name) || generalSkills.has(name)) {
       fail('skill-profile', `${name} installs only on will`);
     }
@@ -168,7 +168,7 @@ function runStatic() {
   for (const name of ['cpp-code-style', 'cpp-code-style-manager', 'using-powershell', 'uml-diagrams', 'uml-diagrams-new']) {
     if (willSkills.has(name)) fail('skill-profile', `will must not install ${name}`);
   }
-  for (const name of ['write-prompt', 'sync-db-from-prisma', 'manage-llm-config', 'aliyun-ops', 'acceptance-campaign', 'release-handoff']) {
+  for (const name of ['write-prompt', 'sync-db-from-prisma', 'manage-llm-config', 'aliyun-ops', 'acceptance-campaign', 'release-handoff', 'review-ui-visual']) {
     if (!willSkills.has(name)) fail('skill-profile', `will must install ${name}`);
   }
 
@@ -182,7 +182,7 @@ function runStatic() {
     fail('skill-profile', 'general must remove sensitive-ops and retain wizard');
   }
   for (const removals of [minimalRemovals, generalRemovals]) {
-    for (const name of ['write-prompt', 'sensitive-ops', 'sync-db-from-prisma', 'manage-llm-config', 'aliyun-ops', 'acceptance-campaign', 'release-handoff']) {
+    for (const name of ['write-prompt', 'sensitive-ops', 'sync-db-from-prisma', 'manage-llm-config', 'aliyun-ops', 'acceptance-campaign', 'release-handoff', 'review-ui-visual']) {
       if (!removals.has(name)) fail('skill-profile', `minimal and general must remove ${name}`);
     }
   }

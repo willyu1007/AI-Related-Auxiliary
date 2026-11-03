@@ -74,6 +74,7 @@ checks/          # 本仓库自己的校验，不是分发物
 | [html-communication](system/skills/html-communication/SKILL.md) | 把计划、报告、比较或 UI mock 交付为便携、无脚本的 HTML 工作文档 |
 | [research](system/skills/research/SKILL.md) | 对需要多来源、时效性或可追溯引用的外部问题做有界调查，并返回可由调用方消费的证据结论 |
 | [review-code](system/skills/review-code/SKILL.md) | 直接审查代码：圈定范围、对齐审查意图，在已授权时边审边修，并报告已修复与未解决问题 |
+| [review-ui-visual](system/skills/review-ui-visual/SKILL.md) | 用户点名时对照定稿做视觉 QA，并在有运行基线时做视觉回归；只出判定与差异页，不实施修复 |
 | [sync-db-from-prisma](system/skills/sync-db-from-prisma/SKILL.md) | Prisma repo→DB migration 闸门：预览、单独的 apply 批准、按环境应用、验证 |
 | [manage-llm-config](system/skills/manage-llm-config/SKILL.md) | 集中管理 agent/workflow 的模型、参数、Prompt 与 Provider 配置；通过共享加载器读取 `.ai/llm` |
 | [debug-mode](system/skills/debug-mode/SKILL.md) | 根因不明故障的证据循环：准确症状信号、可证伪假设、授权修复、原始复现验证与自动清理 |
@@ -104,7 +105,7 @@ checks/          # 本仓库自己的校验，不是分发物
 |---|---|---|
 | `minimal` | 基础档 | 治理主线以及 C++、PowerShell（仅 Windows）、review、research、tdd |
 | `general` | 包含 `minimal` | 增加日常调试、UI、HTML、清理、Codex 和 script-first 的 wizard |
-| `will` | 个人档：包含 `general` 的日常技能，但以 sensitive-ops 替换 wizard，且不装 C++、PowerShell 与两套 UML 图技能 | 另含 write-prompt、Prisma、`.ai/llm`、`aliyun-ops`、`acceptance-campaign`、`release-handoff` |
+| `will` | 个人档：包含 `general` 的日常技能，但以 sensitive-ops 替换 wizard，且不装 C++、PowerShell 与两套 UML 图技能 | 另含 write-prompt、Prisma、`.ai/llm`、`aliyun-ops`、`acceptance-campaign`、`release-handoff`、`review-ui-visual` |
 
 `wizard` 与 `sensitive-ops` 不会同时安装；`.codex` 在 `general` 和 `will` 下仍不安装三个 `codex-*` 技能。`using-powershell` 只在 Windows（`win32`）安装，且从不进入 `will`；macOS / Linux 会跳过，并删掉目标里已有的副本。
 
