@@ -78,9 +78,13 @@ When delivering a UI mock:
 - When the mock changes an existing implementation, show the current state beside each changed
   view: current on the left, proposed on the right, at the same size and with the same data, one
   row per changed state.
-- Take the current state from a screenshot of the running implementation. When none is available,
-  rebuild it from the code, including the shared containers it renders inside, and label it as
-  rebuilt.
+- Take the current state from a screenshot of the running implementation. When a full-app
+  screenshot is unavailable, capture the same components, theme, and data from a running preview
+  such as a Storybook story or preview route.
+- Rebuild only when no running capture is possible, and then only by reusing the production
+  component tree, shared containers, style entry, tokens, and fonts—never by redrawing from
+  recollection. Label it `rebuilt` with the note that the layout engine did not run. Leave the
+  pane empty and disclose the gap when that mechanical path is unavailable.
 - Label variants `A`, `B`, `C`... outside the product surface and place them to the right of the
   current state, or side by side when there is none.
 - Represent tabs, overlays, pagination, and other interactive states as labeled static states or
@@ -102,4 +106,4 @@ When delivering a UI mock:
 Deliver the document locally.
 
 1. Keep the primary HTML file and its previews outside the repository unless the user requests otherwise.
-2. Return the primary HTML file's absolute path. Open it in the system default browser.
+2. Return the primary HTML file's absolute path. Open it in the system default browser only when that file is not already open.

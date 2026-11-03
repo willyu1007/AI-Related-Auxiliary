@@ -53,7 +53,13 @@ The current agent always continues this skill.
   of intended behavior (the user instruction, current task bundle, accepted
   requirement or spec, issue, or PR), and judge against it. If sources conflict
   or no accepted source exists, disclose the limitation instead of inferring
-  requirements from the implementation.
+  requirements from the implementation. Locate a finalized interface from that
+  source in this order: the mock the review request names; the task bundle's
+  Outstanding verification item or `Done when`; a link in the issue, PR, or
+  spec. When one exists, compare the running client with it, including every
+  state it specifies. A difference is Must fix unless the user has accepted it.
+  Reading the source, or a mock rebuilt by reinterpretation from the code under
+  review, does not complete this comparison.
 - **Repository fit** — separately judge relevant contracts and established
   conventions; passing one dimension does not excuse failing the other.
 - **Fixing** — when changes are authorized, fix evidence-backed issues with

@@ -128,7 +128,10 @@ Mark a task `done` only when all three claims hold at the task boundary:
   known in-scope roadmap work remains unresolved.
 - **Implementation or artifact quality** — Relevant review and checks are complete, and no known
   material defect, unresolved review finding, temporary instrumentation, or residue contradicts
-  the accepted outcome or repository conventions.
+  the accepted outcome or repository conventions. Where a finalized interface exists — the latest
+  interface the user accepted for this work — the running client matches it, including every state
+  it specifies, unless the user has accepted a difference. A code reading or a mock rebuilt from
+  that code does not pass it.
 - **Semantic convergence** — Code, interfaces, configuration, documentation, the task bundle, and
   the project hub agree on the accepted result; no unintended parallel old/new paths, duplicated
   behavior, or competing authority remains.

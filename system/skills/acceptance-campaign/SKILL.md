@@ -145,7 +145,7 @@ reader-side verification of a cross-layer change.
 
   | Kind | Condition | Action |
   | --- | --- | --- |
-  | `defect` | In-scope behavior is wrong or missing | Fix unit, then retest on the lane |
+  | `defect` | In-scope behavior is wrong or missing, or the running interface differs from its finalized interface | Fix unit, then retest on the lane |
   | `design` | The behavior matches the design | Record where the design lives; judge the row on it |
   | `gap` | The capability's scope is unconfirmed | Ask for a ruling: in scope, it becomes a defect; out of scope, it goes to the task's Out of scope at write-back; judge on substitute evidence only under that ruling |
   | `environment` | The lane, not the product, causes it | Fix the lane or runbook through section 5 |
