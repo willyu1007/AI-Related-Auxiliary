@@ -8,7 +8,7 @@
 
 ```text
 install-task-governance.mjs     # 目标仓库 .ai/ 与 dev-docs/ 初始化，可从 git 拉取
-install-system-auxiliary.mjs    # 按档位同步 skills 与全局文档到 ~/.claude ~/.codex ~/.cursor
+install-system-auxiliary.mjs    # 按档位同步 skills 与全局文档到 ~/.claude ~/.codex ~/.cursor ~/.gemini
 system/          # 库本身：跟着人走的全局层
   skills/        #   所有 Skill，一层平铺（发现只扫这一层）
     <skill>/
@@ -116,7 +116,8 @@ checks/          # 本仓库自己的校验，不是分发物
 
 ```bash
 # 从本仓库同步到全局：skills 按目录整体替换，当前档以外的本库技能会从目标删掉；
-# 默认 general；.codex 不装 codex-*；AGENTS.md 落 ~/.codex 和 ~/.cursor，CLAUDE.md 落 ~/.claude
+# 默认 general；.codex 不装 codex-*；AGENTS.md 落 ~/.codex、~/.cursor、~/.gemini，CLAUDE.md 落 ~/.claude
+# .gemini 的 skills 装到 ~/.gemini/config/skills/（Antigravity 官方个人路径）
 node install-system-auxiliary.mjs
 node install-system-auxiliary.mjs --profile minimal
 node install-system-auxiliary.mjs --profile will
@@ -125,6 +126,7 @@ node install-system-auxiliary.mjs --profile will
 cp -R system/resources/. ~/.claude/resources/
 cp -R system/resources/. ~/.codex/resources/
 cp -R system/resources/. ~/.cursor/resources/
+cp -R system/resources/. ~/.gemini/config/resources/
 ```
 
 目标仓库初始化（脚本最省事；等价做法是按上一节手动复制 `project/`）：

@@ -1,14 +1,15 @@
 #!/usr/bin/env node
 /**
  * Sync system/skills/ and the global instruction docs into the agent homes
- * (~/.claude, ~/.codex, ~/.cursor).
+ * (~/.claude, ~/.codex, ~/.cursor, ~/.gemini).
  *
  * - Skills are replaced per directory: a skill shipped by this library overwrites the
  *   same-named skill in the target wholesale; skills the target has that this library
  *   does not ship are left untouched.
  * - Library skills outside the selected profile are removed from the target.
  * - ~/.codex does not receive the codex-* skills (Codex does not delegate to itself).
- * - Docs: AGENTS.md -> ~/.codex and ~/.cursor; CLAUDE.md -> ~/.claude.
+ * - Docs: AGENTS.md -> ~/.codex, ~/.cursor, and ~/.gemini; CLAUDE.md -> ~/.claude.
+ * - ~/.gemini skills land in config/skills/ (Antigravity App + CLI personal path).
  * - An agent home that does not exist is skipped, never created.
  *
  * Note: system/resources/ is NOT handled here; see README for the manual copy that
@@ -34,6 +35,8 @@ const AGENTS = [
   { home: '.claude', skillFilter: () => true, docs: ['CLAUDE.md'] },
   { home: '.codex', skillFilter: (name) => !name.startsWith('codex-'), docs: ['AGENTS.md'] },
   { home: '.cursor', skillFilter: () => true, docs: ['AGENTS.md'] },
+  // Antigravity: same policy as .cursor; skills under config/skills per official discovery.
+  { home: '.gemini', skillsDir: 'config/skills', skillFilter: () => true, docs: ['AGENTS.md'] },
 ];
 
 const TIER_RANK = { minimal: 0, general: 1, will: 2 };
@@ -114,7 +117,7 @@ function usage(exitCode = 0) {
 Usage:
   node install-system-auxiliary.mjs [options]
 
-Sync system/skills and global instruction docs into ~/.claude, ~/.codex, and ~/.cursor.
+Sync system/skills and global instruction docs into ~/.claude, ~/.codex, ~/.cursor, and ~/.gemini.
 
 Options:
   --profile <name>  minimal | general | will
@@ -264,7 +267,7 @@ function main() {
     const selected = hostSkills.filter(agent.skillFilter);
     const excluded = hostSkills.filter((name) => !agent.skillFilter(name));
 
-    const skillsDest = path.join(homeDir, 'skills');
+    const skillsDest = path.join(homeDir, agent.skillsDir ?? 'skills');
     fs.mkdirSync(skillsDest, { recursive: true });
 
     const removed = [];
