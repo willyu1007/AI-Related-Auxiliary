@@ -7,45 +7,54 @@ disable-model-invocation: true
 
 # Prune Tests
 
-Delete low-value tests and their dedicated fixtures, and remove CI overhead
-within the approved scope. Keep protecting behaviors the product still needs
-long-term. Optimize for execution and maintenance cost. Do not promise fixed
-cuts in case count, coverage, or runtime.
+Delete low-value tests and their dedicated fixtures within the approved scope.
+Leave only the thinnest direct evidence for high-consequence behaviors the
+product still needs long-term. Optimize for execution and maintenance cost.
+Do not promise fixed cuts in case count, coverage, or runtime. Remove CI
+overhead only when that work is in scope.
 
 ## Set trade-offs and baseline
 
 - Honor the user's repo, exclusions, approved list, and authorization. Stay
-  read-only when only inventory or discussion is requested. Before dropping
-  unique coverage of still-supported behavior at scale, list the retained core,
-  deletion scope, lost guarantees, and estimated cost for user alignment. With
-  clear prior approval, implement without re-asking.
+  read-only when only inventory or discussion is requested.
 - Confirm behavior from real product entry points and current rules. Do not treat
   test names, old plans, or version labels as requirements. When a list disagrees
   with product reality, mark the gap; do not invent business rules to keep a
   numbered case.
-- Find every real execution entry: default commands, workspace/project config,
-  CI, databases, cross-repo joint checks, tools, native deps, and release
-  verification. Record discovery, execution, skip, and duplicate-run scope
-  separately. Count files, runner-reported cases, and independent behaviors
-  separately.
-- Prefer a measured baseline with clear source and scope. If missing, record
-  commands, source revision, environment, exit codes, and wall-clock time for
-  required channels before edits. List already-failing or inactive channels
-  separately; do not treat them as a full green baseline.
+- Map real execution entries enough to choose what to delete: default commands,
+  workspace/project config, CI, databases, cross-repo joint checks, tools,
+  native deps, and release verification. Count files, runner-reported cases, and
+  independent behaviors separately. Full discovery, skip, and duplicate-run
+  reconciliation belongs in Full verification—do not block same-turn deletion
+  on a complete channel audit.
+- Prefer a measured baseline with clear source and scope when one is already
+  available. If missing, note the commands you will use for after-prune
+  verification and continue deleting; record revision, environment, exit codes,
+  and wall-clock time with Full verification. List already-failing or inactive
+  channels separately; do not treat them as a full green baseline.
 
 ## Choose the core by guarantee value
 
+Calling this skill to prune (not inventory or discussion) authorizes deletion
+inside that scope. In the same turn: state the retained core, the deletion set,
+and the guarantees that will be lost, then delete per the table below. Stop and
+ask only when a candidate is the last evidence for still-supported behavior and
+the user has not accepted losing that guarantee; with clear prior acceptance,
+delete without re-asking.
+
 Classify by current behavior, risk, and duplicate responsibility—not by file age
-or whether everything is green. Detail tests that are still valid may exit.
-Do not keep a test only because CI still runs it or it has a unique assertion;
-fold that coverage loss into the trade-off.
+or whether everything is green. Do not keep a test only because CI still runs it
+or it has a unique assertion; record low-value unique coverage as coverage loss
+and delete it. Success means non-core is gone and entries are synced—not that an
+audit was written while the suite stayed nearly intact. If detail or
+duplicate-layer cases still dominate, the prune is incomplete; keep cutting.
 
 | Category | Handling |
 | --- | --- |
-| High-consequence current behavior that needs long-term protection | Keep limited, direct evidence. Prefer critical boundaries such as auth and privacy, transactional atomicity, idempotency, concurrency races, unknown-outcome recovery, and undo. Concrete trade-offs follow this product. |
-| Multiple layers verifying the same guarantee | Keep the layer most likely to catch a real fault. Keep wiring or interaction evidence only when it covers a different risk. Do not copy the same matrix onto every controller, DTO, and client. |
-| Field/error-code/state permutations, implementation snapshots, ordinary UI detail, excess tool self-tests | Trim or exit by unique risk vs maintenance cost. Include any still-valid unique coverage loss in the confirmed trade-off. |
-| Removed features, retired tracks, one-off drills, and corpora with no current use | Delete with dedicated fixtures. First verify current callers, public contracts, conventionally loaded entry points, and external consumers. |
+| High-consequence current behavior that needs long-term protection | **Keep** only the thinnest direct evidence per guarantee. Prefer critical boundaries such as auth and privacy, transactional atomicity, idempotency, concurrency races, unknown-outcome recovery, and undo. Concrete trade-offs follow this product. |
+| Multiple layers verifying the same guarantee | **Delete duplicate layers.** Keep only the layer most likely to catch a real fault. Keep wiring or interaction evidence only when it covers a different risk. |
+| Field/error-code/state permutations, implementation snapshots, ordinary UI detail, excess tool self-tests | **Delete by default.** Fold any still-valid unique coverage loss into the report; uniqueness alone does not retain them. |
+| Removed features, retired tracks, one-off drills, and corpora with no current use | **Delete** with dedicated fixtures after checking current callers, public contracts, conventionally loaded entry points, pins, and external consumers. No consumer after that check: delete; do not keep the whole file on mere uncertainty. |
 
 For each retained flow, state the current behavior, fixed inputs or bounded
 sequential steps, observable outcome, and source location. Renaming tests,
@@ -58,10 +67,8 @@ merging outer cases, or moving files alone is not pruning.
   continuous flow when that is the real scenario. Do not glue independent risks
   only to reduce counts. Dual-participant races, replays, and bounded
   interactions must state actual steps.
-- Make evidence reach the claimed result: saving a payload does not prove data
-  is visible after refresh; a mock receiving a call does not prove the database
-  committed; schema compile, byte hashes, and source strings do not prove
-  business behavior.
+- Make evidence reach the claimed result. A mock call is not a commit; a schema
+  compile or byte hash is not business behavior.
 - Keep mocks outside the core guarantee. When claiming transactional, real
   dual-owner, or native-load protection, exercise the matching database, both
   boundaries, or native entry; otherwise narrow the claim. Do not invent a
