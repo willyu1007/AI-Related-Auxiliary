@@ -81,7 +81,7 @@ checks/          # 本仓库自己的校验，不是分发物
 | [acceptance-campaign](system/skills/acceptance-campaign/SKILL.md) | 在单条车道上推进大范围验收、回归或发布前的测试与修复：统筹派发有界单元（设备批次、修复、车道运维、集成），分流发现，记录用户裁定与交接包，按轮判定，并由 progress.md 生成进度页 |
 | [sensitive-ops](system/skills/sensitive-ops/SKILL.md) | 管理项目级敏感运维上下文及 MFA、OAuth、认证 UI、实体设备等用户绑定步骤；默认使用 `~/Documents/LLM/sensitive-ops.md`（可指定其他私密文档）让用户直接补齐，仅在明确要求时生成可恢复 shell helper |
 | [manage-ui-style](system/skills/manage-ui-style/SKILL.md) | 继承、探索并沉淀项目 UI 风格，在需要时审计和修复视觉漂移 |
-| [cleanup-project-residue](system/skills/cleanup-project-residue/SKILL.md) | 清理当前 session、任务、近期工作或全项目中的过时测试、冗余内容、语义漂移、双轨/legacy 残留和技术债；证据+批准后删除，校验门收尾 |
+| [cleanup-project-residue](system/skills/cleanup-project-residue/SKILL.md) | 清理仓库残留，或在已批准的替换中迁完调用方、退役旧源码及旧上下文；不另建 legacy 参考轨，核对真实消费者、保留依据和当前入口后收口 |
 | [workspace-lifecycle](system/skills/workspace-lifecycle/SKILL.md) | 开发过程中管理自身分支、工作树和中间产物，或由统筹跨仓协调合入与资源退役；核对会话归属、制品用途和本地/远端内容，保护进行中的工作 |
 | [prune-tests](system/skills/prune-tests/SKILL.md) | 仅应用户明确请求，围绕已对齐的长期核心精简测试与专用设施，同步覆盖声明和 pin，并报告实际执行与维护成本变化 |
 | [resolve-vcs-conflicts](system/skills/resolve-vcs-conflicts/SKILL.md) | 在已获授权且进行中的 merge、rebase、cherry-pick 或 revert 中恢复双方意图并解决 Git 冲突 |
@@ -98,7 +98,7 @@ checks/          # 本仓库自己的校验，不是分发物
 
 技能有两种触发方式，且同一个技能可以兼具：**用户点名**（响应用户的直接要求）与**模型自发**（工作途中识别时刻，用户没有要求这件事本身）。归属读各技能 description 的现行措辞即可，这里不维护花名册——那是会静默漂移的第二份副本。
 
-两个极端才值得写下来。有破坏性或纯问答的技能只应由用户点名，description 里会写死 "user explicitly asks"（如 cleanup-project-residue）。反过来，有些义务对应的时刻**没有用户话语**——没人会说"现在做个检查点"或"现在把提示词写规范"——这类技能必须由处境触发，这也是它们存在的理由。
+显式调用限制与执行授权分别读取。`prune-tests`、`review-ui-visual` 只应由用户点名；已批准的实现替换可以触发源码与上下文退役，开发检查点也可以触发自身工作空间整理，但不能据此扩大删除、构建或远端操作的授权。另有些义务对应的时刻没有用户话语——没人会说“现在做个检查点”——这类技能由处境触发。
 
 `system/` 是全局 Agent 配置的版本化镜像。默认安装 `general`；安装器把所选档位视为完整目标状态，会删除当前档位不包含的本库技能，而不是与原档位叠加共存。
 
