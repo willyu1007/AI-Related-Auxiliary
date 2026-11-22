@@ -8,6 +8,7 @@
  *   does not ship are left untouched.
  * - Library skills outside the selected profile are removed from the target.
  * - ~/.codex does not receive the codex-* skills (Codex does not delegate to itself).
+ * - ~/.gemini does not receive codex-computer-use.
  * - Docs: AGENTS.md -> ~/.codex, ~/.cursor, and ~/.gemini; CLAUDE.md -> ~/.claude.
  * - ~/.gemini skills land in config/skills/ (Antigravity App + CLI personal path).
  * - An agent home that does not exist is skipped, never created.
@@ -35,8 +36,13 @@ const AGENTS = [
   { home: '.claude', skillFilter: () => true, docs: ['CLAUDE.md'] },
   { home: '.codex', skillFilter: (name) => !name.startsWith('codex-'), docs: ['AGENTS.md'] },
   { home: '.cursor', skillFilter: () => true, docs: ['AGENTS.md'] },
-  // Antigravity: same policy as .cursor; skills under config/skills per official discovery.
-  { home: '.gemini', skillsDir: 'config/skills', skillFilter: () => true, docs: ['AGENTS.md'] },
+  // Antigravity: like .cursor, minus computer-use; skills under config/skills.
+  {
+    home: '.gemini',
+    skillsDir: 'config/skills',
+    skillFilter: (name) => name !== 'codex-computer-use',
+    docs: ['AGENTS.md'],
+  },
 ];
 
 const TIER_RANK = { minimal: 0, general: 1, will: 2 };
@@ -133,6 +139,7 @@ Profiles:
             Aliyun ops, acceptance campaigns, and release handoff
 
 ~/.codex never receives the three codex-* skills.
+~/.gemini never receives codex-computer-use.
 Library skills outside the selected profile are removed from the target.
 using-powershell installs only on Windows (win32), and never in will.
 `.trim());

@@ -107,7 +107,7 @@ checks/          # 本仓库自己的校验，不是分发物
 | `general` | 包含 `minimal` | 增加日常调试、UI、HTML、清理、Codex 和 script-first 的 wizard |
 | `will` | 个人档：包含 `general` 的日常技能，但以 sensitive-ops 替换 wizard，且不装 C++、PowerShell 与两套 UML 图技能 | 另含 write-prompt、Prisma、`.ai/llm`、`aliyun-ops`、`acceptance-campaign`、`release-handoff`、`review-ui-visual` |
 
-`wizard` 与 `sensitive-ops` 不会同时安装；`.codex` 在 `general` 和 `will` 下仍不安装三个 `codex-*` 技能。`using-powershell` 只在 Windows（`win32`）安装，且从不进入 `will`；macOS / Linux 会跳过，并删掉目标里已有的副本。
+`wizard` 与 `sensitive-ops` 不会同时安装；`.codex` 在 `general` 和 `will` 下仍不安装三个 `codex-*` 技能；`.gemini` 不安装 `codex-computer-use`。`using-powershell` 只在 Windows（`win32`）安装，且从不进入 `will`；macOS / Linux 会跳过，并删掉目标里已有的副本。
 
 > [!CAUTION]
 > `will` 是仓库维护者的个人配置，包含较强的工作流与环境假设，并不代表更通用或更适合所有用户。使用前应逐项阅读相关 skill，尤其先确认 [sensitive-ops](system/skills/sensitive-ops/SKILL.md) 对敏感信息持久化、一次性凭证、生产授权和可选 shell helper 的处理方式符合你的设备、项目与团队安全要求；不符合时应调整 skill 或选择较低档位。
@@ -116,7 +116,8 @@ checks/          # 本仓库自己的校验，不是分发物
 
 ```bash
 # 从本仓库同步到全局：skills 按目录整体替换，当前档以外的本库技能会从目标删掉；
-# 默认 general；.codex 不装 codex-*；AGENTS.md 落 ~/.codex、~/.cursor、~/.gemini，CLAUDE.md 落 ~/.claude
+# 默认 general；.codex 不装 codex-*；.gemini 不装 codex-computer-use
+# AGENTS.md 落 ~/.codex、~/.cursor、~/.gemini，CLAUDE.md 落 ~/.claude
 # .gemini 的 skills 装到 ~/.gemini/config/skills/（Antigravity 官方个人路径）
 node install-system-auxiliary.mjs
 node install-system-auxiliary.mjs --profile minimal
