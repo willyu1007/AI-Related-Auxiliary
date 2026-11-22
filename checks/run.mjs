@@ -50,6 +50,7 @@ const SKILL_CROSSLINK_ALLOWLIST = new Map([
       'task-resume',
       'task-start',
       'task-sync',
+      'workspace-lifecycle',
     ]),
   ],
 ]);

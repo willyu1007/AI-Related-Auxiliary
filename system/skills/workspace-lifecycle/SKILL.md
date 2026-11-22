@@ -14,9 +14,11 @@ requested end state, not a rule for ongoing development.
 
 ## Choose the scope
 
-- **Development:** manage this task's branches, worktrees and artifacts. Reuse
+- **Development:** manage this chat's task branches, worktrees and artifacts. Reuse
   suitable isolation before creating another checkout. At a checkpoint, preserve
-  verified work and release resources no longer needed by this task or its consumers.
+  verified work and remove eligible outputs; apply the owner-release rule below
+  before retiring branches or worktrees. Another chat's resources, even for the
+  same task, belong to coordinated cleanup.
 - **Coordination:** inventory the requested repositories and their active owners,
   agree integration and release order, then retire independently eligible resources.
   One blocked owner does not hold unrelated cleanup.
@@ -30,6 +32,9 @@ Inspect the current repository, index and worktree state before mutation. Captur
 the exact target commit and each candidate's identity; recheck them immediately
 before acting. Age, a clean tracked status, a closed chat or a merged PR alone
 does not establish eligibility.
+
+Keep the repository's default branch, the user's integration target and the
+primary checkout, even when they are idle or their branches are not checked out.
 
 | Resource | Evidence needed before retirement |
 |---|---|
@@ -84,11 +89,20 @@ create a second registry for ordinary temporary files.
    the intended target using repository conventions. Follow any user instruction
    to stop on conflicts; resolve only within the authorized merge scope. Leave
    unaccounted changes intact and continue other independent resources.
-3. **Release owners.** For application-managed worktrees, use the available native
-   handoff/archive mechanism. Preserve needed ignored artifacts first and verify
-   the resulting recovery reference. An active/owned/protected refusal stops that
-   candidate: arrange normal release within the existing coordination authority.
-   Do not edit application state or remove directories to bypass protection.
+3. **Release chat workspaces.** Keep an ongoing chat's assigned task branch and
+   checkout through phase checkpoints, integration and idle waits. Retire them
+   only at or after the chat's archival/closure, or after its owner confirms a safe
+   handoff and releases the old workspace. Both paths still require eligibility
+   above. Verify a usable assigned destination for continuing work; do not put
+   concurrent writers into one checkout to achieve main-only.
+   An authorized coordinator must establish this closure or handoff; the role
+   alone is not release evidence. Keep candidates with unknown ownership or
+   release status and report what is missing.
+   For application-managed worktrees, use the available native handoff/archive
+   mechanism. Preserve needed ignored artifacts first and verify the resulting
+   recovery reference. An active/owned/protected refusal stops that candidate:
+   arrange normal release within the existing coordination authority. Do not edit
+   application state or remove directories to bypass protection.
 4. **Retire exact resources.** For unmanaged Git worktrees use Git's worktree
    operations, then retire eligible local branches. Prefer normal merged-branch
    deletion; a force flag is not proof of eligibility. Prune metadata only for

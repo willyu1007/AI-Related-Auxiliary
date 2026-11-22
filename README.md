@@ -82,7 +82,7 @@ checks/          # 本仓库自己的校验，不是分发物
 | [sensitive-ops](system/skills/sensitive-ops/SKILL.md) | 管理项目级敏感运维上下文及 MFA、OAuth、认证 UI、实体设备等用户绑定步骤；默认使用 `~/Documents/LLM/sensitive-ops.md`（可指定其他私密文档）让用户直接补齐，仅在明确要求时生成可恢复 shell helper |
 | [manage-ui-style](system/skills/manage-ui-style/SKILL.md) | 继承、探索并沉淀项目 UI 风格，在需要时审计和修复视觉漂移 |
 | [cleanup-project-residue](system/skills/cleanup-project-residue/SKILL.md) | 清理仓库残留，或在已批准的替换中迁完调用方、退役旧源码及旧上下文；不另建 legacy 参考轨，核对真实消费者、保留依据和当前入口后收口 |
-| [workspace-lifecycle](system/skills/workspace-lifecycle/SKILL.md) | `will` 档：开发过程中管理自身分支、工作树和中间产物，或由统筹跨仓协调合入与资源退役；核对会话归属、制品用途和本地/远端内容，保护进行中的工作 |
+| [workspace-lifecycle](system/skills/workspace-lifecycle/SKILL.md) | `will` 档：开发时整理自身中间产物；会话归档或安全迁移交还后退役任务分支与工作树，统筹清理也须核实交还；保留默认分支、集成目标和进行中的工作空间 |
 | [prune-tests](system/skills/prune-tests/SKILL.md) | 仅应用户明确请求，围绕已对齐的长期核心精简测试与专用设施，同步覆盖声明和 pin，并报告实际执行与维护成本变化 |
 | [resolve-vcs-conflicts](system/skills/resolve-vcs-conflicts/SKILL.md) | 在已获授权且进行中的 merge、rebase、cherry-pick 或 revert 中恢复双方意图并解决 Git 冲突 |
 | [tdd](system/skills/tdd/SKILL.md) | 在行为与测试 seam 足够稳定时，以 red → green → refactor 推进测试优先实现 |

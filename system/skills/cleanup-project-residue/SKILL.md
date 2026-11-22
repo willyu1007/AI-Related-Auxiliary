@@ -14,6 +14,10 @@ implementation history in Git, not in a parallel reference implementation.
 
 ## Scan boundaries
 
+For an ambiguous cleanup request, distinguish source and guidance from execution
+output and Git resources before setting the scan boundary. Do not report a source
+sweep as complete workspace cleanup.
+
 Use the replacement boundary when cleanup is part of an approved replacement.
 Use an explicit-cleanup mode only for a separately requested sweep.
 
