@@ -54,6 +54,9 @@ For Git resources:
 
 ## Manage intermediate artifacts
 
+Handle outputs of execution here; fixtures, generated contracts and other assets
+maintained as part of an implementation belong to source retirement.
+
 For substantial, shared or retained outputs, record the path, owner, source
 identity and removal condition in the existing task or handoff record. Do not
 create a second registry for ordinary temporary files.
