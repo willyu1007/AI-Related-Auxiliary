@@ -72,7 +72,6 @@ export const SKILL_TIER = {
   'acceptance-campaign': 'will',
   'resolve-vcs-conflicts': 'general',
   'cleanup-project-residue': 'general',
-  'workspace-lifecycle': 'general',
   'prune-tests': 'general',
   'html-communication': 'general',
   'uml-diagrams': 'general',
@@ -90,6 +89,7 @@ export const SKILL_TIER = {
   'aliyun-ops': 'will',
   'release-handoff': 'will',
   'review-ui-visual': 'will',
+  'workspace-lifecycle': 'will',
 };
 
 /** A profile may replace or omit skills from the ranks it otherwise includes. */

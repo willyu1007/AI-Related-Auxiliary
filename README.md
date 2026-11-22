@@ -82,7 +82,7 @@ checks/          # 本仓库自己的校验，不是分发物
 | [sensitive-ops](system/skills/sensitive-ops/SKILL.md) | 管理项目级敏感运维上下文及 MFA、OAuth、认证 UI、实体设备等用户绑定步骤；默认使用 `~/Documents/LLM/sensitive-ops.md`（可指定其他私密文档）让用户直接补齐，仅在明确要求时生成可恢复 shell helper |
 | [manage-ui-style](system/skills/manage-ui-style/SKILL.md) | 继承、探索并沉淀项目 UI 风格，在需要时审计和修复视觉漂移 |
 | [cleanup-project-residue](system/skills/cleanup-project-residue/SKILL.md) | 清理仓库残留，或在已批准的替换中迁完调用方、退役旧源码及旧上下文；不另建 legacy 参考轨，核对真实消费者、保留依据和当前入口后收口 |
-| [workspace-lifecycle](system/skills/workspace-lifecycle/SKILL.md) | 开发过程中管理自身分支、工作树和中间产物，或由统筹跨仓协调合入与资源退役；核对会话归属、制品用途和本地/远端内容，保护进行中的工作 |
+| [workspace-lifecycle](system/skills/workspace-lifecycle/SKILL.md) | `will` 档：开发过程中管理自身分支、工作树和中间产物，或由统筹跨仓协调合入与资源退役；核对会话归属、制品用途和本地/远端内容，保护进行中的工作 |
 | [prune-tests](system/skills/prune-tests/SKILL.md) | 仅应用户明确请求，围绕已对齐的长期核心精简测试与专用设施，同步覆盖声明和 pin，并报告实际执行与维护成本变化 |
 | [resolve-vcs-conflicts](system/skills/resolve-vcs-conflicts/SKILL.md) | 在已获授权且进行中的 merge、rebase、cherry-pick 或 revert 中恢复双方意图并解决 Git 冲突 |
 | [tdd](system/skills/tdd/SKILL.md) | 在行为与测试 seam 足够稳定时，以 red → green → refactor 推进测试优先实现 |
@@ -106,7 +106,7 @@ checks/          # 本仓库自己的校验，不是分发物
 |---|---|---|
 | `minimal` | 基础档 | 治理主线以及 C++、PowerShell（仅 Windows）、review、research、tdd |
 | `general` | 包含 `minimal` | 增加日常调试、UI、HTML、清理、Codex 和 script-first 的 wizard |
-| `will` | 个人档：包含 `general` 的日常技能，但以 sensitive-ops 替换 wizard，且不装 C++、PowerShell 与两套 UML 图技能 | 另含 write-prompt、Prisma、`.ai/llm`、`aliyun-ops`、`acceptance-campaign`、`release-handoff`、`review-ui-visual` |
+| `will` | 个人档：包含 `general` 的日常技能，但以 sensitive-ops 替换 wizard，且不装 C++、PowerShell 与两套 UML 图技能 | 另含 write-prompt、Prisma、`.ai/llm`、`aliyun-ops`、`acceptance-campaign`、`release-handoff`、`review-ui-visual`、`workspace-lifecycle` |
 
 `wizard` 与 `sensitive-ops` 不会同时安装；`.codex` 在 `general` 和 `will` 下仍不安装三个 `codex-*` 技能；`.gemini` 不安装 `codex-computer-use`。`using-powershell` 只在 Windows（`win32`）安装，且从不进入 `will`；macOS / Linux 会跳过，并删掉目标里已有的副本。
 
