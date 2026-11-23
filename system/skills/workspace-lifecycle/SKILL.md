@@ -14,8 +14,9 @@ requested end state, not a rule for ongoing development.
 
 ## Choose the scope
 
-- **Development:** manage this chat's task branches, worktrees and artifacts. Reuse
-  suitable isolation before creating another checkout. At a checkpoint, preserve
+- **Development:** limit candidates to this chat's branches, worktrees and outputs,
+  including resources explicitly taken over through handoff. Reuse suitable
+  isolation before creating another checkout. At a checkpoint, preserve
   verified work and remove eligible outputs; apply the owner-release rule below
   before retiring branches or worktrees. Another chat's resources, even for the
   same task, belong to coordinated cleanup.
@@ -25,6 +26,10 @@ requested end state, not a rule for ongoing development.
 - A question or inventory request is read-only. Existing authorization covers
   actions within its scope; local cleanup alone does not authorize remote ref
   deletion, publishing, stopping another task or deleting its resources.
+
+Look beyond candidates as needed to check ownership, consumers and recovery
+dependencies. These lookups, a shared task or a shared directory do not expand
+the candidate set.
 
 ## Establish eligibility
 
@@ -66,9 +71,9 @@ For substantial, shared or retained outputs, record the path, owner, source
 identity and removal condition in the existing task or handoff record. Do not
 create a second registry for ordinary temporary files.
 
-- Include known task-owned ignored and out-of-repository outputs: temporary
-  scripts, diagnostic logs, failed builds, exports, screenshots and copied caches.
-  Keep the scan within the authorized task or explicit cleanup roots.
+- Apply the selected candidate scope to ignored and out-of-repository outputs:
+  temporary scripts, diagnostic logs, failed builds, exports, screenshots and
+  copied caches. Keep candidate paths within the authorized cleanup roots.
 - Separate reproducible disposable output from unique evidence, delivery packages,
   symbols, acceptance inputs, recovery copies and business data. Keep qualified
   reusable outputs while their consumers need them; do not rebuild merely to delete.

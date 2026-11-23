@@ -71,9 +71,10 @@ task-start / task-resume
    3. Use `cleanup-project-residue` for obsolete source, maintained assets or
       current guidance within the phase boundary. For execution outputs or Git
       resource closeout, use `workspace-lifecycle` when available. When unavailable,
-      remove only known task-owned temporary instrumentation and scratch with no
-      remaining consumers; keep assigned workspaces and required outputs, and
-      leave workspace retirement to authorized coordination.
+      remove only this chat's temporary instrumentation and scratch, including
+      outputs explicitly accepted through handoff, with no remaining consumers; keep
+      assigned workspaces and required outputs, and leave workspace retirement
+      to authorized coordination.
    4. Run decisive checks on the final result. Each must directly support a
       closeout claim; resolve or record any remaining failed or inconclusive
       check, finding, residue, or blocker without advancing the phase, except as
