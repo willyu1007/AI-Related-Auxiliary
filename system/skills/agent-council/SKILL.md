@@ -12,19 +12,22 @@ even on the same model.
 
 - **ChatGPT (`gpt-*`)** — Codex CLI, not swarm:
   `codex exec -C <repo-root> -m <model> -c model_reasoning_effort=xhigh -o <scratch>/<step>-<member>-r<n>.md`
-  (`-s read-only` for council/reviewer, `-s workspace-write` for implementer,
-  `-i <file>` for screenshots). Continue with a new `codex exec`.
-- **Other models** — swarm, not Codex CLI: spawn via `swarm` `add`, continue
-  with `post_message` (`@<name>`) and `swarm_wait`, not `send_message`. Check
-  `swarm` `models`/`status` before spawning.
+  (prompt via stdin, never after `-i`; `-s read-only` for council/reviewer,
+  `-s workspace-write` with `--add-dir` for extra repos, `-i <file>` for
+  screenshots). Continue with a new `codex exec`.
+- **Other models** — swarm, not Codex CLI: check `swarm` `models`/`status`,
+  spawn via `swarm` `add` (`workspace: "share"` for concurrent writers), and
+  continue with `post_message` (`@<name>`) + `swarm_wait`, not `send_message`.
+  Keep scores, plans, and peer findings in scratch files (pointers only on the
+  board), and land `share`/`branch` edits before `kill`.
 - **Runtime verifier (UI/live targets)** — `browser` subagent (`send_message`),
   desktop and narrow/mobile viewports, full reload after server or
   linked-package restarts; inspect host-verified screenshots directly.
 
-If a model is unavailable or quota-limited, disclose the gap, switch it
-(`swarm` `model`) or `kill` it, and substitute an available model on its
-required channel. Never claim a missing member participated, post `@all`, or
-`@mention` an unavailable or retired worker.
+If a model is unavailable or quota-limited, disclose the gap, switch
+(`swarm` `model`) or `kill` it, and substitute on its required channel. Never
+claim a missing member participated, post `@all`, or `@mention` an
+unavailable/retired worker.
 
 - **Coordinator** — this session.
 - **Implementer** — this session by default; separate run only for a disjoint
@@ -55,20 +58,23 @@ Freeze a concise Charter in scratch or the active task plan before any write:
 ## Loop
 
 Verify cited findings against source, tests/contracts, and rendered DOM/tokens
-before acting. Do not stop to ask the user. Reject and log in the Charter any
-suggestion that changes the scorecard.
+before acting. Ask the user only for external auth, destructive/external-publish
+actions, contradictory requirements, or unresolvable invariant conflicts. Reject
+and log in the Charter any scorecard-change suggestion.
 
 - **Pre-flight:** check `git status --short`, `git branch --show-current`,
   runtime/test deps, and baseline runtime evidence (if UI-facing); freeze the
   Charter.
-- **Rounds:** default **2** (cap **3**, or user's count). Stop early when every
-  pass line is met, or when blind evaluation yields no concrete,
-  evidence-backed next steps.
+- **Rounds:** default **2** (cap **3**, or user's count). Stop early when all
+  pass lines are met, or blind evaluation yields no concrete, evidence-backed
+  next steps.
 
 1. **Blind evaluation** (council, parallel, before any member reports) — pass
-   scorecard, invariants, target, and runtime evidence; no peer findings or
-   Coordinator verdict. Swarm members skip later board posts during Step 1,
-   write to `<scratch>/<step>-<member>-r<n>.md`, and post only
+   scorecard, invariants, scoped target/diff, and fresh runtime evidence (on
+   round 2+, focus on missed dimensions, recent changes, and prior-round
+   rejections; never current peer findings or Coordinator verdict). Swarm
+   members skip later board posts during Step 1, write to
+   `<scratch>/<step>-<member>-r<n>.md`, and post only
    `@coordinator done: <path>`. Output per dimension: subjective score +
    evidence + next step if missed; objective met/not met from current evidence
    (no taste score; never pass visual/interactive lines on source or unit tests
@@ -95,10 +101,10 @@ suggestion that changes the scorecard.
 ## Final Report
 
 - Participating roles and models (including fallbacks/gaps).
-- Each dimension's pass line, final score or met/not met (at the round cap
-  after final fixes, label subjective scores pre-fix unless re-scored, and
-  judge objective dimensions from post-fix checks), and verification basis
-  (live vs. static/unit-only, noting unreachable role/auth states).
+- Each dimension's pass line, final score or met/not met (at round cap after
+  final fixes, mark subjective scores pre-fix unless re-scored; judge objective
+  lines from post-fix checks), and verification basis (live vs. static/unit,
+  noting unreachable role/auth states).
 - Rejected scorecard-change suggestions.
 - Confirmed findings resolved vs. rejected.
 - Exact verification commands with real counts.
