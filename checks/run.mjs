@@ -16,6 +16,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
+  agentReceivesSkill,
   applyHostFilter,
   assertSkillTiers,
   managedSkillsToRemove,
@@ -33,10 +34,6 @@ const NUL = String.fromCharCode(0);
 const SCRIPT_REF_RE = /\.ai\/scripts\/[a-z0-9-]+\.mjs/g;
 const MACHINE_PATH_RE = /(?:\/Users\/|\/home\/[a-z]|\/Volumes\/|[A-Z]:\\\\)/;
 const SKILL_CROSSLINK_ALLOWLIST = new Map([
-  [
-    'agent-council',
-    new Set(['codex-implementation', 'codex-review']),
-  ],
   [
     'cpp-code-style',
     new Set(['cpp-code-style-manager']),
@@ -218,6 +215,14 @@ function runStatic() {
   }
   if (unixMinimal.has('using-powershell')) {
     fail('skill-host', 'using-powershell must not install on linux');
+  }
+  for (const home of ['.claude', '.codex', '.cursor']) {
+    if (agentReceivesSkill(home, 'agent-council')) {
+      fail('skill-host', `agent-council must not install to ${home}`);
+    }
+  }
+  if (!agentReceivesSkill('.gemini', 'agent-council')) {
+    fail('skill-host', 'agent-council must install to .gemini');
   }
 
   // Cross-skill orchestration is exceptional and explicit. Validate the allowlist itself so a

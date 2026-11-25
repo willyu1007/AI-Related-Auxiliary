@@ -9,6 +9,7 @@
  * - Library skills outside the selected profile are removed from the target.
  * - ~/.codex does not receive the codex-* skills (Codex does not delegate to itself).
  * - ~/.gemini does not receive codex-computer-use.
+ * - agent-council installs only into ~/.gemini.
  * - Docs: AGENTS.md -> ~/.codex, ~/.cursor, and ~/.gemini; CLAUDE.md -> ~/.claude.
  * - ~/.gemini skills land in config/skills/ (Antigravity App + CLI personal path).
  * - An agent home that does not exist is skipped, never created.
@@ -32,15 +33,23 @@ const SKILLS_SRC = path.join(REPO_ROOT, 'system', 'skills');
 const DOCS_SRC = path.join(REPO_ROOT, 'system', 'docs');
 const HOME = os.homedir();
 
+/** Whether this agent home receives the library skill. */
+export function agentReceivesSkill(home, name) {
+  if (name === 'agent-council') return home === '.gemini';
+  if (home === '.codex' && name.startsWith('codex-')) return false;
+  if (home === '.gemini' && name === 'codex-computer-use') return false;
+  return true;
+}
+
 const AGENTS = [
-  { home: '.claude', skillFilter: () => true, docs: ['CLAUDE.md'] },
-  { home: '.codex', skillFilter: (name) => !name.startsWith('codex-'), docs: ['AGENTS.md'] },
-  { home: '.cursor', skillFilter: () => true, docs: ['AGENTS.md'] },
-  // Antigravity: like .cursor, minus computer-use; skills under config/skills.
+  { home: '.claude', skillFilter: (name) => agentReceivesSkill('.claude', name), docs: ['CLAUDE.md'] },
+  { home: '.codex', skillFilter: (name) => agentReceivesSkill('.codex', name), docs: ['AGENTS.md'] },
+  { home: '.cursor', skillFilter: (name) => agentReceivesSkill('.cursor', name), docs: ['AGENTS.md'] },
+  // Antigravity: skills under config/skills. agent-council is Gemini-only.
   {
     home: '.gemini',
     skillsDir: 'config/skills',
-    skillFilter: (name) => name !== 'codex-computer-use',
+    skillFilter: (name) => agentReceivesSkill('.gemini', name),
     docs: ['AGENTS.md'],
   },
 ];
@@ -142,6 +151,7 @@ Profiles:
 
 ~/.codex never receives the three codex-* skills.
 ~/.gemini never receives codex-computer-use.
+agent-council installs only into ~/.gemini.
 Library skills outside the selected profile are removed from the target.
 using-powershell installs only on Windows (win32), and never in will.
 `.trim());

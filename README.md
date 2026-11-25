@@ -66,7 +66,7 @@ checks/          # 本仓库自己的校验，不是分发物
 
 | Skill | 用途 |
 |---|---|
-| [agent-council](system/skills/agent-council/SKILL.md) | 组建多模型议事团（Council）编排并行不重叠实施与跨模型对抗审查：冻结章程与接口、分派宿主子智能体及 `codex-implementation` / `codex-review`、盲审收敛与统筹落盘 |
+| [agent-council](system/skills/agent-council/SKILL.md) | 仅 Gemini，且须用户点名。统筹先写记分卡；council 盲评并交叉给建议，Reviewer 只查实施缺陷，Implementer 落地方案。`gpt-*` 走 Codex CLI，其他模型走 swarm |
 | [cpp-code-style](system/skills/cpp-code-style/SKILL.md) | 按已确认规则编写、审查、格式化和检查 C++；不负责规则初始化与写入 |
 | [cpp-code-style-manager](system/skills/cpp-code-style-manager/SKILL.md) | 初始化并维护系统、用户、组织和项目四层 C++ 规则，写入须经确认 |
 | [codex-computer-use](system/skills/codex-computer-use/SKILL.md) | 当代码和 shell 不足时，通过 GUI、截图、模拟器或实时应用状态完成或验证工作 |
@@ -109,7 +109,7 @@ checks/          # 本仓库自己的校验，不是分发物
 | `general` | 包含 `minimal` | 增加日常调试、UI、HTML、清理、Codex 和 script-first 的 wizard |
 | `will` | 个人档：包含 `general` 的日常技能，但以 sensitive-ops 替换 wizard，且不装 C++、PowerShell 与两套 UML 图技能 | 另含 `agent-council`、write-prompt、Prisma、`.ai/llm`、`aliyun-ops`、`acceptance-campaign`、`release-handoff`、`review-ui-visual`、`workspace-lifecycle` |
 
-`wizard` 与 `sensitive-ops` 不会同时安装；`.codex` 在 `general` 和 `will` 下仍不安装三个 `codex-*` 技能；`.gemini` 不安装 `codex-computer-use`。`using-powershell` 只在 Windows（`win32`）安装，且从不进入 `will`；macOS / Linux 会跳过，并删掉目标里已有的副本。
+`wizard` 与 `sensitive-ops` 不会同时安装；`.codex` 在 `general` 和 `will` 下仍不安装三个 `codex-*` 技能；`.gemini` 不安装 `codex-computer-use`。`agent-council` 只装进 `~/.gemini`。`using-powershell` 只在 Windows（`win32`）安装，且从不进入 `will`；macOS / Linux 会跳过，并删掉目标里已有的副本。
 
 > [!CAUTION]
 > `will` 是仓库维护者的个人配置，包含较强的工作流与环境假设，并不代表更通用或更适合所有用户。使用前应逐项阅读相关 skill，尤其先确认 [sensitive-ops](system/skills/sensitive-ops/SKILL.md) 对敏感信息持久化、一次性凭证、生产授权和可选 shell helper 的处理方式符合你的设备、项目与团队安全要求；不符合时应调整 skill 或选择较低档位。
@@ -118,7 +118,7 @@ checks/          # 本仓库自己的校验，不是分发物
 
 ```bash
 # 从本仓库同步到全局：skills 按目录整体替换，当前档以外的本库技能会从目标删掉；
-# 默认 general；.codex 不装 codex-*；.gemini 不装 codex-computer-use
+# 默认 general；.codex 不装 codex-*；.gemini 不装 codex-computer-use；agent-council 只装 ~/.gemini
 # AGENTS.md 落 ~/.codex、~/.cursor、~/.gemini，CLAUDE.md 落 ~/.claude
 # .gemini 的 skills 装到 ~/.gemini/config/skills/（Antigravity 官方个人路径）
 node install-system-auxiliary.mjs
@@ -170,7 +170,7 @@ node checks/run.mjs
 - **相信模型** — 给条件、路径、动作。不解释原理，不预演失败。
 - **从使用情景写** — 仓库内设施写 `<repo-root>/...`；Skill 自带材料写本目录的 `references/`、`templates/`。不要从 Skill 的安装位置往外跳。
 - **引导，不介绍** — 步骤回答「此刻做什么、缺什么、去哪取」。不写背景、花名册、独立论证。
-- **自包含** — 普通 Skill 不点名其他 Skill；共享协议进 `resources/`。仅在 `checks/run.mjs` 显式登记的编排器（`goal-mode`、`agent-council`）与成对规则技能除外。
+- **自包含** — 普通 Skill 不点名其他 Skill；共享协议进 `resources/`。仅在 `checks/run.mjs` 显式登记的编排器（`goal-mode`）与成对规则技能除外。
 - **一处定义** — 规则只写一次。能 lint 的交给脚本。
 - **写清边界** — 不做什么和做什么同样重要。
 - **可复用** — 不绑机器、密钥、个人路径。不依赖未提交的本地文件。
