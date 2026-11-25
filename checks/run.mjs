@@ -34,6 +34,10 @@ const SCRIPT_REF_RE = /\.ai\/scripts\/[a-z0-9-]+\.mjs/g;
 const MACHINE_PATH_RE = /(?:\/Users\/|\/home\/[a-z]|\/Volumes\/|[A-Z]:\\\\)/;
 const SKILL_CROSSLINK_ALLOWLIST = new Map([
   [
+    'agent-council',
+    new Set(['codex-implementation', 'codex-review']),
+  ],
+  [
     'cpp-code-style',
     new Set(['cpp-code-style-manager']),
   ],

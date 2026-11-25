@@ -66,7 +66,7 @@ checks/          # 本仓库自己的校验，不是分发物
 
 | Skill | 用途 |
 |---|---|
-| [agent-council](system/skills/agent-council/SKILL.md) | 组建多模型议事团（Council）推进复杂、跨面或高风险任务：明确各角色模型与内置调用方式、冻结目标与接口规则、并行不重叠实施、盲审收敛与统筹方治理职责 |
+| [agent-council](system/skills/agent-council/SKILL.md) | 组建多模型议事团（Council）编排并行不重叠实施与跨模型对抗审查：冻结章程与接口、分派宿主子智能体及 `codex-implementation` / `codex-review`、盲审收敛与统筹落盘 |
 | [cpp-code-style](system/skills/cpp-code-style/SKILL.md) | 按已确认规则编写、审查、格式化和检查 C++；不负责规则初始化与写入 |
 | [cpp-code-style-manager](system/skills/cpp-code-style-manager/SKILL.md) | 初始化并维护系统、用户、组织和项目四层 C++ 规则，写入须经确认 |
 | [codex-computer-use](system/skills/codex-computer-use/SKILL.md) | 当代码和 shell 不足时，通过 GUI、截图、模拟器或实时应用状态完成或验证工作 |
@@ -170,7 +170,7 @@ node checks/run.mjs
 - **相信模型** — 给条件、路径、动作。不解释原理，不预演失败。
 - **从使用情景写** — 仓库内设施写 `<repo-root>/...`；Skill 自带材料写本目录的 `references/`、`templates/`。不要从 Skill 的安装位置往外跳。
 - **引导，不介绍** — 步骤回答「此刻做什么、缺什么、去哪取」。不写背景、花名册、独立论证。
-- **自包含** — 普通 Skill 不点名其他 Skill；共享协议进 `resources/`。`goal-mode` 是唯一编排例外。
+- **自包含** — 普通 Skill 不点名其他 Skill；共享协议进 `resources/`。仅在 `checks/run.mjs` 显式登记的编排器（`goal-mode`、`agent-council`）与成对规则技能除外。
 - **一处定义** — 规则只写一次。能 lint 的交给脚本。
 - **写清边界** — 不做什么和做什么同样重要。
 - **可复用** — 不绑机器、密钥、个人路径。不依赖未提交的本地文件。
