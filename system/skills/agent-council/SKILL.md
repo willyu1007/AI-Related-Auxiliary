@@ -11,15 +11,15 @@ Every non-Coordinator role is a separate run; never reuse a run across roles,
 even on the same model.
 
 - **ChatGPT (`gpt-*`)** — Codex CLI, not swarm:
-  `codex exec -m <model> -c model_reasoning_effort=xhigh -o <scratch>/<role>-r<n>.md`
+  `codex exec -C <repo-root> -m <model> -c model_reasoning_effort=xhigh -o <scratch>/<step>-<member>-r<n>.md`
   (`-s read-only` for council/reviewer, `-s workspace-write` for implementer,
   `-i <file>` for screenshots). Continue with a new `codex exec`.
-- **Other models** — swarm, not Codex CLI: drive with `post_message`
-  (`@<name>`) and `swarm_wait`, not `send_message`. Check `swarm`
-  `models`/`status` before spawning.
+- **Other models** — swarm, not Codex CLI: spawn via `swarm` `add`, continue
+  with `post_message` (`@<name>`) and `swarm_wait`, not `send_message`. Check
+  `swarm` `models`/`status` before spawning.
 - **Runtime verifier (UI/live targets)** — `browser` subagent (`send_message`),
   desktop and narrow/mobile viewports, full reload after server or
-  linked-package restarts.
+  linked-package restarts; inspect host-verified screenshots directly.
 
 If a model is unavailable or quota-limited, disclose the gap, switch it
 (`swarm` `model`) or `kill` it, and substitute an available model on its
@@ -62,16 +62,17 @@ suggestion that changes the scorecard.
   runtime/test deps, and baseline runtime evidence (if UI-facing); freeze the
   Charter.
 - **Rounds:** default **2** (cap **3**, or user's count). Stop early when every
-  pass line is met, or when a round yields zero P0/P1 and zero evidence-backed
-  P2 findings.
+  pass line is met, or when blind evaluation yields no concrete,
+  evidence-backed next steps.
 
 1. **Blind evaluation** (council, parallel, before any member reports) — pass
    scorecard, invariants, target, and runtime evidence; no peer findings or
    Coordinator verdict. Swarm members skip later board posts during Step 1,
-   write to `<scratch>/<role>-r<n>.md`, and post only `@coordinator done: <path>`.
-   Output per dimension: subjective score + evidence + next step if missed;
-   objective met/not met from current evidence (no taste score; never pass
-   visual/interactive lines on source or unit tests alone) + next step if missed.
+   write to `<scratch>/<step>-<member>-r<n>.md`, and post only
+   `@coordinator done: <path>`. Output per dimension: subjective score +
+   evidence + next step if missed; objective met/not met from current evidence
+   (no taste score; never pass visual/interactive lines on source or unit tests
+   alone) + next step if missed.
 2. **Cross-review** (same members, no rescoring) — skip when Step 1 scores and
    next steps align. Pass peer files only; output omissions or emphasis only.
 3. **Plan** (Coordinator) — one plan covering missed dimensions and verified
@@ -80,7 +81,7 @@ suggestion that changes the scorecard.
    style/copy polish. Pass plan and target files; fold confirmed implementation
    defects into the plan.
 5. **Implement** (Implementer) — land the plan, upstream repos before
-   downstream.
+   downstream, and pass fast local checks (typecheck/lint) before Step 6.
 6. **Diff review & checks** (parallel) — Reviewer inspects the round diff and
    plan (no scorecard) for implementation defects; Coordinator runs repo checks
    and fresh runtime verification.
@@ -94,8 +95,10 @@ suggestion that changes the scorecard.
 ## Final Report
 
 - Participating roles and models (including fallbacks/gaps).
-- Each dimension's pass line, final score or met/not met, and verification
-  basis (live vs. static/unit-only, noting unreachable role/auth states).
+- Each dimension's pass line, final score or met/not met (at the round cap
+  after final fixes, label subjective scores pre-fix unless re-scored, and
+  judge objective dimensions from post-fix checks), and verification basis
+  (live vs. static/unit-only, noting unreachable role/auth states).
 - Rejected scorecard-change suggestions.
 - Confirmed findings resolved vs. rejected.
 - Exact verification commands with real counts.
