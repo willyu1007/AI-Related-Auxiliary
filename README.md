@@ -47,7 +47,7 @@ checks/          # 本仓库自己的校验，不是分发物
 
 技能发现只扫 `system/skills/` 的第一层，所以那一层保持平铺，不要建分组子目录。
 
-## system/ —— 35 个技能
+## system/ —— 36 个技能
 
 任务治理的八个技能按实际操作划分；其中 `goal-mode` 串联同一 Goal 运行内的长任务主线，其余每个对应工作流程里的一个时刻。主线是 `start → plan → implementation`；新证据推翻路线时回到 plan，实施检查点通过 `sync → resume` 走仓库跨越时间，`handoff → 新会话` 则通过对话完成普通任务的零间隔交接。
 
@@ -62,10 +62,11 @@ checks/          # 本仓库自己的校验，不是分发物
 | [project-status](system/skills/project-status/SKILL.md) | 一项或多项任务及项目 hub 的只读状态、归档就绪度与一致性审查 | 仓库 |
 | [goal-mode](system/skills/goal-mode/SKILL.md) | 在同一 Goal 运行内串联 start、planning、分阶段执行、checkpoint、恢复与完成契约 | 仓库 + 对话 |
 
-另有 27 个与任务治理无关的技能：
+另有 28 个与任务治理无关的技能：
 
 | Skill | 用途 |
 |---|---|
+| [agent-council](system/skills/agent-council/SKILL.md) | 组建多模型议事团（Council）推进复杂、跨面或高风险任务：明确各角色模型与内置调用方式、冻结目标与接口规则、并行不重叠实施、盲审收敛与统筹方治理职责 |
 | [cpp-code-style](system/skills/cpp-code-style/SKILL.md) | 按已确认规则编写、审查、格式化和检查 C++；不负责规则初始化与写入 |
 | [cpp-code-style-manager](system/skills/cpp-code-style-manager/SKILL.md) | 初始化并维护系统、用户、组织和项目四层 C++ 规则，写入须经确认 |
 | [codex-computer-use](system/skills/codex-computer-use/SKILL.md) | 当代码和 shell 不足时，通过 GUI、截图、模拟器或实时应用状态完成或验证工作 |

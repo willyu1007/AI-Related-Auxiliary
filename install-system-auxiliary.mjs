@@ -78,6 +78,7 @@ export const SKILL_TIER = {
   'uml-diagrams-new': 'general',
   'manage-ui-style': 'general',
   'goal-mode': 'general',
+  'agent-council': 'general',
   'codex-implementation': 'general',
   'codex-review': 'general',
   'codex-computer-use': 'general',
