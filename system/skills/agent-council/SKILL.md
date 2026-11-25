@@ -1,11 +1,8 @@
 ---
 name: agent-council
 description: >-
-  Use when the user explicitly requests a council or multi-model collaboration,
-  or when a task needs parallel disjoint file tracks, frozen shared interfaces,
-  and independent cross-model plan and code review. Do not use for single-pass
-  edits, single-track work covered by one implementer and one review pass, or
-  mechanical changes already covered by deterministic checks.
+  Activate only when the user explicitly calls this skill by name.
+disable-model-invocation: true
 ---
 
 # Agent Council
@@ -20,8 +17,7 @@ your assigned brief and skip this file.
 | **Coordinator** | Current host model | Current session |
 | **Plan Reviewer** | Full-system plan tier | `codex-review` |
 | **Parallel Implementer** | Current host model (default for exploratory, UI, or host-context tracks); `codex-implementation` only for an explicitly specified bounded track | Host native subagent tool (never shell-spawned agents; use a swarm only if explicitly requested or already active), or `codex-implementation` |
-| **Code Reviewer** | Code-review tier (full-system tier when requested); for Codex-authored tracks, follow `codex-review`'s reverse-author rule so a non-Codex reviewer leads | `codex-review` |
-| **Verifier** (optional) | Host read-only or browser subagent | Host native subagent tool |
+| **Code Reviewer** | Code-review tier (full-system tier when requested) for non-Codex tracks; fresh non-Codex host reviewer for Codex-authored tracks | `codex-review` (non-Codex tracks), or fresh host subagent / Coordinator direct review (Codex-authored tracks; `codex-review` supplemental only) |
 
 Follow `codex-review` and `codex-implementation` for all Codex CLI arguments,
 model routing, and sandbox rules — do not invent parallel command shapes here.

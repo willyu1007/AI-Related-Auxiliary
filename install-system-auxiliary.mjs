@@ -78,7 +78,7 @@ export const SKILL_TIER = {
   'uml-diagrams-new': 'general',
   'manage-ui-style': 'general',
   'goal-mode': 'general',
-  'agent-council': 'general',
+  'agent-council': 'will',
   'codex-implementation': 'general',
   'codex-review': 'general',
   'codex-computer-use': 'general',
@@ -137,8 +137,8 @@ Profiles:
   minimal   task-* / project-* plus C++, PowerShell (Windows), review, research, and tdd
   general   minimal plus everyday debug, UI, HTML, cleanup, Codex, and wizard
   will      personal: general with sensitive-ops instead of wizard, without C++,
-            PowerShell, or the UML skills, plus write-prompt, Prisma, .ai/llm,
-            Aliyun ops, acceptance campaigns, and release handoff
+            PowerShell, or the UML skills, plus agent-council, write-prompt,
+            Prisma, .ai/llm, Aliyun ops, acceptance campaigns, and release handoff
 
 ~/.codex never receives the three codex-* skills.
 ~/.gemini never receives codex-computer-use.

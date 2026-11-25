@@ -99,7 +99,7 @@ checks/          # 本仓库自己的校验，不是分发物
 
 技能有两种触发方式，且同一个技能可以兼具：**用户点名**（响应用户的直接要求）与**模型自发**（工作途中识别时刻，用户没有要求这件事本身）。归属读各技能 description 的现行措辞即可，这里不维护花名册——那是会静默漂移的第二份副本。
 
-显式调用限制与执行授权分别读取。`prune-tests`、`review-ui-visual` 只应由用户点名；已批准的实现替换可以触发源码与上下文退役，开发检查点也可以触发自身工作空间整理，但不能据此扩大删除、构建或远端操作的授权。另有些义务对应的时刻没有用户话语——没人会说“现在做个检查点”——这类技能由处境触发。
+显式调用限制与执行授权分别读取。`agent-council`、`prune-tests`、`review-ui-visual` 只应由用户点名；已批准的实现替换可以触发源码与上下文退役，开发检查点也可以触发自身工作空间整理，但不能据此扩大删除、构建或远端操作的授权。另有些义务对应的时刻没有用户话语——没人会说“现在做个检查点”——这类技能由处境触发。
 
 `system/` 是全局 Agent 配置的版本化镜像。默认安装 `general`；安装器把所选档位视为完整目标状态，会删除当前档位不包含的本库技能，而不是与原档位叠加共存。
 
@@ -107,7 +107,7 @@ checks/          # 本仓库自己的校验，不是分发物
 |---|---|---|
 | `minimal` | 基础档 | 治理主线以及 C++、PowerShell（仅 Windows）、review、research、tdd |
 | `general` | 包含 `minimal` | 增加日常调试、UI、HTML、清理、Codex 和 script-first 的 wizard |
-| `will` | 个人档：包含 `general` 的日常技能，但以 sensitive-ops 替换 wizard，且不装 C++、PowerShell 与两套 UML 图技能 | 另含 write-prompt、Prisma、`.ai/llm`、`aliyun-ops`、`acceptance-campaign`、`release-handoff`、`review-ui-visual`、`workspace-lifecycle` |
+| `will` | 个人档：包含 `general` 的日常技能，但以 sensitive-ops 替换 wizard，且不装 C++、PowerShell 与两套 UML 图技能 | 另含 `agent-council`、write-prompt、Prisma、`.ai/llm`、`aliyun-ops`、`acceptance-campaign`、`release-handoff`、`review-ui-visual`、`workspace-lifecycle` |
 
 `wizard` 与 `sensitive-ops` 不会同时安装；`.codex` 在 `general` 和 `will` 下仍不安装三个 `codex-*` 技能；`.gemini` 不安装 `codex-computer-use`。`using-powershell` 只在 Windows（`win32`）安装，且从不进入 `will`；macOS / Linux 会跳过，并删掉目标里已有的副本。
 
